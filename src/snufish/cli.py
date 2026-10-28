@@ -76,6 +76,35 @@ def cmd_reference(args):
     return 0
 
 
+def cmd_scan(args):
+    import numpy as np
+
+    from .build import _write_frame
+    from .paths import build_dir
+    from .scan import scan
+
+    out = build_dir()
+    out.mkdir(parents=True, exist_ok=True)
+    dm2 = np.round(np.arange(args.dm2_min, args.dm2_max + 1e-9, args.dm2_step), 4)
+    for name, frame in scan(dm2, site=args.site, solar_model=args.solar_model).items():
+        _write_frame(frame, out / f"{name}.parquet")
+        print(f"wrote   {out / name}.parquet ({len(frame)} rows)")
+    return 0
+
+
+def cmd_budget(args):
+    from .build import _write_frame
+    from .paths import build_dir
+    from .uncertainty import predictions, write_budget
+
+    frames = write_budget(args.sets, args.solar_model, args.n, args.seed)
+    frames["Budget_Predictions"] = predictions(frames["Budget"])
+    _write_frame(frames["Budget_Predictions"], build_dir() / "Budget_Predictions.parquet")
+    for name, frame in frames.items():
+        print(f"wrote   build/data/{name}.parquet ({len(frame)} rows)")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="snufish", description=__doc__)
     parser.add_argument("--version", action="version", version=__version__)
@@ -97,6 +126,21 @@ def main(argv=None):
     p = sub.add_parser("reference", help="(re)compute the SNUfish reference contribution")
     p.add_argument("benchmark", choices=["B2_sun", "B3_earth", "B4_xsec"])
     p.set_defaults(func=cmd_reference)
+
+    p = sub.add_parser("scan", help="solar observables against Delta m^2_21 and at each parameter set")
+    p.add_argument("--dm2_min", type=float, default=4.0, help="1e-5 eV^2")
+    p.add_argument("--dm2_max", type=float, default=10.0)
+    p.add_argument("--dm2_step", type=float, default=0.2)
+    p.add_argument("--site", default="Kamioka")
+    p.add_argument("--solar_model", default="b16_gs98")
+    p.set_defaults(func=cmd_scan)
+
+    p = sub.add_parser("budget", help="uncertainty propagation: error budget of the 8B rates and A_DN")
+    p.add_argument("--sets", nargs="+", default=["juno_2025", "solar_global_2024"])
+    p.add_argument("--solar_model", default="b23_gs98")
+    p.add_argument("--n", type=int, default=400)
+    p.add_argument("--seed", type=int, default=1)
+    p.set_defaults(func=cmd_budget)
 
     args = parser.parse_args(argv)
     return args.func(args)

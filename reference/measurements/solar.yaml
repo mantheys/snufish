@@ -1,0 +1,32 @@
+# Solar neutrino measurements that discriminate Delta m^2_21, with sources.
+
+sk_day_night:
+  description: >
+    Super-Kamiokande day-night asymmetry of the 8B elastic-scattering rate,
+    all phases (5805 days), amplitude fit. SK convention A = (D - N) / ((D + N) / 2);
+    SNUfish uses 2 (N - D) / (N + D) = -A.
+  value: -0.0286
+  stat: 0.0085
+  syst: 0.0032
+  site: Kamioka
+  channel: es
+  detector_material: water
+  recoil_kinetic_threshold_MeV: 3.49     # analysis window 3.49-19.49 MeV electron kinetic energy (SK-IV)
+  notes: the amplitude fit assumes the zenith shape of dm2_21 = 6.1e-5 eV^2; SK states similar conclusions hold over the region of interest
+  source: Super-Kamiokande, arXiv:2312.12907, sec. VIII and summary
+
+sk_sno_pee_quadratic:
+  description: >
+    Daytime nu_e survival probability of 8B neutrinos from SK + SNO spectra,
+    P_ee(E) = c0 + c1 (E - 10 MeV) + c2 (E - 10 MeV)^2, E the neutrino energy in MeV.
+  c: [0.308, -0.0044, 0.0016]
+  errors: [0.015, 0.0034, 0.0017]
+  correlation: [[1.0, -0.474, -0.394], [-0.474, 1.0, 0.391], [-0.394, 0.391, 1.0]]
+  valid_MeV: [3.0, 15.0]
+  source: Super-Kamiokande, arXiv:2312.12907, table VIII (SK+SNO row)
+
+borexino_rates:
+  description: Borexino pp, pep and 7Be interaction rates (counts per day per 100 t), with the inverse covariance used by Super-Kamiokande.
+  rates: {pp: 134.0, pep: 2.43, Be7: 48.3}
+  inverse_covariance: [[0.00647, -0.0126, -0.0170], [-0.0126, 6.36, -0.501], [-0.017, -0.501, 0.784]]
+  source: Borexino (Nature 562, 505 (2018)), as used in arXiv:2312.12907 sec. VII D

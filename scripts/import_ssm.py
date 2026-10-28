@@ -125,10 +125,15 @@ def b23(directory):
         flux_lines = (directory / f"fluxes_SF3_{label}.dat").read_text().splitlines()
         values = next(line for line in flux_lines if line.rstrip().endswith("Flux")).split()[:8]
         errors = next(line for line in flux_lines if line.rstrip().endswith("Fract.Err")).split()[:8]
+        start = next(i for i, line in enumerate(flux_lines) if line.strip().startswith("---"))
+        rows = [line.split() for line in flux_lines[start + 1:] if len(line.split()) == 9][:8]
+        correlation = [[float(v) for v in row[:8]] for row in rows]
+        assert [row[8] for row in rows] == ["pp", "pep", "hep", "7Be", "8B", "13N", "15O", "17F"]
         out[name] = {
             "family": "B23", "composition": f"{label}: {composition}", "reference": "Zenodo 10.5281/zenodo.10174172",
             "fluxes": {c: float(v) for c, v in zip(COMPONENTS, values)},
             "flux_uncertainty": {c: float(e) for c, e in zip(COMPONENTS, errors)},
+            "flux_correlation": correlation,  # order of COMPONENTS
             "table": str(path.relative_to(ROOT)), "tail": None,  # tabulated to the surface
             "source": {"file": f"SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_{label}.dat, "
                                f"fluxes_SF3_{label}.dat", "sha256": sha256(struct), "license": "CC-BY-4.0"},

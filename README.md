@@ -76,6 +76,25 @@ reference solvers, [NuFast-Earth](https://github.com/PeterDenton/NuFast-Earth)
 (B2, B3) and [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) (B4); see
 [catalogue/tools](catalogue/tools).
 
+## Analyses on top of the benchmarks
+
+- `snufish scan`: the observables that separate the solar and reactor
+  determinations of Delta m^2_21 (8B day-night asymmetry of the
+  elastic-scattering rate above a recoil threshold, the slope and shape of
+  the daytime P_ee) against Delta m^2_21 and at every parameter set of
+  `reference/oscillation/parameter_sets.yaml` (NuFIT 6.0, JUNO 2025,
+  KamLAND, SK solar fits), for each Earth model, compared with the
+  measurements in `reference/measurements/solar.yaml`. Plots:
+  `plotipus run scan`.
+- `snufish budget`: uncertainty propagation to the 8B rates and the
+  day-night asymmetry. Solar fluxes (with the B23 correlations, or the SNO
+  neutral-current 8B flux) and oscillation parameters are sampled; nuclear
+  model, ES radiative corrections and Earth model are reported as model
+  ranges, never folded into a sigma. Plots: `plotipus run budget`.
+
+Both use the solvers the benchmarks validate (the B2 adiabatic reference,
+NuFast-Earth for the night: `make` in `contributions/nufast-earth/scripts`).
+
 ## Layout
 
 ```

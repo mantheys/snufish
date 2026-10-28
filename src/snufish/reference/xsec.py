@@ -24,6 +24,24 @@ def es_total(energy_mev, flavour, constants):
     return 2 * G**2 * me / np.pi * integral * hbarc2
 
 
+def es_above(energy_mev, flavour, constants, t_min_mev):
+    """sigma(E; T > t_min) in cm^2 per electron: the tree-level cross section
+    integrated over electron kinetic energies from t_min to T_max."""
+    E = np.asarray(energy_mev, dtype=float)
+    me, sw2 = constants["m_e_MeV"], constants["sin2_theta_W"]
+    G = constants["G_F_GeV-2"] * 1e-6
+    hbarc2 = (constants["hbarc_MeV_fm"] * 1e-13) ** 2
+    g1 = (0.5 if flavour == "nue" else -0.5) + sw2
+    g2 = sw2
+    t_max = 2 * E**2 / (me + 2 * E)
+    lo = np.minimum(t_min_mev, t_max)
+
+    def primitive(T):
+        return g1**2 * T - g2**2 * (E / 3) * (1 - T / E) ** 3 - g1 * g2 * me * T**2 / (2 * E**2)
+
+    return 2 * G**2 * me / np.pi * (primitive(t_max) - primitive(lo)) * hbarc2
+
+
 def solve_b4(spec, grid="map"):
     energies = spec.axis("energy", grid)
     records = []
