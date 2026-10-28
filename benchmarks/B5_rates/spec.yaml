@@ -60,6 +60,11 @@ channels:
   cc_nue_ar40: {flavours: {nue: cc_nue_ar40}, threshold_MeV: 1.504}   # M(40K) - M(40Ar), atomic masses
   cc_nue_o16:  {flavours: {nue: cc_nue_o16}, threshold_MeV: 15.4}     # 16F ground state
 
+# Spectra (rate per MeV of neutrino energy) in two binnings; totals use `linear`.
+spectrum_bins:
+  linear: {kind: linear, start: 0.0, stop: 20.0, step: 0.1}
+  log:    {kind: log, start: 0.05, stop: 20.0, per_decade: 40}
+
 # Totals are reported over all energies and above these neutrino energies.
 thresholds_MeV: [0.0, 5.0]
 

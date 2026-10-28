@@ -117,6 +117,29 @@ def _build_b4(contributions, spec):
 
 BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3, "B4_xsec": _build_b4}
 
+def _bins(kind, start, stop, step=None, per_decade=None):
+    if kind == "linear":
+        return np.round(np.arange(start, stop + step / 2, step), 6)
+    n = int(round(np.log10(stop / start) * per_decade))
+    return np.geomspace(start, stop, n + 1)
+
+
+def _bin_lines(lines, edges):
+    content = np.zeros(len(edges) - 1)
+    for energy, rate in lines:
+        k = np.searchsorted(edges, energy, side="right") - 1
+        if 0 <= k < len(content):
+            content[k] += rate
+    return content
+
+
+def _spectrum_row(base, binning, edges, content):
+    """Rate density (per MeV) at the bin centres (geometric for log bins)."""
+    centres = np.sqrt(edges[1:] * edges[:-1]) if binning == "log" else 0.5 * (edges[1:] + edges[:-1])
+    return dict(base, Binning=binning, Energy=centres, Rate=content / np.diff(edges), EnergyLow=edges[:-1],
+                EnergyHigh=edges[1:])
+
+
 def combine_rates(out_dir=None, echo=print):
     """B5: interaction rates per B1 solar model, B4 model, detector, channel
     and flux component (daytime oscillations from the B2 reference of the
@@ -135,7 +158,11 @@ def combine_rates(out_dir=None, echo=print):
     sun_all = sun_all[sun_all.Tool == "snufish-reference"]
     xs = pd.read_parquet(xs_path)
     seconds = spec["exposure"]["seconds_per_year"] * spec["exposure"]["kton_year"]
-    edges = np.round(np.arange(0.0, 20.0001, 0.1), 6)
+    # Spectra in two binnings of neutrino energy: linear (totals and the 8B
+    # range) and logarithmic (pp to hep on a log axis). Rates are integrated on
+    # each component's own fine grid, so any binning is exact up to its edges.
+    binnings = {name: _bins(**info) for name, info in spec["spectrum_bins"].items()}
+    edges = binnings["linear"]
     centres = 0.5 * (edges[1:] + edges[:-1])
 
     spectra, totals = [], []
@@ -174,38 +201,41 @@ def combine_rates(out_dir=None, echo=print):
                             total += P[..., k] * np.nan_to_num(s)
                         return total, missing
 
-                    total_spectrum = np.zeros(len(centres))
+                    sums = {name: np.zeros(len(e) - 1) for name, e in binnings.items()}
                     for component, flux in fluxes.items():
-                        content = np.zeros(len(centres))
                         # coverage: fraction of the flux above threshold where sigma is known
                         if len(flux) == 2:  # lines
-                            known, above = 0.0, 0.0
+                            known, above, lines = 0.0, 0.0, []
                             for energy, branching in flux[1]:
                                 value, missing = folded(component, np.array([energy]))
-                                rate = n_targets * flux[0] * branching * value[0] * seconds
-                                content[min(np.searchsorted(edges, energy) - 1, len(centres) - 1)] += rate
+                                lines.append((energy, n_targets * flux[0] * branching * value[0] * seconds))
                                 if energy >= threshold:
                                     above += branching
                                     known += 0.0 if missing[0] else branching
+                            contents = {name: _bin_lines(lines, e) for name, e in binnings.items()}
                         else:
                             _, energy, shape = flux
                             value, missing = folded(component, energy)
                             density = n_targets * flux[0] * shape * value * seconds  # per MeV
                             cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(energy))])
-                            content = np.diff(np.interp(edges, energy, cumulative))
+                            contents = {name: np.diff(np.interp(e, energy, cumulative)) for name, e in binnings.items()}
                             weight = shape * (energy >= threshold)
                             above = np.trapezoid(weight, energy)
                             known = np.trapezoid(weight * ~missing, energy)
                         coverage = known / above if above > 0 else 1.0
-                        total_spectrum += content
                         base = dict(SolarModel=solar_model, Tool=tool, Version=version, Label=label, Variant=variant,
                                     Model=f"{tool}: {variant}", Detector=detector, Channel=channel, Component=component)
-                        spectra.append(dict(base, Energy=centres, Rate=content / 0.1))
+                        for name, e in binnings.items():
+                            sums[name] += contents[name]
+                            spectra.append(_spectrum_row(base, name, e, contents[name]))
+                        content = contents["linear"]
                         totals.append(dict(base, Total=content.sum(), Above5=content[centres > 5].sum(), Coverage=coverage))
                     base = dict(SolarModel=solar_model, Tool=tool, Version=version, Label=label, Variant=variant,
                                 Model=f"{tool}: {variant}",
                                 Detector=detector, Channel=channel, Component="all")
-                    spectra.append(dict(base, Energy=centres, Rate=total_spectrum / 0.1))
+                    for name, e in binnings.items():
+                        spectra.append(_spectrum_row(base, name, e, sums[name]))
+                    total_spectrum = sums["linear"]
                     parts = totals[-len(fluxes):]
                     rate = sum(t["Total"] for t in parts)
                     coverage = min(t["Coverage"] for t in parts if t["Total"] > 1e-3 * rate) if rate > 0 else 1.0

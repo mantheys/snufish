@@ -17,6 +17,7 @@ LIST = ROOT / "input" / "plots" / "readme_scripts.txt"
 def main():
     suffixes = re.findall(r"--output_suffix (\w+)", LIST.read_text())
     for theme, folder in (("light", "web"), ("dark", "web-dark")):
+        shutil.rmtree(ROOT / "output" / "plots" / folder, ignore_errors=True)  # stale names would match too
         subprocess.run([sys.executable, "-m", "plotipus", "run", "readme", "--medium", "web", "--theme", theme],
                        cwd=ROOT, check=True, capture_output=True)
         target = ROOT / "docs" / "images" / theme
