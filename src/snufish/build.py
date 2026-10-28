@@ -112,18 +112,7 @@ def _build_b4(contributions, spec):
             energy, sigma = sub["energy"].to_numpy(), sub["value"].to_numpy()
             rows.append(dict(base, Variant=variant, Channel=channel, Model=f"{meta['tool']}: {variant}",
                              Energy=energy, Sigma=sigma, SigmaPerE=sigma / energy))
-    frame = pd.DataFrame(rows)
-    # The same series restricted, per channel, to the energies where every
-    # model has a value: plotipus ratio panels need series on equal x.
-    common = []
-    for channel, group in frame.groupby("Channel"):
-        known = np.logical_and.reduce([np.isfinite(sigma) for sigma in group.Sigma])
-        for _, row in group.iterrows():
-            row = row.copy()
-            row["Energy"], row["Sigma"], row["SigmaPerE"] = (row.Energy[known], row.Sigma[known],
-                                                             row.SigmaPerE[known])
-            common.append(row)
-    return {"B4_Sigma": frame, "B4_Common": pd.DataFrame(common)}
+    return {"B4_Sigma": pd.DataFrame(rows)}
 
 
 BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3, "B4_xsec": _build_b4}
