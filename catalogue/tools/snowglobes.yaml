@@ -2,7 +2,7 @@ id: snowglobes
 name: SNOwGLoBES
 description: Event rates and observed spectra for given neutrino fluxes in common detector materials, built on the GLoBES rate engine. Designed for supernova bursts; usable for solar fluxes with suitable smearing and efficiency files.
 language: C, Perl (GLoBES)
-license: GPL-3.0
+license: GPL-2.0
 repository: https://github.com/SNOwGLoBES/snowglobes   # B4 data taken from the fork git@github.com:mantheys/snowglobes.git @ 6fa928e
 documentation: https://webhome.phy.duke.edu/~schol/snowglobes
 reference: null
