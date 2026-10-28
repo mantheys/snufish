@@ -1,0 +1,15 @@
+# Provenance of the solar neutrino spectral shapes (dN/dE per MeV, any normalisation;
+# SNUfish normalises each to unit area). Columns: E_MeV, shape[, shape uncertainty].
+obtained_from: https://github.com/michelelucente/PEANUTS, Data/ at commit 39ef11f
+retrieved: 2026-10-28
+method: table
+license: public research data; cite the sources below
+files:
+  pp_shape.csv:  {source: "J. N. Bahcall, Phys. Rev. C 56, 3391 (1997)", endpoint_MeV: 0.42341}
+  hep_shape.csv: {source: "J. N. Bahcall, Phys. Rev. C 56, 3391 (1997)", endpoint_MeV: 18.784}
+  8B_shape_Winter_et_al.csv: {source: "W. T. Winter et al., Phys. Rev. C 73, 025503 (2006)", columns: [E_MeV, shape, shape_uncertainty],
+                              note: "truncated: falls from 0.047 to 0 between 15.2 and 15.3 MeV (true endpoint ~16.5 MeV); ~1e-4 of the flux missing, relevant above 15 MeV (8B background to hep)"}
+  n13_shape.csv: {source: "J. N. Bahcall and R. K. Ulrich, Rev. Mod. Phys. 60, 297 (1988)", endpoint_MeV: 1.199}
+  o15_shape.csv: {source: "J. N. Bahcall and R. K. Ulrich, Rev. Mod. Phys. 60, 297 (1988)", endpoint_MeV: 1.732,
+                  note: "the file header says N13 (a copy slip in the PEANUTS file); the endpoint is that of 15O"}
+  f17_shape.csv: {source: "J. N. Bahcall and R. K. Ulrich, Rev. Mod. Phys. 60, 297 (1988)", endpoint_MeV: 1.740}

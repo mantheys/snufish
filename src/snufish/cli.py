@@ -23,11 +23,12 @@ def cmd_validate(args):
 
 
 def cmd_build(args):
-    from .build import build, combine_day_night
+    from .build import build, combine_day_night, combine_rates
 
     for benchmark in args.benchmark or available_benchmarks():
         build(benchmark, extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
     combine_day_night(args.out)
+    combine_rates(args.out)
     return 0
 
 
@@ -38,6 +39,11 @@ def _reference_records(spec):
         variants = earth.exact_variants(spec)
         return variants, "exact matrix exponential per constant-density segment", [
             r for variant in variants for grid in spec.grids for r in earth.solve_b3(spec, variant, grid)]
+    if spec.id == "B4_xsec":
+        from .reference import xsec
+
+        return ["default"], "tree-level SM nu-e elastic scattering, all recoil energies (no radiative corrections)", [
+            r for grid in spec.grids for r in xsec.solve_b4(spec, grid)]
     from .reference import sun
 
     variants = list(spec.variants)
@@ -85,7 +91,7 @@ def main(argv=None):
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("reference", help="(re)compute the SNUfish reference contribution")
-    p.add_argument("benchmark", choices=["B2_sun", "B3_earth"])
+    p.add_argument("benchmark", choices=["B2_sun", "B3_earth", "B4_xsec"])
     p.set_defaults(func=cmd_reference)
 
     args = parser.parse_args(argv)

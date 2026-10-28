@@ -116,7 +116,11 @@ def validate(contribution, spec=None):
         return problems
 
     low, high = spec["checks"]["range"]
-    outside = df[(df["value"] < low) | (df["value"] > high) | ~np.isfinite(df["value"])]
+    missing = df["value"].isna()
+    if missing.any() and not spec["checks"].get("allow_missing", False):
+        problems.append(f"{missing.sum()} missing values (NaN)")
+    values = df.loc[~missing, "value"]
+    outside = values[(values < low) | (values > high) | ~np.isfinite(values)]
     if len(outside):
         problems.append(f"{len(outside)} values outside [{low}, {high}] or not finite")
 
@@ -135,9 +139,16 @@ def _check_grid(df, spec, variant, grid):
         if len(got) != len(expected) or not np.allclose(got, expected, atol=1e-9):
             problems.append(f"{where} {name} grid differs from the spec ({len(got)} vs {len(expected)} points)")
     quantities = set(df["quantity"])
-    if quantities != set(spec.quantities):
-        problems.append(f"{where} quantities {sorted(quantities)}, expected {spec.quantities}")
-    n_expected = len(spec.quantities) * int(np.prod([len(spec.axis(n, grid)) for n in spec.grid_names]))
+    expected_quantities = spec.variants[variant].get("quantities")
+    if expected_quantities is not None:
+        if quantities != set(expected_quantities):
+            problems.append(f"{where} quantities {sorted(quantities)}, expected {expected_quantities}")
+    elif spec.data.get("all_quantities_required", True):
+        if quantities != set(spec.quantities):
+            problems.append(f"{where} quantities {sorted(quantities)}, expected {spec.quantities}")
+    elif not quantities <= set(spec.quantities):
+        problems.append(f"{where} unknown quantities {sorted(quantities - set(spec.quantities))}")
+    n_expected = len(quantities) * int(np.prod([len(spec.axis(n, grid)) for n in spec.grid_names]))
     if len(df) != n_expected or df.duplicated(["quantity", *spec.grid_names]).any():
         problems.append(f"{where} {len(df)} rows, expected {n_expected} unique grid points")
     return problems
@@ -169,4 +180,17 @@ def _check_b2(df, spec):
     return []
 
 
-BENCHMARK_CHECKS = {"B3_earth": _check_b3, "B2_sun": _check_b2}
+def _check_b4(df, spec):
+    # nu_e scatters on electrons through CC and NC: always above nu_mu, nu_tau
+    wide = df[df.quantity.str.startswith("es_")].pivot_table(
+        index=["grid", "variant", "energy"], columns="quantity", values="value")
+    problems = []
+    for other in ("es_numu", "es_nutau"):
+        if {"es_nue", other} <= set(wide.columns):
+            bad = (wide["es_nue"] <= wide[other]) & wide["es_nue"].notna()
+            if bad.any():
+                problems.append(f"es_nue <= {other} at {bad.sum()} energies")
+    return problems
+
+
+BENCHMARK_CHECKS = {"B3_earth": _check_b3, "B2_sun": _check_b2, "B4_xsec": _check_b4}

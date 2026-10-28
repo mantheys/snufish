@@ -102,7 +102,124 @@ def _build_b2(contributions, spec):
     return {"B2_Energy": pd.DataFrame(by_energy), "B2_Average": pd.DataFrame(averages)}
 
 
-BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3}
+def _build_b4(contributions, spec):
+    rows = []
+    for contribution in contributions:
+        meta = contribution.meta
+        base = {"Tool": meta["tool"], "Version": str(meta["tool_version"]), "Label": contribution.label}
+        for (variant, channel), sub in contribution.data.groupby(["variant", "quantity"]):
+            sub = sub.sort_values("energy")
+            energy, sigma = sub["energy"].to_numpy(), sub["value"].to_numpy()
+            rows.append(dict(base, Variant=variant, Channel=channel, Model=f"{meta['tool']}: {variant}",
+                             Energy=energy, Sigma=sigma, SigmaPerE=sigma / energy))
+    frame = pd.DataFrame(rows)
+    # The same series restricted, per channel, to the energies where every
+    # model has a value: plotipus ratio panels need series on equal x.
+    common = []
+    for channel, group in frame.groupby("Channel"):
+        known = np.logical_and.reduce([np.isfinite(sigma) for sigma in group.Sigma])
+        for _, row in group.iterrows():
+            row = row.copy()
+            row["Energy"], row["Sigma"], row["SigmaPerE"] = (row.Energy[known], row.Sigma[known],
+                                                             row.SigmaPerE[known])
+            common.append(row)
+    return {"B4_Sigma": frame, "B4_Common": pd.DataFrame(common)}
+
+
+BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3, "B4_xsec": _build_b4}
+
+def combine_rates(out_dir=None, echo=print):
+    """B5: interaction rates per B4 model, detector, channel and flux
+    component (daytime oscillations from the B2 reference), in events per
+    kton-year: spectra in 0.1 MeV bins of neutrino energy and totals."""
+    from .fluxes import components
+
+    out_dir = Path(out_dir) if out_dir else build_dir()
+    sun_path, xs_path = out_dir / "B2_Average.parquet", out_dir / "B4_Sigma.parquet"
+    if not (sun_path.exists() and xs_path.exists()):
+        return None
+    spec, sun_spec = load_spec("B5_rates"), load_spec("B2_sun")
+    U2 = np.abs(pmns(sun_spec["oscillation"])) ** 2  # [alpha, i]
+    sun = pd.read_parquet(sun_path)
+    sun = sun[(sun.Tool == "snufish-reference") & (sun.Variant == "b16_gs98")].set_index("Component")
+    xs = pd.read_parquet(xs_path)
+    fluxes = components(spec)
+    seconds = spec["exposure"]["seconds_per_year"] * spec["exposure"]["kton_year"]
+    edges = np.round(np.arange(0.0, 20.0001, 0.1), 6)
+    centres = 0.5 * (edges[1:] + edges[:-1])
+
+    def oscillation(component, energy):
+        row = sun.loc[component]
+        F = np.stack([np.interp(energy, row.Energy, row[f"F{i}"]) for i in (1, 2, 3)], axis=-1)
+        return F @ U2.T  # P_{e alpha}(E), alpha = e, mu, tau
+
+    spectra, totals = [], []
+    for (tool, version, label, variant), models in xs.groupby(["Tool", "Version", "Label", "Variant"]):
+        sigma = {row.Channel: row for row in models.itertuples()}
+        for detector, info in spec["detectors"].items():
+            for channel, target in info["channels"].items():
+                flavours = spec["channels"][channel]["flavours"]
+                threshold = spec["channels"][channel]["threshold_MeV"]
+                if not all(name in sigma for name in flavours.values()):
+                    continue
+                n_targets = info["targets"][target]
+
+                def folded(component, energy):
+                    P = oscillation(component, energy)
+                    total, missing = np.zeros_like(energy), np.zeros_like(energy, dtype=bool)
+                    for k, flavour in enumerate(("nue", "numu", "nutau")):
+                        if flavour not in flavours:
+                            continue
+                        row = sigma[flavours[flavour]]
+                        s = np.interp(energy, row.Energy, row.Sigma, left=np.nan, right=np.nan)
+                        zero = (energy < threshold) | (energy < row.Energy[0])
+                        s = np.where(zero, 0.0, s)
+                        missing |= np.isnan(s)
+                        total += P[..., k] * np.nan_to_num(s)
+                    return total, missing
+
+                total_spectrum = np.zeros(len(centres))
+                for component, flux in fluxes.items():
+                    content = np.zeros(len(centres))
+                    # coverage: fraction of the flux above threshold where sigma is known
+                    if len(flux) == 2:  # lines
+                        known, above = 0.0, 0.0
+                        for energy, branching in flux[1]:
+                            value, missing = folded(component, np.array([energy]))
+                            rate = n_targets * flux[0] * branching * value[0] * seconds
+                            content[min(np.searchsorted(edges, energy) - 1, len(centres) - 1)] += rate
+                            if energy >= threshold:
+                                above += branching
+                                known += 0.0 if missing[0] else branching
+                    else:
+                        _, energy, shape = flux
+                        value, missing = folded(component, energy)
+                        density = n_targets * flux[0] * shape * value * seconds  # per MeV
+                        cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(energy))])
+                        content = np.diff(np.interp(edges, energy, cumulative))
+                        weight = shape * (energy >= threshold)
+                        above = np.trapezoid(weight, energy)
+                        known = np.trapezoid(weight * ~missing, energy)
+                    coverage = known / above if above > 0 else 1.0
+                    total_spectrum += content
+                    base = dict(Tool=tool, Version=version, Label=label, Variant=variant,
+                                Model=f"{tool}: {variant}", Detector=detector, Channel=channel, Component=component)
+                    spectra.append(dict(base, Energy=centres, Rate=content / 0.1))
+                    totals.append(dict(base, Total=content.sum(), Above5=content[centres > 5].sum(), Coverage=coverage))
+                base = dict(Tool=tool, Version=version, Label=label, Variant=variant, Model=f"{tool}: {variant}",
+                            Detector=detector, Channel=channel, Component="all")
+                spectra.append(dict(base, Energy=centres, Rate=total_spectrum / 0.1))
+                parts = totals[-len(fluxes):]
+                rate = sum(t["Total"] for t in parts)
+                coverage = min(t["Coverage"] for t in parts if t["Total"] > 1e-3 * rate) if rate > 0 else 1.0
+                totals.append(dict(base, Total=total_spectrum.sum(), Above5=total_spectrum[centres > 5].sum(),
+                                   Coverage=coverage))
+    spectrum_frame, total_frame = pd.DataFrame(spectra), pd.DataFrame(totals)
+    _write_frame(spectrum_frame, out_dir / "B5_Spectrum.parquet")
+    _write_frame(total_frame, out_dir / "B5_Totals.parquet")
+    echo(f"wrote   {out_dir / 'B5_Spectrum'}.parquet ({len(spectrum_frame)} rows), B5_Totals ({len(total_frame)} rows)")
+    return total_frame
+
 
 # Flux components combined with B3 (spectra reaching the B3 energy range).
 DAY_NIGHT_COMPONENTS = ("B8", "hep")

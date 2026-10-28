@@ -1,0 +1,27 @@
+tool: snowglobes
+tool_version: git-6fa928e
+tool_commit: 6fa928e
+benchmark: B4_xsec
+benchmark_version: 0.1.0
+contributor: SNUfish maintainers (wrapper)
+date: '2026-10-28'
+command: SNOWGLOBES=<path> python contributions/snowglobes/scripts/run_b4.py
+settings:
+  files:
+    default/es_nue: xs_nue_e.dat
+    default/es_numu: xs_nue_e.dat
+    default/es_nutau: xs_nue_e.dat
+    default/cc_nue_ar40: xs_nue_Ar40.dat
+    default/cc_nue_o16: xs_nue_O16.dat
+    default/cc_nue_c13: xs_nue_C13.dat
+    default/cc_nue_d: xs_nue_d.dat
+    ar40_klmv/cc_nue_ar40: xs_nue_Ar40_klmv.dat
+    ar40_marley/cc_nue_ar40: xs_nue_Ar40_marley.dat
+    ar40_marley1/cc_nue_ar40: xs_nue_Ar40_marley1.dat
+  interpolation: sigma/E linear in log10 E; NaN outside each table
+  units: files in 1e-38 cm^2/GeV (sigma/E), as their headers state
+  repository: fork git@github.com:mantheys/snowglobes.git
+  xscns_modified_locally: true
+license: CC-BY-4.0
+notes: ES tables start at 0.5 MeV (no pp, no 7Be 384 keV line); MARLEY and deuteron
+  tables at 5 MeV.

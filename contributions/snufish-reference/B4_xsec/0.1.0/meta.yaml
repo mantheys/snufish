@@ -1,0 +1,14 @@
+tool: snufish-reference
+tool_version: 0.1.0
+tool_commit: null
+benchmark: B4_xsec
+benchmark_version: 0.1.0
+contributor: SNUfish maintainers
+date: '2026-10-28'
+command: snufish reference B4_xsec
+settings:
+  method: tree-level SM nu-e elastic scattering, all recoil energies (no radiative
+    corrections)
+  variants:
+  - default
+license: CC-BY-4.0

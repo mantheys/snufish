@@ -1,0 +1,64 @@
+# SNUfish benchmark B5: solar neutrino interaction rates per detector,
+# channel and flux component, before detector response.
+#
+# SNUfish computes the rates for every B4 contribution (one set per tool and
+# model) as
+#   dR/dE = N_targets * Phi_c * s_c(E) * sum_alpha P_{e alpha}(E) sigma_alpha(E),
+# with P_{e alpha} = sum_i F_i |U_{alpha i}|^2 from the B2 reference
+# (daytime, production-averaged per component). Contributions to B5 itself
+# are full-chain rate spectra from tools that do the folding themselves
+# (e.g. SNOwGLoBES), compared with SNUfish's folding of the same inputs.
+#
+# Status: DRAFT.
+
+id: B5_rates
+version: 0.1.0
+status: draft
+title: Solar neutrino interaction rates
+
+# B16-GS98 (arXiv:1611.09867, table 6), cm^-2 s^-1.
+fluxes:
+  pp:  {flux: 5.98e+10, shape: reference/ssm/shapes/pp_shape.csv}
+  pep: {flux: 1.44e+8,  lines: [[1.442, 1.0]]}
+  hep: {flux: 7.98e+3,  shape: reference/ssm/shapes/hep_shape.csv}
+  Be7: {flux: 4.93e+9,  lines: [[0.8613, 0.8956], [0.3843, 0.1044]]}
+  B8:  {flux: 5.46e+6,  shape: reference/ssm/shapes/8B_shape_Winter_et_al.csv}
+  N13: {flux: 2.78e+8,  shape: reference/ssm/shapes/n13_shape.csv}
+  O15: {flux: 2.05e+8,  shape: reference/ssm/shapes/o15_shape.csv}
+  F17: {flux: 5.28e+6,  shape: reference/ssm/shapes/f17_shape.csv}
+
+oscillation:
+  source: B2_sun reference, variant b16_gs98, daytime   # night: next version, from B3
+  
+exposure:
+  kton_year: 1.0
+  seconds_per_year: 3.15576e+7  # Julian year
+
+# Targets per kton of detector material.
+detectors:
+  argon:
+    description: liquid argon (natural, 99.60% 40Ar), M = 39.948 g/mol
+    targets: {electron: 2.71349e+32, ar40: 1.50146e+31}
+    channels: {es: electron, cc_nue_ar40: ar40}
+  water:
+    description: H2O, M = 18.015 g/mol, 99.757% 16O
+    targets: {electron: 3.34285e+32, o16: 3.33472e+31}
+    channels: {es: electron, cc_nue_o16: o16}
+
+# `es` sums the three ES channels weighted with P_{e alpha}; CC channels use P_ee.
+# Below `threshold_MeV` the cross section is zero by kinematics (missing
+# table values there do not make a rate incomplete). Below the B4 grid
+# (0.02 MeV) cross sections are taken as zero: < 0.01% of any rate.
+channels:
+  es: {flavours: {nue: es_nue, numu: es_numu, nutau: es_nutau}, threshold_MeV: 0.0}
+  cc_nue_ar40: {flavours: {nue: cc_nue_ar40}, threshold_MeV: 1.504}   # M(40K) - M(40Ar), atomic masses
+  cc_nue_o16:  {flavours: {nue: cc_nue_o16}, threshold_MeV: 15.4}     # 16F ground state
+
+# Totals are reported over all energies and above these neutrino energies.
+thresholds_MeV: [0.0, 5.0]
+
+# Open questions:
+# - The 8B shape table is truncated at 15.2 MeV (true endpoint ~16.5 MeV):
+#   take the full Winter et al. tail before using rates above 15 MeV.
+# - Night and annual rates per site (B3 night averages).
+# - Observed spectra need detector response (the D library): smearing and efficiency.

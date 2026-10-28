@@ -1,0 +1,67 @@
+# SNUfish benchmark B4: cross sections of the solar neutrino detection channels.
+#
+# Each contribution gives sigma(E) per target for the channels the tool has,
+# on a fixed energy grid. B5 folds them with the solar fluxes and the B2
+# oscillations into event rates, one set of rates per contributed model.
+#
+# Status: DRAFT.
+
+id: B4_xsec
+version: 0.1.0
+status: draft
+title: Cross sections of solar neutrino detection channels
+
+quantities:                     # channels; target in brackets
+  es_nue:      nu_e  + e- -> nu_e  + e-, all recoil energies [electron]
+  es_numu:     nu_mu + e- -> nu_mu + e-, all recoil energies [electron]
+  es_nutau:    nu_tau + e- -> nu_tau + e-, all recoil energies [electron]
+  cc_nue_ar40: nu_e + 40Ar -> e- + 40K* [40Ar nucleus]
+  cc_nue_o16:  nu_e + 16O -> e- + 16F [16O nucleus]
+  cc_nue_c13:  nu_e + 13C -> e- + 13N [13C nucleus]
+  cc_nue_d:    nu_e + d -> e- + p + p [deuteron]
+all_quantities_required: false  # a tool contributes the channels it has
+
+grids:
+  map:
+    energy: {start: 0.02, stop: 20.0, step: 0.02, unit: MeV}   # 1000 points; fine enough for pp (endpoint 0.42 MeV)
+
+# `default` is the tool's own choice for every channel it provides. Named
+# model variants carry alternative calculations of one channel, so that the
+# spread between nuclear models shows next to the spread between tools.
+variants:
+  default:
+    required: true
+    description: The tool's default cross section for each channel it provides.
+  ar40_klmv:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: Kolbe, Langanke, Martinez-Pinedo, Vogel (2003) shell-model + RPA.
+  ar40_marley:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: MARLEY (Gardiner 2021) allowed-approximation model.
+  ar40_marley1:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: Earlier MARLEY calculation (as shipped by SNOwGLoBES).
+
+constants:
+  G_F_GeV-2: 1.1663788e-5       # PDG 2024
+  hbarc_MeV_fm: 197.3269804     # CODATA 2018
+  m_e_MeV: 0.51099895           # CODATA 2018
+  sin2_theta_W: 0.23857         # PDG 2024, MS-bar at Q^2 -> 0 (used by the tree-level reference)
+
+columns:
+  grid:     string, a key of `grids`
+  variant:  string, a key of `variants`
+  quantity: string, a channel
+  energy:   float, MeV
+  value:    float, cm^2 per target; NaN where the tool has no value (outside its table)
+
+checks:
+  range: [0.0, 1.0e-30]
+  allow_missing: true           # NaN allowed (outside a tool's table); never negative
+
+# Open questions:
+# - Electron-recoil thresholds: add sigma(E; T > T_min) for the detectors' ES thresholds?
+# - Radiative corrections for ES (Bahcall, Kamionkowski, Sirlin 1995) in the reference.

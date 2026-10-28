@@ -1,11 +1,16 @@
 id: snowglobes
 name: SNOwGLoBES
 description: Event rates and observed spectra for given neutrino fluxes in common detector materials, built on the GLoBES rate engine. Designed for supernova bursts; usable for solar fluxes with suitable smearing and efficiency files.
-language: C
-license: null
-repository: null
+language: C, Perl (GLoBES)
+license: GPL-3.0
+repository: https://github.com/SNOwGLoBES/snowglobes   # B4 data taken from the fork git@github.com:mantheys/snowglobes.git @ 6fa928e
 documentation: https://webhome.phy.duke.edu/~schol/snowglobes
 reference: null
 maintainers: null
 benchmarks: [B4_xsec, B5_rates]
-status: draft
+status: verified        # B4 wrapper: contributions/snowglobes/scripts/run_b4.py (reads xscns/ of a local checkout)
+notes: >
+  Cross-section files: log10(E/GeV) and sigma/E in 1e-38 cm^2/GeV per target, as their headers
+  state (checked: nu_e-e gives 8.9e-44 cm^2 at 10 MeV). ES tables start at 0.5 MeV (no pp, no
+  384 keV 7Be line); deuteron and MARLEY argon tables at 5 MeV. Full-chain B5 contribution
+  (supernova.pl with solar fluxes) still to do.

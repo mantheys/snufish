@@ -41,6 +41,9 @@ outside this repository (e.g. results not yet public) to a local build.
 
 **B2_sun** (MSW in the Sun) and **B3_earth** (Earth crossing) combine into
 day and night P_ee and the day-night asymmetry per detector site.
+**B4_xsec** (cross sections per channel) folded with B16-GS98 fluxes and B2
+gives **B5_rates**: interactions per kton-year by detector, channel and flux
+component, one set per contributed cross-section model.
 
 See [benchmarks/README.md](benchmarks/README.md). The first one is
 **B3_earth**: P(nu_i -> nu_e) for mass eigenstates crossing a fixed
