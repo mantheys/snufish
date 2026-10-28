@@ -1,0 +1,3 @@
+[submodule "contributions/nufast-earth/scripts/NuFast-Earth"]
+	path = contributions/nufast-earth/scripts/NuFast-Earth
+	url = https://github.com/PeterDenton/NuFast-Earth

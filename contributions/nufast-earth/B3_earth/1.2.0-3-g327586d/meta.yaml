@@ -1,0 +1,23 @@
+tool: nufast-earth
+tool_version: 1.2.0-3-g327586d
+tool_commit: 327586d
+benchmark: B3_earth
+benchmark_version: 0.2.0
+contributor: SNUfish maintainers (wrapper); NuFast-Earth by P. B. Denton and S. J.
+  Parke
+date: '2026-10-28'
+command: cd contributions/nufast-earth/scripts && make && python run_b3.py
+settings:
+  quantity: Probability_Engine::solar_night_in_earth (Earth matrix, checked against
+    Get_Solar_Night_Probabilities = Vsolar x Earth matrix)
+  eigenvalue_precision: default
+  earth_models:
+    prem_prob3: PREM_Prob3
+    prem_four: PREM_Four (mean density per segment)
+    prem_full: PREM_Full (mean density per segment)
+    native: 'PREM_NDiscontinuityLayer(2, 10, 10, 5): piecewise-constant PREM, 27 shells
+      (NuFast-Earth examples)'
+  earth_model: 'PREM_NDiscontinuityLayer(2, 10, 10, 5): piecewise-constant PREM, 27
+    shells (NuFast-Earth examples)'
+license: CC-BY-4.0
+reference: arXiv:2511.04735
