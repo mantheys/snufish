@@ -1,0 +1,25 @@
+tool: snowglobes
+tool_version: git-6fa928e
+tool_commit: 6fa928e
+benchmark: B5_rates
+benchmark_version: 0.3.0
+contributor: SNUfish maintainers (wrapper)
+date: '2026-10-28'
+command: snufish build && python contributions/snowglobes/scripts/run_b5.py --snowglobes
+  <checkout>
+settings:
+  runs:
+    argon: supernova.pl 0 <flux> argon ar40kt
+    water: supernova.pl 0 <flux> water wc100kt30prct
+  flux_files: 0-0.1 GeV every 0.2 MeV; nu/cm^2/s per 0.2 MeV; lines spread flat over
+    their 0.4975 MeV sampling bin (a single table point is counted 0-2.5x, see run_b5.py)
+  rates: unweighted, unsmeared outputs x channel-file target factor x seconds/year
+    / config mass
+  targets: 'SNOwGLoBES conventions: argon N_A/40 per gram (pure 40Ar), water 2/18
+    x N_A protons per gram (ES x5, 16O x0.5)'
+  native: fluxes/solar_bs05op_mixed.dat (BS05-OP, survival probabilities from a figure)
+  oscillations: B2 snufish-reference, daytime, production-averaged per component
+license: CC-BY-4.0
+notes: Weighted output files (_events.dat) were written only for the last channel
+  of each channel file in our runs; the wrapper applies the target factors itself
+  from the unweighted files.

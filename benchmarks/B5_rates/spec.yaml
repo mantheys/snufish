@@ -12,7 +12,7 @@
 # Status: DRAFT.
 
 id: B5_rates
-version: 0.2.0
+version: 0.3.0
 status: draft
 title: Solar neutrino interaction rates
 
@@ -73,3 +73,70 @@ thresholds_MeV: [0.0, 5.0]
 #   take the full Winter et al. tail before using rates above 15 MeV.
 # - Night and annual rates per site (B3 night averages).
 # - Observed spectra need detector response (the D library): smearing and efficiency.
+
+# --- Contributions: full-chain rates from tools that fold fluxes themselves ---
+# Each tool runs the same inputs (B1 fluxes and shapes, B2 reference daytime
+# oscillations per component, its own cross sections) through its own chain;
+# SNUfish compares the totals with its folding of that tool's B4 cross
+# sections. Values are interactions per kton-year, before detector response.
+# Solar model behind each tool's `native` flux, for the comparison.
+native_solar_model: {snowglobes: bs05_op}
+
+grids:
+  totals:
+    threshold: {start: 0.0, stop: 5.0, step: 5.0, unit: MeV}   # all energies; true E_nu > 5 MeV
+
+variants:
+  b16_gs98: {required: true, solar_model: b16_gs98, description: SNUfish inputs for B16-GS98.}
+  bs05_op:  {required: false, solar_model: bs05_op, description: SNUfish inputs for BS05-OP.}
+  b16_gs98_point_lines: {required: false, solar_model: b16_gs98, description: "B16-GS98 with each line written as one point of the tool's flux table (for tools whose sampling makes that unreliable)."}
+  native:   {required: false, solar_model: null, description: "The tool's own built-in solar flux (describe in meta.yaml settings)."}
+
+quantities:
+  argon/es/pp: argon, es, pp
+  argon/es/pep: argon, es, pep
+  argon/es/hep: argon, es, hep
+  argon/es/Be7: argon, es, Be7
+  argon/es/B8: argon, es, B8
+  argon/es/N13: argon, es, N13
+  argon/es/O15: argon, es, O15
+  argon/es/F17: argon, es, F17
+  argon/es/all: argon, es, all
+  argon/cc_nue_ar40/pp: argon, cc_nue_ar40, pp
+  argon/cc_nue_ar40/pep: argon, cc_nue_ar40, pep
+  argon/cc_nue_ar40/hep: argon, cc_nue_ar40, hep
+  argon/cc_nue_ar40/Be7: argon, cc_nue_ar40, Be7
+  argon/cc_nue_ar40/B8: argon, cc_nue_ar40, B8
+  argon/cc_nue_ar40/N13: argon, cc_nue_ar40, N13
+  argon/cc_nue_ar40/O15: argon, cc_nue_ar40, O15
+  argon/cc_nue_ar40/F17: argon, cc_nue_ar40, F17
+  argon/cc_nue_ar40/all: argon, cc_nue_ar40, all
+  water/es/pp: water, es, pp
+  water/es/pep: water, es, pep
+  water/es/hep: water, es, hep
+  water/es/Be7: water, es, Be7
+  water/es/B8: water, es, B8
+  water/es/N13: water, es, N13
+  water/es/O15: water, es, O15
+  water/es/F17: water, es, F17
+  water/es/all: water, es, all
+  water/cc_nue_o16/pp: water, cc_nue_o16, pp
+  water/cc_nue_o16/pep: water, cc_nue_o16, pep
+  water/cc_nue_o16/hep: water, cc_nue_o16, hep
+  water/cc_nue_o16/Be7: water, cc_nue_o16, Be7
+  water/cc_nue_o16/B8: water, cc_nue_o16, B8
+  water/cc_nue_o16/N13: water, cc_nue_o16, N13
+  water/cc_nue_o16/O15: water, cc_nue_o16, O15
+  water/cc_nue_o16/F17: water, cc_nue_o16, F17
+  water/cc_nue_o16/all: water, cc_nue_o16, all
+all_quantities_required: false
+
+columns:
+  grid:      string, a key of `grids`
+  variant:   string, a key of `variants`
+  quantity:  string, detector/channel/component
+  threshold: float, MeV of true neutrino energy
+  value:     float, interactions per kton-year
+
+checks:
+  range: [0.0, 1.0e+9]

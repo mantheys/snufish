@@ -27,10 +27,12 @@ def cmd_build(args):
 
     combine_ssm(args.out)
     for benchmark in args.benchmark or available_benchmarks():
-        if benchmark in BUILDERS:
+        if benchmark in BUILDERS and benchmark != "B5_rates":
             build(benchmark, extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
     combine_day_night(args.out)
     combine_rates(args.out)
+    if "B5_rates" in (args.benchmark or available_benchmarks()):  # needs the folded rates above
+        build("B5_rates", extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
     return 0
 
 

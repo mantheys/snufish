@@ -115,7 +115,34 @@ def _build_b4(contributions, spec):
     return {"B4_Sigma": pd.DataFrame(rows)}
 
 
-BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3, "B4_xsec": _build_b4}
+def _build_b5(contributions, spec):
+    """Full-chain tool totals next to SNUfish's folding of the same inputs
+    with that tool's B4 cross sections (same solar model)."""
+    totals_path = build_dir() / "B5_Totals.parquet"
+    folded = pd.read_parquet(totals_path) if totals_path.exists() else None
+    rows = []
+    for contribution in contributions:
+        meta = contribution.meta
+        for _, r in contribution.data.iterrows():
+            detector, channel, component = r.quantity.split("/")
+            variant = spec.variants[r.variant]
+            model = variant["solar_model"] or spec.data.get("native_solar_model", {}).get(meta["tool"])
+            row = dict(Tool=meta["tool"], Version=str(meta["tool_version"]), Variant=r.variant, SolarModel=model,
+                       Detector=detector, Channel=channel, Component=component, Threshold=r.threshold,
+                       Case=f"{detector} {channel}", Rate=r.value, Folded=np.nan, Coverage=np.nan)
+            if folded is not None and model is not None:
+                match = folded[(folded.Model == f"{meta['tool']}: default") & (folded.SolarModel == model)
+                               & (folded.Detector == detector) & (folded.Channel == channel)
+                               & (folded.Component == component)]
+                if len(match):
+                    m = match.iloc[0]
+                    row.update(Folded=m.Total if r.threshold == 0 else m.Above5, Coverage=m.Coverage)
+            row["Ratio"] = row["Rate"] / row["Folded"] if row["Folded"] else np.nan
+            rows.append(row)
+    return {"B5_Chain": pd.DataFrame(rows)}
+
+
+BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3, "B4_xsec": _build_b4, "B5_rates": _build_b5}
 
 def _bins(kind, start, stop, step=None, per_decade=None):
     if kind == "linear":

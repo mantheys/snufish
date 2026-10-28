@@ -58,3 +58,20 @@ def test_pp_es_rate_by_hand(constants):
     per_electron = flux * np.trapezoid(shape * sigma, energy)
     per_day_100t = per_electron * 3.307e31 * 86400   # Borexino electrons per 100 t
     assert 120 < per_day_100t < 150
+
+
+def test_snowglobes_chain_contribution():
+    """The SNOwGLoBES full-chain totals validate, and smooth spectra agree with
+    SNUfish's folding of the same inputs (see contributions/snowglobes/scripts/run_b5.py)."""
+    from snufish.contribution import load_contribution, validate
+
+    path = ROOT / "contributions" / "snowglobes" / "B5_rates" / "git-6fa928e"
+    if not path.exists():
+        pytest.skip("SNOwGLoBES B5 contribution not generated")
+    contribution = load_contribution(path)
+    assert validate(contribution, load_spec("B5_rates", root=ROOT)) == []
+    data = contribution.data.set_index(["variant", "quantity", "threshold"]).value
+    # 8B CC on argon: within the 0.3% target-count convention of SNOwGLoBES (N_A/40 per gram)
+    assert data[("b16_gs98", "argon/cc_nue_ar40/B8", 0.0)] == pytest.approx(1566, rel=0.01)
+    # pp is below SNOwGLoBES's first sampling point (0.5 MeV)
+    assert data[("b16_gs98", "argon/es/pp", 0.0)] == 0.0
