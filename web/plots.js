@@ -20,15 +20,15 @@ function alpha(hex, a) {
 
 const FONT = '"DejaVu Sans", Verdana, Geneva, sans-serif';
 
-function layout(c, title, xTitle, yTitle, extra = {}) {
+function layout(c, node, title, xTitle, yTitle, extra = {}) {
+  node.previousElementSibling.textContent = title; // the card's heading: Plotly's toolbar would cover a title in the plot
   const axis = { showline: true, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
                  tickwidth: 1, tickcolor: c.axis, minor: { ticks: "inside", ticklen: 3, tickcolor: c.axis, showgrid: false },
                  showgrid: false, zeroline: false, tickfont: { color: c.secondary, size: 12 },
                  title: { font: { color: c.text, size: 13 } }, automargin: true };
   return {
-    title: { text: title, font: { size: 14, color: c.text }, x: 0.5, xanchor: "center" },
     paper_bgcolor: c.surface, plot_bgcolor: c.surface, font: { family: FONT, color: c.text, size: 12 },
-    margin: { l: 60, r: 16, t: 40, b: 48 }, hoverlabel: { bgcolor: c.surface, bordercolor: c.axis, font: { color: c.text, family: FONT } },
+    margin: { l: 60, r: 16, t: 24, b: 48 }, hoverlabel: { bgcolor: c.surface, bordercolor: c.axis, font: { color: c.text, family: FONT } },
     legend: { orientation: "h", y: -0.22, x: 0, font: { color: c.text } },
     ...extra,
     xaxis: { ...axis, ...extra.xaxis, title: { ...axis.title, text: xTitle } },
@@ -96,7 +96,7 @@ export function spectrumPlot(node, result) {
     traces.push(...bandTraces(c, edges, low, high));
     traces.push({ ...stairs(edges, a), mode: "lines", name: "central",
                   line: { color: c.text, width: 2 }, hovertemplate: "%{y:.3f} %<extra>A_DN</extra>" });
-    return Plotly.react(node, traces, layout(c, "Day-night asymmetry per energy bin", "Neutrino energy (MeV)", "A_DN (%)",
+    return Plotly.react(node, traces, layout(c, node, "Day-night asymmetry per energy bin", "Neutrino energy (MeV)", "A_DN (%)",
       { xaxis: energyAxis(edges, spectra.day, 1e-9 * Math.max(...spectra.day)), hovermode: "x unified",
         shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 0, y1: 0, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
   }
@@ -122,7 +122,7 @@ export function spectrumPlot(node, result) {
   traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.4 },
                 hovertemplate: "%{y:.4g}<extra>total</extra>" });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
-  return Plotly.react(node, traces, layout(c, title, "Neutrino energy (MeV)", "Interactions / (kt·yr) per bin",
+  return Plotly.react(node, traces, layout(c, node, title, "Neutrino energy (MeV)", "Interactions / (kt·yr) per bin",
     { xaxis: energyAxis(edges, total, floor), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified" }), CONFIG);
 }
 
@@ -139,10 +139,10 @@ export function distributionPlot(node, result, measured) {
   const top = Math.max(...counts);
   const shapes = [{ type: "line", x0: central, x1: central, y0: 0, y1: top * 1.05, line: { color: c.text, width: 2 } }];
   const annotations = [];
-  ranges.forEach((r, k) => {
-    const y = top * (1.18 + 0.16 * k);
+  ranges.forEach((r, k) => { // a bar per model range above the histogram, labelled above its left end
+    const y = top * (1.15 + 0.2 * k);
     shapes.push({ type: "line", x0: r.Low * scale, x1: r.High * scale, y0: y, y1: y, line: { color: c.range, width: 6 } });
-    annotations.push({ x: r.High * scale, y, text: r.Source, showarrow: false, xanchor: "left", xshift: 6,
+    annotations.push({ x: r.Low * scale, y, text: r.Source, showarrow: false, xanchor: "left", yanchor: "bottom", yshift: 4,
                        font: { size: 11, color: c.secondary } });
   });
   if (measured) {
@@ -156,9 +156,9 @@ export function distributionPlot(node, result, measured) {
                   marker: { color: alpha(c.sampled, 0.8) }, name: `${values.length} draws`,
                   hovertemplate: `%{x:.4g} ${unit}: %{y} draws<extra></extra>` };
   const name = quantity === "adn" ? "A_DN" : "Rate";
-  return Plotly.react(node, [trace], layout(c, "Sampled values and model ranges", `${name} (${unit})`, "Draws",
-    { shapes, annotations, showlegend: false, bargap: 0, margin: { l: 50, r: 120, t: 40, b: 48 },
-      xaxis: { range: [lo - pad, hi + pad] }, yaxis: { range: [0, top * (1.3 + 0.16 * ranges.length)] } }), CONFIG);
+  return Plotly.react(node, [trace], layout(c, node, quantity === "adn" ? "Sampled A_DN and model ranges" : "Sampled rates and model ranges", `${name} (${unit})`, "Draws",
+    { shapes, annotations, showlegend: false, bargap: 0, margin: { l: 50, r: 16, t: 24, b: 48 },
+      xaxis: { range: [lo - pad, hi + pad] }, yaxis: { range: [0, top * (1.25 + 0.2 * ranges.length)] } }), CONFIG);
 }
 
 export function budgetSizes(rows, quantity, scale) {
@@ -180,7 +180,7 @@ export function budgetPlot(node, result) {
              textfont: { color: c.secondary, size: 11 }, hovertemplate: `%{y}: %{x:.3g}<extra>${name}</extra>` };
   });
   const xTitle = quantity === "rate" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
-  return Plotly.react(node, traces, layout(c, "Error budget", xTitle, "",
-    { barmode: "overlay", margin: { l: 10, r: 40, t: 40, b: 48 }, xaxis: { rangemode: "tozero" },
+  return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
+    { barmode: "overlay", margin: { l: 10, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
       yaxis: { categoryorder: "array", categoryarray: order.map((i) => rows[i].Source) } }), CONFIG);
 }

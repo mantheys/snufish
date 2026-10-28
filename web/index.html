@@ -84,10 +84,10 @@
   <main class="results">
     <div id="status" class="status" role="status" aria-live="polite">Loading the inputs…</div>
     <section id="headline" class="headline"></section>
-    <section class="card"><div id="plot-spectrum" class="plot tall"></div></section>
-    <div class="pair">
-      <section class="card"><div id="plot-distribution" class="plot"></div></section>
-      <section class="card"><div id="plot-budget" class="plot"></div></section>
+    <div class="trio"><!-- the same order as the plotipus figures: spectrum, sampled values, uncertainties -->
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-spectrum" class="plot"></div></section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-distribution" class="plot"></div></section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-budget" class="plot"></div></section>
     </div>
     <details class="card">
       <summary>Budget table</summary>

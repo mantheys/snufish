@@ -103,10 +103,9 @@ select:disabled { opacity: 0.45; }
 .status { min-height: 1.4em; font-size: 0.88rem; color: var(--text-secondary); }
 .status.error { background: var(--warning-bg); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; }
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-width: 0; }
-.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-@media (max-width: 1200px) { .pair { grid-template-columns: minmax(0, 1fr); } }
-.plot { width: 100%; height: 340px; }
-.plot.tall { height: 380px; }
+.trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+.plot { width: 100%; height: 360px; }
+.plot-title { margin: 2px 4px 0; font: 600 0.9rem/1.3 "DejaVu Sans", Verdana, sans-serif; text-align: center; color: var(--plot-ink); }
 
 .headline { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: grid; gap: 10px; }
 .headline .what { color: var(--text-secondary); font-size: 0.88rem; }
