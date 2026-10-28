@@ -109,6 +109,7 @@ absolute), checked by `tests/test_engine.py` (also
 `snufish budget --tables build/app`).
 
 ```bash
+python -m venv .venv && source .venv/bin/activate      # once; then activate in each new shell
 pip install -e ".[app]"
 snufish export-app --out build/app                       # tables, ~3 min on 8 cores, 16 MB
 python app/build.py --plotipus ../plotipus --out build/site
@@ -133,7 +134,11 @@ app/                             the browser app (Panel on Pyodide)
 
 ## Use
 
+Install into a virtual environment; the `snufish` command exists only while
+it is active (or call `.venv/bin/snufish`):
+
 ```bash
+python -m venv .venv && source .venv/bin/activate      # once; then activate in each new shell
 pip install -e ".[dev,plots]"
 snufish validate                 # check every contribution against its spec
 snufish build                    # validated contributions -> build/data/*.parquet for plotipus

@@ -13,6 +13,8 @@ NuFast-Earth driver (night tables).
 import datetime
 import json
 import multiprocessing
+import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -156,8 +158,18 @@ def export_app(out, s12=S12_GRID, dm21=DM21_GRID, jobs=None, solar_models=None):
     earth_models, sites = inputs["earth_models"], inputs["sites"]
     _SHARED.update(inputs=inputs, solar_models=solar_models, earth_models=earth_models, sites=sites)
     points = [(a, b) for a in s12_axis for b in dm21_axis]
-    with multiprocessing.get_context("fork").Pool(jobs) as pool:
-        results = pool.map(_point, points, chunksize=4)
+    workers = jobs or multiprocessing.cpu_count()
+    print(f"{len(points)} grid points x ({len(solar_models)} solar models, {len(earth_models)} Earth models) "
+          f"on {workers} processes", file=sys.stderr, flush=True)
+    start, results = time.monotonic(), []
+    with multiprocessing.get_context("fork").Pool(workers) as pool:
+        for k, result in enumerate(pool.imap(_point, points, chunksize=4), 1):
+            results.append(result)
+            if k % 50 == 0 or k == len(points):
+                elapsed = time.monotonic() - start
+                print(f"\r  {k}/{len(points)} points, {elapsed:.0f} s elapsed, "
+                      f"~{elapsed * (len(points) - k) / k:.0f} s left ", end="", file=sys.stderr, flush=True)
+    print(file=sys.stderr)
     shape = (len(s12_axis), len(dm21_axis))
     night = np.array([r[1] for r in results]).reshape(*shape, *results[0][1].shape)      # s12, dm21, earth, site, E, 3
     common = dict(s12=s12_axis, dm21=dm21_axis)
