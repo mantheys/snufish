@@ -1,0 +1,100 @@
+# SNUfish benchmark B2: MSW propagation in the Sun.
+#
+# Each contribution gives F_i(E, r0) = P(nu_e produced at radius r0 -> nu_i at
+# the solar surface), the mass-eigenstate fractions that arrive at the Earth
+# (incoherently: the Sun-Earth distance averages all phases). F_i is the
+# phase-averaged value: the exact pointwise F_i carries O(1/gamma) terms
+# (gamma ~ 1e3, the adiabaticity at the MSW resonance) that oscillate with the
+# phase accumulated across the Sun and vanish over any energy resolution.
+# For these parameters it equals the adiabatic |V_ei(r0)|^2 to O(1e-6). SNUfish averages
+# them over each flux component's production profile and combines them with
+# B3 into day and night P_ee and the day-night asymmetry.
+#
+# Status: DRAFT.
+
+id: B2_sun
+version: 0.1.0
+status: draft
+title: Mass-eigenstate fractions leaving the Sun
+neutrinos_only: true
+
+quantities:
+  F1: P(nu_e at r0 -> nu_1 at the solar surface)
+  F2: P(nu_e at r0 -> nu_2 at the solar surface)
+  F3: P(nu_e at r0 -> nu_3 at the solar surface)
+
+grids:
+  map:
+    energy:  {start: 0.1, stop: 20.0, step: 0.1, unit: MeV}   # 200 points: pp to hep
+    radius:  {start: 0.0, stop: 0.3,  step: 0.005}            # r0 / R_sun, 61 points; 99% of every flux is below 0.27
+
+# Same parameters and constants as B3 (NuFIT 6.0, normal ordering).
+oscillation:
+  sin2_theta12: 0.307
+  sin2_theta13: 0.02195
+  sin2_theta23: 0.561
+  delta_cp_deg: 177.0
+  dm2_21_eV2: 7.49e-5
+  dm2_31_eV2: 2.534e-3
+  ordering: normal
+
+constants:
+  G_F_GeV-2: 1.1663788e-5       # PDG 2024
+  hbarc_MeV_fm: 197.3269804     # CODATA 2018
+  N_A_mol-1: 6.02214076e+23
+
+sun:
+  radius_km: 695700.0           # IAU 2015 nominal solar radius
+  path: radial                  # from r0 straight out to the surface
+
+# Electron density profiles n_e(r), in N_A / cm^3 (so V = sqrt(2) G_F N_A n_e).
+solar_models:
+  b16_gs98:
+    description: >
+      B16-GS98 table (reference/ssm/b16_gs98_nudistr.dat, column 3 = log10 n_e),
+      interpolated linearly in log10 n_e against r/R_sun; constant below the
+      first point (0.0005); beyond the last point (0.5),
+      log10 n_e = 2.3711 - 4.6246 r/R_sun (fit to the table for r > 0.4,
+      residual < 0.003).
+    table: reference/ssm/b16_gs98_nudistr.dat
+    radius_column: 0
+    log10_ne_column: 2
+    tail: {intercept: 2.3711, slope: -4.6246}
+  exponential:
+    description: Bahcall's exponential approximation n_e = 245 exp(-10.54 r/R_sun).
+    n0: 245.0
+    scale: 10.54
+
+variants:
+  b16_gs98:
+    required: true
+    solar_model: b16_gs98
+    description: Realistic SSM density; the tool comparison.
+  exponential:
+    required: false
+    solar_model: exponential
+    description: Analytic profile used in many textbook and fast calculations.
+
+# Production profiles used by SNUfish for the averages (columns of the table).
+production:
+  table: reference/ssm/b16_gs98_nudistr.dat
+  components: {pp: 4, pep: 5, hep: 6, Be7: 7, B8: 8, N13: 9, O15: 10, F17: 11}
+
+columns:
+  grid:      string, a key of `grids`
+  variant:   string, a key of `variants`
+  quantity:  string, a key of `quantities`
+  energy:    float, MeV
+  radius:    float, r0 / R_sun
+  value:     float, the probability
+
+checks:
+  range: [0.0, 1.0]
+  unitarity_tolerance: 1.0e-6   # F1 + F2 + F3 = 1
+
+# Open questions:
+# - A validated non-adiabatic solver (e.g. adiabatic-basis integration with
+#   phase averaging) to measure the O(1/gamma^2) corrections directly.
+# - Radial path vs the true line of sight for off-centre production
+#   (irrelevant while propagation is adiabatic; the reference measures it).
+# - Add AGSS09 (reference table available) as a variant?

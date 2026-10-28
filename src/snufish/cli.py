@@ -23,19 +23,31 @@ def cmd_validate(args):
 
 
 def cmd_build(args):
-    from .build import build
+    from .build import build, combine_day_night
 
     for benchmark in args.benchmark or available_benchmarks():
         build(benchmark, extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
+    combine_day_night(args.out)
     return 0
 
 
-def cmd_reference(args):
-    from .reference import earth
+def _reference_records(spec):
+    if spec.id == "B3_earth":
+        from .reference import earth
 
+        variants = earth.exact_variants(spec)
+        return variants, "exact matrix exponential per constant-density segment", [
+            r for variant in variants for grid in spec.grids for r in earth.solve_b3(spec, variant, grid)]
+    from .reference import sun
+
+    variants = list(spec.variants)
+    return variants, "adiabatic: |V_ei(r0)|^2 from the eigenvectors at the production point", [
+        r for variant in variants for grid in spec.grids for r in sun.solve_b2(spec, variant, grid)]
+
+
+def cmd_reference(args):
     spec = load_spec(args.benchmark)
-    records = [r for variant in earth.exact_variants(spec) for grid in spec.grids
-               for r in earth.solve_b3(spec, variant, grid)]
+    variants, method, records = _reference_records(spec)
     meta = {
         "tool": "snufish-reference",
         "tool_version": __version__,
@@ -45,8 +57,7 @@ def cmd_reference(args):
         "contributor": "SNUfish maintainers",
         "date": datetime.date.today().isoformat(),
         "command": f"snufish reference {spec.id}",
-        "settings": {"method": "exact matrix exponential per constant-density segment",
-                     "variants": earth.exact_variants(spec)},
+        "settings": {"method": method, "variants": variants},
         "license": "CC-BY-4.0",
     }
     path = contributions_dir() / meta["tool"] / spec.id / meta["tool_version"]
@@ -74,7 +85,7 @@ def main(argv=None):
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("reference", help="(re)compute the SNUfish reference contribution")
-    p.add_argument("benchmark", choices=["B3_earth"])
+    p.add_argument("benchmark", choices=["B2_sun", "B3_earth"])
     p.set_defaults(func=cmd_reference)
 
     args = parser.parse_args(argv)

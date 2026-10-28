@@ -1,11 +1,11 @@
 id: snufish-reference
 name: SNUfish reference solvers
-description: Exact three-flavour evolution through piecewise-constant matter, shipped with SNUfish as the baseline for B3.
+description: Baselines shipped with SNUfish. B3, exact three-flavour evolution through piecewise-constant matter; B2, adiabatic three-flavour fractions at the production point.
 language: Python
 license: MIT
 repository: null            # the SNUfish repository, once public
 documentation: null
 reference: null
 maintainers: [Sergio Manthey]
-benchmarks: [B3_earth]
+benchmarks: [B2_sun, B3_earth]
 status: verified

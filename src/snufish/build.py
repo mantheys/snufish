@@ -75,7 +75,66 @@ def _build_b3(contributions, spec):
     }
 
 
-BUILDERS = {"B3_earth": _build_b3}
+def _build_b2(contributions, spec):
+    from .solar import production_weights
+
+    vacuum = np.abs(pmns(spec["oscillation"])[0]) ** 2
+    radii = spec.axis("radius")
+    weights = production_weights(spec, radii)
+    by_energy, averages = [], []
+    for contribution in contributions:
+        meta = contribution.meta
+        df = contribution.data.rename(columns={"variant": "Variant", "quantity": "Quantity", "energy": "Energy",
+                                               "radius": "Radius", "value": "Fraction"})
+        df["RadiusBin"] = df["Radius"].map(lambda r: f"{r:.3f}")
+        base = {"Tool": meta["tool"], "Version": str(meta["tool_version"]), "Label": contribution.label}
+        by_energy += _series_rows(df, ["Variant", "Quantity", "RadiusBin"], "Energy", ("Fraction",), base)
+
+        for variant, sub in df.groupby("Variant"):
+            # F[radius, energy, i] on the spec grid
+            cube = np.stack([sub[sub.Quantity == f"F{i}"].pivot(index="Radius", columns="Energy", values="Fraction")
+                             .reindex(index=radii).to_numpy() for i in (1, 2, 3)], axis=-1)
+            energies = np.sort(sub["Energy"].unique())
+            for component, w in weights.items():
+                F = np.einsum("r,rei->ei", w, cube)
+                averages.append(dict(base, Variant=variant, Component=component, Energy=energies,
+                                     F1=F[:, 0], F2=F[:, 1], F3=F[:, 2], PeeDay=F @ vacuum))
+    return {"B2_Energy": pd.DataFrame(by_energy), "B2_Average": pd.DataFrame(averages)}
+
+
+BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3}
+
+# Flux components combined with B3 (spectra reaching the B3 energy range).
+DAY_NIGHT_COMPONENTS = ("B8", "hep")
+
+
+def combine_day_night(out_dir=None, echo=print):
+    """B2 x B3: day and night P_ee and the day-night asymmetry
+    A_DN = 2 (N - D) / (N + D) per tool, solar model, Earth model, site and
+    component, on the B3 exposure energies. Tools are paired with themselves."""
+    out_dir = Path(out_dir) if out_dir else build_dir()
+    sun_path, earth_path = out_dir / "B2_Average.parquet", out_dir / "B3_Night.parquet"
+    if not (sun_path.exists() and earth_path.exists()):
+        return None
+    sun, earth = pd.read_parquet(sun_path), pd.read_parquet(earth_path)
+    rows = []
+    for _, s in sun[sun.Component.isin(DAY_NIGHT_COMPONENTS)].iterrows():
+        nights = earth[earth.Tool == s.Tool]
+        for (earth_variant, site), group in nights.groupby(["Variant", "Site"]):
+            night = {q: group[group.Quantity == q].iloc[0] for q in ("P1e", "P2e", "P3e")}
+            energy = np.asarray(night["P1e"].Energy)
+            index = np.searchsorted(s.Energy, energy)
+            assert np.allclose(np.asarray(s.Energy)[index], energy)
+            F = [np.asarray(s[f"F{i}"])[index] for i in (1, 2, 3)]
+            day = np.asarray(s.PeeDay)[index]
+            pee_night = sum(F[i] * np.asarray(night[f"P{i + 1}e"].Night) for i in range(3))
+            rows.append(dict(Tool=s.Tool, Version=s.Version, Label=s.Label, SunVariant=s.Variant,
+                             EarthVariant=earth_variant, Site=site, Component=s.Component, Energy=energy,
+                             PeeDay=day, PeeNight=pee_night, ADN=2 * (pee_night - day) / (pee_night + day)))
+    frame = pd.DataFrame(rows)
+    _write_frame(frame, out_dir / "B23_DayNight.parquet")
+    echo(f"wrote   {out_dir / 'B23_DayNight'}.parquet ({len(frame)} rows)")
+    return frame
 
 
 def _write_frame(frame, path):

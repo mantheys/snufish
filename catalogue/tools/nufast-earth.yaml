@@ -7,9 +7,11 @@ repository: https://github.com/PeterDenton/NuFast-Earth
 documentation: User_Guide.pdf in the repository
 reference: arXiv:2511.04735
 maintainers: [Peter B. Denton, Stephen J. Parke]
-benchmarks: [B3_earth]
-status: verified        # B3 wrapper: contributions/nufast-earth/scripts (pinned submodule)
+benchmarks: [B2_sun, B3_earth]
+status: verified        # B2 and B3 wrappers: contributions/nufast-earth/scripts (pinned submodule)
 notes: >
   B3 uses the private Earth matrix solar_night_in_earth; the public
   Get_Solar_Night_Probabilities folds it with Vsolar at one solar density.
   P3e is computed as 1 - P1e - P2e, so unitarity holds by construction.
+  B2 uses Calculate_Solar_Probability (adiabatic |V_ei|^2 at one density);
+  F1 = 1 - F2 - F3 by construction.

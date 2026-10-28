@@ -1,0 +1,14 @@
+tool: snufish-reference
+tool_version: 0.1.0
+tool_commit: null
+benchmark: B2_sun
+benchmark_version: 0.1.0
+contributor: SNUfish maintainers
+date: '2026-10-28'
+command: snufish reference B2_sun
+settings:
+  method: 'adiabatic: |V_ei(r0)|^2 from the eigenvectors at the production point'
+  variants:
+  - b16_gs98
+  - exponential
+license: CC-BY-4.0

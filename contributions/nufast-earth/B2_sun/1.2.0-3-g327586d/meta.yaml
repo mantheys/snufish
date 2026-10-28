@@ -1,0 +1,14 @@
+tool: nufast-earth
+tool_version: 1.2.0-3-g327586d
+tool_commit: 327586d
+benchmark: B2_sun
+benchmark_version: 0.1.0
+contributor: SNUfish maintainers (wrapper); NuFast-Earth by P. B. Denton and S. J.
+  Parke
+date: '2026-10-28'
+command: cd contributions/nufast-earth/scripts && make && python run_b2.py
+settings:
+  quantity: Probability_Engine::Calculate_Solar_Probability (adiabatic |V_ei|^2 at
+    rhoYe = n_e(r0)); F1 = 1 - F2 - F3 by construction
+license: CC-BY-4.0
+reference: arXiv:2511.04735

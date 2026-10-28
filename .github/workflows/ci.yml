@@ -12,5 +12,6 @@ jobs:
       - run: snufish validate
       - run: snufish build
       - run: plotipus run b3 --jobs 4
+      - run: plotipus run b2 --jobs 4
       - uses: actions/upload-artifact@v4
         with: {name: plots, path: output/plots}

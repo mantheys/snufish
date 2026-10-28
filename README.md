@@ -39,6 +39,9 @@ outside this repository (e.g. results not yet public) to a local build.
 
 ## Benchmarks
 
+**B2_sun** (MSW in the Sun) and **B3_earth** (Earth crossing) combine into
+day and night P_ee and the day-night asymmetry per detector site.
+
 See [benchmarks/README.md](benchmarks/README.md). The first one is
 **B3_earth**: P(nu_i -> nu_e) for mass eigenstates crossing a fixed
 four-shell Earth, on a (E, cos nadir) grid. The SNUfish reference solver

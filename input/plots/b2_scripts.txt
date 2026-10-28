@@ -1,0 +1,13 @@
+# B2 Sun and B2 x B3 day-night. Data: `snufish build` (build/data).
+# Daytime survival probability per flux component (production-averaged), the classic MSW curve
+line --no_error --datafile B2_Average -x Energy -y PeeDay --hue Component --select Tool -s snufish-reference --select Variant -s b16_gs98 --plot_type line --logx --labelx 'Neutrino energy (MeV)' --labely '$P_{ee}^\mathrm{day}$' --title 'Daytime $P_{ee}$ by production region (B16-GS98)' --output_suffix components
+# Solar model: 8B with the B16 table and the exponential profile
+line --no_error --datafile B2_Average -x Energy -y PeeDay --hue Variant --select Tool -s snufish-reference --select Component -s B8 --plot_type line --logx --labelx 'Neutrino energy (MeV)' --labely '$P_{ee}^\mathrm{day}$' --title '$^8$B: B16-GS98 vs exponential density' --output_suffix solar_models
+# nu_2 fraction against energy for production radii
+line --no_error --datafile B2_Energy -x Energy -y Fraction --hue RadiusBin --select Tool -s snufish-reference --select Variant -s b16_gs98 --select Quantity -s F2 --select RadiusBin -s 0.000 --select RadiusBin -s 0.050 --select RadiusBin -s 0.100 --select RadiusBin -s 0.200 --select RadiusBin -s 0.300 --plot_type line --logx --labelx 'Neutrino energy (MeV)' --labely '$F_2$' --title '$\nu_2$ fraction by production radius ($r_0/R_\odot$)' --output_suffix f2_radius
+# Day-night asymmetry of 8B per site (B16 x prem_prob3)
+line --no_error --datafile B23_DayNight -x Energy -y ADN --hue Site --select Tool -s snufish-reference --select SunVariant -s b16_gs98 --select EarthVariant -s prem_prob3 --select Component -s B8 --plot_type line --horizontal 0 --labelx 'Neutrino energy (MeV)' --labely '$A_\mathrm{DN} = 2(N-D)/(N+D)$' --title '$^8$B day-night asymmetry by site' --output_suffix adn_sites
+# Day-night asymmetry at SURF per Earth model
+line --no_error --datafile B23_DayNight -x Energy -y ADN --hue EarthVariant --select Tool -s nufast-earth --select SunVariant -s b16_gs98 --select Component -s B8 --select Site -s SURF --plot_type line --horizontal 0 --labelx 'Neutrino energy (MeV)' --labely '$A_\mathrm{DN}$' --title '$^8$B day-night asymmetry at SURF by Earth model' --output_suffix adn_models
+# Tool comparison of A_DN at SURF
+line --no_error --datafile B23_DayNight -x Energy -y ADN --hue Label --select SunVariant -s b16_gs98 --select EarthVariant -s prem_prob3 --select Component -s B8 --select Site -s SURF --plot_type line --lower subtract --reference Label --reference_value 'snufish-reference 0.1.0' --lower_labely 'Tool $-$ reference' --labelx 'Neutrino energy (MeV)' --labely '$A_\mathrm{DN}$' --title 'Tool comparison of $A_\mathrm{DN}$ at SURF' --output_suffix adn_tools

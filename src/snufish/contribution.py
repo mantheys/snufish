@@ -161,4 +161,12 @@ def _check_b3(df, spec):
     return problems
 
 
-BENCHMARK_CHECKS = {"B3_earth": _check_b3}
+def _check_b2(df, spec):
+    wide = df.pivot_table(index=["grid", "variant", "energy", "radius"], columns="quantity", values="value")
+    worst = np.abs(wide[["F1", "F2", "F3"]].sum(axis=1) - 1).max()
+    if worst > spec["checks"]["unitarity_tolerance"]:
+        return [f"unitarity: |F1 + F2 + F3 - 1| reaches {worst:.2e}"]
+    return []
+
+
+BENCHMARK_CHECKS = {"B3_earth": _check_b3, "B2_sun": _check_b2}
