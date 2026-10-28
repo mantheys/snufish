@@ -215,10 +215,16 @@ def combine_rates(out_dir=None, echo=print):
                             contents = {name: _bin_lines(lines, e) for name, e in binnings.items()}
                         else:
                             _, energy, shape = flux
-                            value, missing = folded(component, energy)
-                            density = n_targets * flux[0] * shape * value * seconds  # per MeV
-                            cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(energy))])
-                            contents = {name: np.diff(np.interp(e, energy, cumulative)) for name, e in binnings.items()}
+                            # The density is linear between the shape's table points; bin edges
+                            # inside the table become nodes too, so bins narrower than the table
+                            # spacing are not flat steps.
+                            inner = [e[(e > energy[0]) & (e < energy[-1])] for e in binnings.values()]
+                            fine = np.unique(np.concatenate([energy, *inner]))
+                            value, _ = folded(component, fine)
+                            density = n_targets * flux[0] * np.interp(fine, energy, shape) * value * seconds  # per MeV
+                            cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(fine))])
+                            contents = {name: np.diff(np.interp(e, fine, cumulative)) for name, e in binnings.items()}
+                            _, missing = folded(component, energy)
                             weight = shape * (energy >= threshold)
                             above = np.trapezoid(weight, energy)
                             known = np.trapezoid(weight * ~missing, energy)
