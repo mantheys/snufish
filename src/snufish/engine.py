@@ -5,7 +5,8 @@ The inputs are a plain dict (fluxes, spectral shapes, cross-section tables,
 detector targets, sites, parameter sets): ``snufish.export.collect_inputs``
 builds it from the repository and an app bundle stores it as
 ``inputs.json``. Everything here is NumPy, so the same code runs in the
-command line and in the browser (Pyodide).
+command line and, ported to JavaScript (web/engine.js, checked against this
+module by tests/test_web_engine.py), in the web page.
 
 A probability provider has two methods:
 
@@ -154,6 +155,42 @@ class Setup:
         return replace(self, **changes)
 
 
+QUANTITY_NAMES = ("rate", "adn")
+PERIODS = ("day", "night", "annual")
+
+
+def check(inputs, setup, quantity="rate"):
+    """Raise ValueError, with what is allowed, if ``setup`` mixes options that
+    do not go together (e.g. a channel the detector does not have)."""
+    def allowed(what, value, options):
+        if value not in options:
+            raise ValueError(f"{what} {value!r} is not available; choose one of: {', '.join(map(str, options))}")
+
+    allowed("quantity", quantity, QUANTITY_NAMES)
+    allowed("period", setup.period, PERIODS)
+    allowed("solar model", setup.solar_model, list(inputs["solar_models"]))
+    if not setup.components:
+        raise ValueError("select at least one flux component")
+    for c in setup.components:
+        allowed("flux component", c, list(inputs.components))
+    allowed("8B flux", setup.b8_flux, ["model", "sno_nc"])
+    allowed("detector", setup.detector, list(inputs["detectors"]))
+    channels = list(inputs["detectors"][setup.detector]["channels"])
+    if setup.channel not in channels:
+        raise ValueError(f"channel {setup.channel!r} is not available in {setup.detector}; "
+                         f"choose one of: {', '.join(channels)}")
+    if setup.channel == "es":
+        allowed("ES model", setup.es_model, ["tree", "snowglobes"])
+    else:
+        allowed(f"cross-section model of {setup.channel}", setup.xsec_model, inputs.xsec_models(setup.channel))
+    if setup.recoil_threshold < 0:
+        raise ValueError("the recoil threshold must be >= 0")
+    allowed("site", setup.site, list(inputs["sites"]))
+    allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
+    if setup.exposure is not None and setup.exposure <= 0:
+        raise ValueError("the exposure must be > 0 (or None for no statistical uncertainty)")
+
+
 def cross_sections(inputs, setup, energy):
     """(sigma nu_e, sigma nu_mu/tau) in cm^2 per target, and targets per kton."""
     detector = inputs["detectors"][setup.detector]
@@ -242,6 +279,31 @@ def needs_night(quantity, period):
     return quantity == "adn" or period != "day"
 
 
+def binned(rates, edges):
+    """{component: {"day", "night"}} of rates per kton-year in each energy bin
+    (continua integrated over the bin, lines put in the bin holding them)."""
+    def counts(kind, energy, values):
+        if values is None:
+            return None
+        if kind == "line":
+            return np.histogram(energy, edges, weights=values)[0]
+        cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (values[1:] + values[:-1]) * np.diff(energy))])
+        return np.diff(np.interp(edges, energy, cumulative))
+
+    return {c: {p: counts(r["kind"], r["energy"], r[p]) for p in ("day", "night")} for c, r in rates.items()}
+
+
+def energy_edges(inputs, components, per_decade=16):
+    """Log-spaced bin edges covering the components' energies."""
+    low, high = [], []
+    for c in components:
+        _, energy, _ = inputs.components[c]
+        low.append(energy.min())
+        high.append(energy.max())
+    lo, hi = np.log10(max(min(low) * 0.9, 0.05)), np.log10(max(high) * 1.05)
+    return np.logspace(lo, hi, max(int(np.ceil((hi - lo) * per_decade)), 4) + 1)
+
+
 # ---------------------------------------------------------------- budget
 
 RANGE_LABELS = {"xsec_model": "cross-section model", "es_model": "ES radiative corrections",
@@ -275,7 +337,7 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
     "fluxes" takes the solar-model range from the fluxes alone, with the
     day fractions of ``setup.solar_model`` (one table instead of all; the
     density profile moves F_i by ~1e-3, the fluxes by ~10%)."""
-    rng = np.random.default_rng(seed)
+    check(inputs, setup, quantity)
     night = needs_night(quantity, setup.period)
     comps = list(setup.components)
 
@@ -283,8 +345,7 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         per = totals(component_rates(inputs, probabilities, s, osc or oscillation(params), night))
         return quantity_value(quantity, s.period, *combine(per, comps, multipliers))
 
-    osc_draws = sample_oscillation(params, rng, n)
-    flux_draws = sample_fluxes(inputs, rng, setup.solar_model, comps, n, setup.b8_flux)
+    rng, osc_draws, flux_draws = _draws(inputs, setup, params, n, seed)
     nominal = totals(component_rates(inputs, probabilities, setup, oscillation(params), night))
     day0, night0 = combine(nominal, comps)
     central = quantity_value(quantity, setup.period, day0, night0)
@@ -295,7 +356,7 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         values = np.asarray(values, dtype=float)
         sigma = float(np.std(values, ddof=1))
         rows.append(dict(Source=source, Kind="sampled", Central=central, Sigma=sigma,
-                         Relative=sigma / abs(central), Low=np.nan, High=np.nan))
+                         Relative=_relative(sigma, central), Low=np.nan, High=np.nan))
         samples[source] = values
 
     per_draw = [totals(component_rates(inputs, probabilities, setup, o, night)) for o in osc_draws]
@@ -327,8 +388,45 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         label = "40Ar nuclear model" if choice == "xsec_model" and setup.channel == "cc_nue_ar40" \
             else RANGE_LABELS[choice]
         rows.append(dict(Source=label, Kind="model range", Central=central, Sigma=np.nan,
-                         Relative=max(high - central, central - low) / abs(central), Low=low, High=high))
+                         Relative=_relative(max(high - central, central - low), central), Low=low, High=high))
     return rows, samples
+
+
+def _relative(error, central):
+    return error / abs(central) if central != 0 else np.nan
+
+
+def _draws(inputs, setup, params, n, seed):
+    """(rng, oscillation draws, flux multipliers): the same for a budget and
+    the spectra of one seed."""
+    rng = np.random.default_rng(seed)
+    osc_draws = sample_oscillation(params, rng, n)
+    return rng, osc_draws, sample_fluxes(inputs, rng, setup.solar_model, list(setup.components), n, setup.b8_flux)
+
+
+def spectra(inputs, probabilities, setup, params, edges=None, n=400, seed=1, night=True):
+    """Binned rates per kton-year: dict(edges, components={c: {"day", "night"}}
+    at the central parameters, day/night totals, and draws_day/draws_night
+    [n, bins] of the totals for the sampled oscillation parameters and fluxes
+    (the draws of ``budget`` with the same seed)."""
+    check(inputs, setup)
+    edges = energy_edges(inputs, setup.components) if edges is None else np.asarray(edges)
+    comps = list(setup.components)
+    _, osc_draws, flux_draws = _draws(inputs, setup, params, n, seed)
+
+    def total(per, multipliers=None):
+        m = np.ones(len(comps)) if multipliers is None else multipliers
+        day = sum(m[k] * per[c]["day"] for k, c in enumerate(comps))
+        nite = sum(m[k] * per[c]["night"] for k, c in enumerate(comps)) if night else None
+        return day, nite
+
+    nominal = binned(component_rates(inputs, probabilities, setup, oscillation(params), night), edges)
+    draws = [total(binned(component_rates(inputs, probabilities, setup, o, night), edges),
+                   None if flux_draws is None else flux_draws[i]) for i, o in enumerate(osc_draws)]
+    day, nite = total(nominal)
+    return dict(edges=edges, components=nominal, day=day, night=nite,
+                draws_day=np.array([d for d, _ in draws]),
+                draws_night=np.array([x for _, x in draws]) if night else None)
 
 
 # ---------------------------------------------------------------- tables
@@ -347,6 +445,19 @@ def _bilinear(x_axis, y_axis, values, x, y):
             + (1 - tx) * ty * values[i, j + 1] + tx * ty * values[i + 1, j + 1])
 
 
+def read_table(directory, name):
+    """{key: array} of a table written by ``snufish.export.write_table``."""
+    directory = Path(directory)
+    with (directory / f"{name}.json").open() as handle:
+        meta = json.load(handle)
+    out = {k: np.array(v) for k, v in meta["values"].items()}
+    data = np.fromfile(directory / meta["bin"], dtype="<f4")
+    for key, entry in meta["arrays"].items():
+        start = entry["offset"] // 4
+        out[key] = data[start:start + int(np.prod(entry["shape"]))].reshape(entry["shape"])
+    return out
+
+
 class TableProbabilities:
     """Probabilities interpolated from an app bundle: bilinear in
     (sin^2 theta12, Delta m^2_21), linear in log E (day) or E (night). The
@@ -361,8 +472,7 @@ class TableProbabilities:
 
     def _load(self, name):
         if name not in self._tables:
-            with np.load(self.directory / f"{name}.npz") as data:
-                self._tables[name] = {k: data[k] for k in data.files}
+            self._tables[name] = read_table(self.directory, name)
         return self._tables[name]
 
     def _point(self, table, osc):

@@ -97,24 +97,27 @@ NuFast-Earth for the night: `make` in `contributions/nufast-earth/scripts`),
 through `snufish.engine`: the folding of fluxes, probabilities and cross
 sections and the uncertainty budget, in NumPy only.
 
-## The app (in development)
+## The web page (in development)
 
-The same engine runs in the browser (Panel on Pyodide): pick oscillation
-parameters, solar model, detector, channel, site and Earth model, and get
-the rate or day-night asymmetry with its error budget, plotted by plotipus.
-In the browser the Sun and Earth solvers are replaced by tables of their
-results on a (sin^2 theta12, Delta m^2_21) grid; they reproduce the exact
-solvers to 2e-4 for rates and 1% for the day-night asymmetry (3e-4
-absolute), checked by `tests/test_engine.py` (also
-`snufish budget --tables build/app`).
+A static page (plain JavaScript, no server) on top of the same engine: pick
+oscillation parameters, solar model and flux components, site and Earth
+model, target and channel, and get the rate or the day-night asymmetry with
+its spectrum, the distribution of the sampled values and the error budget.
+It opens in under a second and recomputes in ~50 ms. "Download" gives the
+result as Parquet with a plotipus command list (`plotipus run app`) and the
+figures.
+
+`web/engine.js` is a port of `snufish.engine`: `tests/test_web_engine.py`
+runs both on the same tables and random draws and requires agreement to
+1e-9 (it is ~1e-14). The Sun and Earth solvers are replaced by tables of
+their results on a (sin^2 theta12, Delta m^2_21) grid, which reproduce them
+to 2e-4 for rates and 1% for the day-night asymmetry (3e-4 absolute;
+`tests/test_engine.py`, or `snufish budget --tables build/app`).
 
 ```bash
-python -m venv .venv && source .venv/bin/activate      # once; then activate in each new shell
-pip install -e ".[app]"
-snufish export-app --out build/app                       # tables, ~3 min on 8 cores, 16 MB
-python app/build.py --plotipus ../plotipus --out build/site
-python -m http.server -d build/site                     # open /snufish_app.html
-panel serve app/snufish_app.py                           # or locally, without Pyodide
+snufish export-app --out build/app      # tables, ~3 min on 8 cores
+python web/build.py --out build/site    # page + tables, plain files for any static host
+python -m http.server -d build/site     # open http://localhost:8000
 ```
 
 ## Layout
@@ -129,7 +132,7 @@ contributions/<tool>/scripts/    how a tool's contribution is produced
 reference/                       shared inputs (solar model, flux shapes), with provenance
 input/plots/<list>_scripts.txt   plotipus command lists
 src/snufish/                     validator, builder, reference solvers, engine
-app/                             the browser app (Panel on Pyodide)
+web/                             the web page (static; engine.js ports snufish.engine)
 ```
 
 ## Use

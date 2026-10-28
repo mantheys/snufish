@@ -2,11 +2,13 @@
 
     snufish export-app --out build/app
 
-writes ``inputs.json`` (see :mod:`snufish.engine`), ``day_<solar model>.npz``
+writes ``inputs.json`` (see :mod:`snufish.engine`), ``day_<solar model>``
 (F_1, F_2 per flux component on a (sin^2 theta12, Delta m^2_21, E) grid,
-over the component's own energies) and
-``night_<Earth model>.npz`` (P(nu_i -> nu_e) for every site on the same
-parameter grid). Needs ``snufish build`` (B4 cross sections) and the
+over the component's own energies) and ``night_<Earth model>``
+(P(nu_i -> nu_e) for every site on the same parameter grid). Each table is
+``<name>.json`` (small arrays, exact, and an index) with ``<name>.bin``
+(large arrays, little-endian float32): read the same way by
+:func:`snufish.engine.read_table` and by the web page. Needs ``snufish build`` (B4 cross sections) and the
 NuFast-Earth driver (night tables).
 """
 
@@ -76,8 +78,9 @@ def collect_inputs():
     sigma = pd.read_parquet(build_dir() / "B4_Sigma.parquet")
     xsec = {}
     for row in sigma[(sigma.Tool == "snowglobes") & sigma.Channel.str.startswith("cc_")].itertuples():
+        # NaN: not provided by the model at that energy; counted as zero (a lower bound)
         xsec.setdefault(row.Channel, {})[row.Variant] = {"energy": np.asarray(row.Energy).tolist(),
-                                                         "sigma": np.asarray(row.Sigma).tolist()}
+                                                         "sigma": np.nan_to_num(np.asarray(row.Sigma)).tolist()}
     ratio = {}
     for flavour in ("nue", "numu"):
         rows = {r.Tool: r for r in sigma[(sigma.Channel == f"es_{flavour}") & (sigma.Variant == "default")].itertuples()}
@@ -111,6 +114,26 @@ class ExactProbabilities:
 
     def night(self, osc, earth_model, site):
         return night_probabilities(osc, earth_model, site_latitude(site))
+
+
+def write_table(directory, name, values):
+    """``<name>.json`` + ``<name>.bin``: arrays of more than 1000 numbers go to
+    the .bin as float32, the rest (and strings) to the .json as they are."""
+    index, small, chunks, offset = {}, {}, [], 0
+    for key, value in values.items():
+        value = np.asarray(value)
+        if value.dtype.kind in "US" or value.size <= 1000:
+            small[key] = value.tolist()
+            continue
+        data = np.ascontiguousarray(value, dtype="<f4")
+        index[key] = {"offset": offset, "shape": list(value.shape)}
+        chunks.append(data.tobytes())
+        offset += data.nbytes
+    with (Path(directory) / f"{name}.bin").open("wb") as handle:
+        handle.write(b"".join(chunks))
+    with (Path(directory) / f"{name}.json").open("w") as handle:
+        json.dump({"values": small, "arrays": index, "bin": f"{name}.bin"}, handle)
+    return [f"{name}.json", f"{name}.bin"]
 
 
 def _axis(start, stop, step):
@@ -152,7 +175,7 @@ def export_app(out, s12=S12_GRID, dm21=DM21_GRID, jobs=None, solar_models=None):
     out.mkdir(parents=True, exist_ok=True)
     inputs = collect_inputs()
     with (out / "inputs.json").open("w") as handle:
-        json.dump(inputs, handle)
+        json.dump(inputs, handle, allow_nan=False)  # read by JavaScript too
     s12_axis, dm21_axis = _axis(*s12), _axis(*dm21)
     solar_models = list(solar_models or inputs["solar_models"])
     earth_models, sites = inputs["earth_models"], inputs["sites"]
@@ -176,17 +199,13 @@ def export_app(out, s12=S12_GRID, dm21=DM21_GRID, jobs=None, solar_models=None):
     files = []
     energies = component_energies(inputs)
     for m, model in enumerate(solar_models):
-        path = out / f"day_{model}.npz"
         tables = {f"F_{c}": np.array([r[0][m][c] for r in results]).reshape(*shape, len(energies[c]), 2)
                   for c in COMPONENTS}  # s12, dm21, E, (F1, F2)
-        np.savez_compressed(path, **common, **{f"energy_{c}": energies[c] for c in COMPONENTS},
-                            **{k: v.astype(np.float32) for k, v in tables.items()})
-        files.append(path.name)
+        files += write_table(out, f"day_{model}", {**common, **{f"energy_{c}": energies[c] for c in COMPONENTS},
+                                                   **tables})
     for e, earth in enumerate(earth_models):
-        path = out / f"night_{earth}.npz"
-        np.savez_compressed(path, **common, energy=results[0][2], sites=np.array(list(sites)),
-                            P=np.moveaxis(night[:, :, e], 2, 0).astype(np.float32))
-        files.append(path.name)
+        files += write_table(out, f"night_{earth}", {**common, "energy": results[0][2], "sites": np.array(list(sites)),
+                                                     "P": np.moveaxis(night[:, :, e], 2, 0)})
     manifest = {"date": datetime.date.today().isoformat(), "s12": list(s12), "dm21_1e-5eV2": list(dm21),
                 "files": ["inputs.json", *files]}
     with (out / "manifest.json").open("w") as handle:

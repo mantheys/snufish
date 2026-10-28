@@ -15,7 +15,6 @@ dependencies = ["numpy", "pandas", "pyarrow", "pyyaml"]
 [project.optional-dependencies]
 plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git"]
 dev = ["pytest"]
-app = ["panel", "plotipus @ git+https://github.com/mantheys/plotipus.git"]
 
 [project.scripts]
 snufish = "snufish.cli:main"

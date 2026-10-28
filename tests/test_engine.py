@@ -108,3 +108,29 @@ def test_table_budget_matches_exact_budget():
     assert list(table.index) == list(exact.index)
     assert np.allclose(table.Central, exact.Central, rtol=5e-3)
     assert np.allclose(table.Relative, exact.Relative, rtol=0.03)
+
+
+def test_check_rejects_mismatched_options(inputs):
+    with pytest.raises(ValueError, match="not available in water"):
+        engine.check(inputs, engine.Setup(detector="water", channel="cc_nue_ar40"))
+    with pytest.raises(ValueError, match="cross-section model"):
+        engine.check(inputs, engine.Setup(detector="argon", channel="cc_nue_ar40", xsec_model="nope"))
+    with pytest.raises(ValueError, match="at least one"):
+        engine.check(inputs, engine.Setup(components=()))
+    engine.check(inputs, engine.Setup(detector="argon", channel="cc_nue_ar40", xsec_model="ar40_marley"))
+
+
+def test_spectra_sum_to_budget_draws(inputs):
+    params = engine.parameters(inputs, "solar_global_2024")
+    setup = engine.Setup(components=("Be7", "pep", "B8"), detector="argon")
+    spec = engine.spectra(inputs, Vacuum(), setup, params, n=50, seed=4, night=False)
+    rows, samples = engine.budget(inputs, Vacuum(), setup, params, "rate", n=50, seed=4, ranges=())
+    assert spec["day"].sum() == pytest.approx(rows[0]["Central"], rel=1e-9)
+    assert spec["draws_day"].sum(axis=1) == pytest.approx(samples["total sampled"], rel=1e-9)
+    assert spec["components"]["Be7"]["day"].sum() > 0 and spec["night"] is None
+
+
+def test_zero_asymmetry_has_no_relative_error(inputs):
+    params = engine.parameters(inputs, "juno_2025")
+    rows, _ = engine.budget(inputs, Vacuum(), engine.Setup(), params, "adn", n=20, ranges=())
+    assert rows[0]["Central"] == pytest.approx(0, abs=1e-12) and np.isnan(rows[0]["Relative"])
