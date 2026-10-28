@@ -1,0 +1,7 @@
+# Plots are made from build/data, written by `snufish build`.
+[project]
+data_root = "build/data"
+plots = "input/plots"
+output = "output"
+plugins = ["snufish.plotipus_plugin"]
+python_path = ["src"]

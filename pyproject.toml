@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snufish"
+version = "0.1.0"
+description = "SNUfish: community benchmarks of solar neutrino tools, plotted with plotipus"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Sergio Manthey", email = "sergio.manthey@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = ["numpy", "pandas", "pyarrow", "pyyaml"]
+
+[project.optional-dependencies]
+plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git"]
+dev = ["pytest"]
+
+[project.scripts]
+snufish = "snufish.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

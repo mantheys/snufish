@@ -1,0 +1,11 @@
+id: nusquids
+name: nuSQuIDS
+description: General neutrino propagation (oscillations, matter, interactions) through arbitrary density profiles.
+language: C++ (Python bindings)
+license: null
+repository: null
+documentation: null
+reference: null
+maintainers: null
+benchmarks: [B2_sun, B3_earth]
+status: draft

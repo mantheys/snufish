@@ -1,0 +1,130 @@
+# SNUfish benchmark B3: solar neutrino propagation through the Earth.
+#
+# Isolates the Earth part of the day-night effect: each contribution gives
+# P(nu_i -> nu_e) for a pure mass eigenstate nu_i arriving at the Earth and
+# crossing it along the chord set by the nadir angle eta. Solar models and
+# MSW in the Sun enter only through B2 (the arriving nu_i fractions), so
+# B3 compares the Earth propagation codes alone.
+#
+# Status: DRAFT. Once frozen, any change bumps `version`; old contributions
+# keep the version they were computed with.
+
+id: B3_earth
+version: 0.2.0
+status: draft
+title: Earth crossing of solar mass eigenstates
+neutrinos_only: true            # antineutrinos out of scope for B3
+
+quantities:
+  P1e: P(nu_1 -> nu_e) after the Earth chord
+  P2e: P(nu_2 -> nu_e) after the Earth chord
+  P3e: P(nu_3 -> nu_e) after the Earth chord
+
+# Every contribution gives all quantities on exactly this grid.
+grid:
+  energy:       {start: 1.0, stop: 20.0, step: 0.1, unit: MeV}   # 191 points
+  cos_nadir:    {start: 0.0, stop: 1.0,  step: 0.01}             # 101 points; 0 = horizon, 1 = through the centre
+                                                                 # (cos zenith = -cos nadir)
+
+# NuFIT 6.0, normal ordering, as used in NuFast-Earth's validation
+# (src/examples/Validation.cpp @ 327586d, "nu-fit 6"). P_ie depends only on
+# the nu_e row of U (theta12, theta13): theta23 and delta must not change
+# the result.
+oscillation:
+  sin2_theta12: 0.307
+  sin2_theta13: 0.02195
+  sin2_theta23: 0.561
+  delta_cp_deg: 177.0
+  dm2_21_eV2: 7.49e-5
+  dm2_31_eV2: 2.534e-3
+  ordering: normal
+
+# Matter potential V = sqrt(2) G_F N_e. Tools with hard-coded constants
+# report theirs in meta.yaml `settings`; for reference, 2 E V per GeV and
+# per g/cm^3 of rho*Ye is 1.526493e-4 eV^2 from these values (NuFast-Earth:
+# 1.5264932e-4).
+constants:
+  G_F_GeV-2: 1.1663788e-5       # PDG 2024
+  hbarc_MeV_fm: 197.3269804     # CODATA 2018
+  N_A_mol-1: 6.02214076e+23
+
+earth:
+  radius_km: 6371.0
+  detector_depth_km: 0.0        # detector at the surface
+
+# Earth models, written out here so that every tool solves the same problem.
+# `shells`: piecewise constant, outer radius in km, density in g/cm^3, Ye.
+# `regions`: PREM density polynomials rho(x) = sum_k c_k x^k with x = r/R_E.
+# Ye = 0.466 in the core and 0.494 in the mantle (hep-ph/0002149, as in
+# NuFast-Earth). Copied from NuFast-Earth src/Earth.cpp @ 327586d.
+earth_models:
+  prem_prob3:
+    description: Four constant shells as in Prob3++ (NuFast-Earth PREM_Prob3).
+    shells:
+      - {outer_radius_km: 1220.0, density: 13.0, ye: 0.5}
+      - {outer_radius_km: 3480.0, density: 11.3, ye: 0.5}
+      - {outer_radius_km: 5701.0, density: 5.0,  ye: 0.5}
+      - {outer_radius_km: 6371.0, density: 3.3,  ye: 0.5}
+  prem_four:
+    description: PREM polynomials of the four main regions, the outermost extended to the surface (NuFast-Earth PREM_Four).
+    regions:
+      - {outer_radius_km: 1221.5, coefficients: [13.0885, 0.0, -8.8381],               ye: 0.466}
+      - {outer_radius_km: 3480.0, coefficients: [12.5815, -1.2638, -3.6426, -5.5281],  ye: 0.466}
+      - {outer_radius_km: 5701.0, coefficients: [7.9565, -6.4761, 5.5283, -3.0807],    ye: 0.494}
+      - {outer_radius_km: 6371.0, coefficients: [5.3197, -1.4836],                     ye: 0.494}
+  prem_full:
+    description: Full PREM (Dziewonski & Anderson 1981), ten regions (NuFast-Earth PREM_Full).
+    regions:
+      - {outer_radius_km: 1221.5, coefficients: [13.0885, 0.0, -8.8381],               ye: 0.466}
+      - {outer_radius_km: 3480.0, coefficients: [12.5815, -1.2638, -3.6426, -5.5281],  ye: 0.466}
+      - {outer_radius_km: 5701.0, coefficients: [7.9565, -6.4761, 5.5283, -3.0807],    ye: 0.494}
+      - {outer_radius_km: 5771.0, coefficients: [5.3197, -1.4836],                     ye: 0.494}
+      - {outer_radius_km: 5971.0, coefficients: [11.2494, -8.0298],                    ye: 0.494}
+      - {outer_radius_km: 6151.0, coefficients: [7.1089, -3.8045],                     ye: 0.494}
+      - {outer_radius_km: 6346.6, coefficients: [2.6910, 0.6924],                      ye: 0.494}
+      - {outer_radius_km: 6356.0, coefficients: [2.9],                                 ye: 0.494}
+      - {outer_radius_km: 6368.0, coefficients: [2.6],                                 ye: 0.494}
+      - {outer_radius_km: 6371.0, coefficients: [1.02],                                ye: 0.494}
+
+# A variant names the Earth model the contribution was computed with.
+variants:
+  prem_prob3:
+    required: true
+    earth_model: prem_prob3
+    description: Constant shells; solvable exactly by every code. The tool comparison.
+  prem_four:
+    required: false
+    earth_model: prem_four
+    description: Continuous density within four shells. Shows how tools handle non-constant density.
+  prem_full:
+    required: false
+    earth_model: prem_full
+    description: Full PREM.
+  native:
+    required: false
+    earth_model: null
+    description: >
+      The tool's own default Earth model. Describe it in meta.yaml
+      `settings.earth_model`. Shows how much the Earth model, not the
+      solver, moves the answer.
+
+# Contribution data.parquet: one row per grid point and quantity.
+columns:
+  variant:   string, a key of `variants`
+  quantity:  string, a key of `quantities`
+  energy:    float, MeV, on grid.energy
+  cos_nadir: float, on grid.cos_nadir
+  value:     float, the probability
+
+checks:
+  range: [0.0, 1.0]
+  unitarity_tolerance: 1.0e-6   # P1e + P2e + P3e = 1 at every grid point
+  horizon_tolerance: 1.0e-6     # at cos_nadir = 0 the chord is empty: P_ie = |U_ei|^2
+
+# Open questions (decide before freezing):
+# - Comparison reference: the SNUfish reference solver for prem_prob3; for the
+#   continuous models, a converged sliced solution (to be added)?
+# - cos_nadir step 0.01 undersamples the oscillations above ~12 MeV: finer
+#   grid near the core, or an exposure-averaged quantity (Solar_Weight,
+#   hep-ph/9702343) per detector latitude?
+# - Energy grid down to 0.1 MeV for pp/7Be (Earth effects tiny there)?

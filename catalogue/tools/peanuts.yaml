@@ -1,0 +1,11 @@
+id: peanuts
+name: PEANUTS
+description: Solar neutrino propagation in the Sun and through the Earth.
+language: Python
+license: null
+repository: null
+documentation: null
+reference: null
+maintainers: null
+benchmarks: [B1_flux, B2_sun, B3_earth]
+status: draft

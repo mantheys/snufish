@@ -1,0 +1,13 @@
+tool: snufish-reference
+tool_version: 0.1.0
+tool_commit: null
+benchmark: B3_earth
+benchmark_version: 0.2.0
+contributor: SNUfish maintainers
+date: '2026-10-28'
+command: snufish reference B3_earth
+settings:
+  method: exact matrix exponential per constant-density segment
+  variants:
+  - prem_prob3
+license: CC-BY-4.0
