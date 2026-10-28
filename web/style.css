@@ -100,7 +100,8 @@ select:disabled { opacity: 0.45; }
 .chips input:checked + span::before { opacity: 1; }
 
 .results { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.status { min-height: 1.4em; font-size: 0.88rem; color: var(--text-secondary); }
+.status { font-size: 0.88rem; color: var(--text-secondary); }
+.status:empty { display: none; }
 .status.error { background: var(--warning-bg); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; }
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-width: 0; }
 .trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
@@ -108,7 +109,8 @@ select:disabled { opacity: 0.45; }
 .plot-title { margin: 2px 4px 0; font: 600 0.9rem/1.3 "DejaVu Sans", Verdana, sans-serif; text-align: center; color: var(--plot-ink); }
 
 .headline { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: grid; gap: 10px; }
-.headline .what { color: var(--text-secondary); font-size: 0.88rem; }
+.headline .what { color: var(--text-secondary); font-size: 0.88rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }
+.headline .timing { color: var(--text-muted); font-size: 0.8rem; }
 .headline .value { font-size: 2rem; font-weight: 650; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .headline .value small { font-size: 1rem; font-weight: 400; color: var(--text-secondary); margin-left: 6px; }
 .headline .sub { color: var(--text-secondary); font-size: 0.88rem; }

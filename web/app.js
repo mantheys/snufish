@@ -220,7 +220,7 @@ async function compute() {
   const allMeasured = setup.components.length === 1 && setup.components[0] === "B8" && setup.b8_flux === "sno_nc";
   if (!fluxSampled && !allMeasured && !(quantity === "adn" && setup.components.length === 1))
     notes.push("This solar model publishes no flux uncertainties: no flux error is sampled.");
-  status(notes.join(" ") || `Computed with ${N_DRAWS} draws in ${Math.round(ms)} ms.`);
+  status(notes.join(" ")); // the timing goes in the result box (render)
   $("download").disabled = $("share").disabled = $("render").disabled = false;
 }
 
@@ -236,7 +236,8 @@ function render() {
   const events = live && quantity === "rate"
     ? `<div class="sub">Expected interactions in ${setup.exposure} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
-    <div class="what">${describe(setup, quantity)} · ${app.inputs.data.parameter_sets.sets[r.set].label}</div>
+    <div class="what"><span>${describe(setup, quantity)} · ${app.inputs.data.parameter_sets.sets[r.set].label}</span>
+      <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
     <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>`;
