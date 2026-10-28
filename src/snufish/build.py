@@ -28,31 +28,50 @@ def _series_rows(df, keys, x, values, base):
 
 
 def _build_b3(contributions, spec):
+    from .exposure import cell_weights
+
     vacuum = dict(zip(("P1e", "P2e", "P3e"), np.abs(pmns(spec["oscillation"])[0]) ** 2))
-    by_energy, by_nadir, maps = [], [], []
+    cos_exposure = spec.axis("cos_nadir", "exposure")
+    weights = {site: cell_weights(cos_exposure, np.radians(info["latitude_deg"]))
+               for site, info in spec["sites"].items()}
+    by_energy, by_nadir, maps, nights = [], [], [], []
     for contribution in contributions:
         meta = contribution.meta
-        df = contribution.data.rename(columns={"variant": "Variant", "quantity": "Quantity",
+        df = contribution.data.rename(columns={"grid": "Grid", "variant": "Variant", "quantity": "Quantity",
                                                "energy": "Energy", "cos_nadir": "CosNadir",
                                                "value": "Probability"})
         df["Regeneration"] = df["Probability"] - df["Quantity"].map(vacuum)
         df["Nadir"] = df["CosNadir"].map(lambda c: f"{c:.2f}")
         df["EnergyBin"] = df["Energy"].map(lambda e: f"{e:.1f}")
         base = {"Tool": meta["tool"], "Version": str(meta["tool_version"]), "Label": contribution.label}
+        fine = df[df["Grid"] == "exposure"]
 
+        # Curves against energy from the map grid (fine in E), against the
+        # nadir from the exposure grid (fine in cos eta).
         values = ("Probability", "Regeneration")
-        by_energy += _series_rows(df, ["Variant", "Quantity", "Nadir"], "Energy", values, base)
-        by_nadir += _series_rows(df, ["Variant", "Quantity", "EnergyBin"], "CosNadir", values, base)
-        for (variant, quantity), sub in df.groupby(["Variant", "Quantity"]):
+        by_energy += _series_rows(df[df["Grid"] == "map"], ["Variant", "Quantity", "Nadir"], "Energy", values, base)
+        by_nadir += _series_rows(fine, ["Variant", "Quantity", "EnergyBin"], "CosNadir", values, base)
+        for (grid_name, variant, quantity), sub in df.groupby(["Grid", "Variant", "Quantity"]):
             grid = sub.pivot(index="CosNadir", columns="Energy", values="Probability")
             regeneration = sub.pivot(index="CosNadir", columns="Energy", values="Regeneration")
-            maps.append(dict(base, Variant=variant, Quantity=quantity,
+            maps.append(dict(base, Grid=grid_name, Variant=variant, Quantity=quantity,
                              EnergyGrid=grid.columns.to_numpy(), CosNadirGrid=grid.index.to_numpy(),
                              ProbabilityGrid=grid.to_numpy(), RegenerationGrid=regeneration.to_numpy()))
+
+        # Night averages per site: P_ie weighted with the annual exposure.
+        for (variant, quantity), sub in fine.groupby(["Variant", "Quantity"]):
+            grid = sub.pivot(index="Energy", columns="CosNadir", values="Probability")
+            assert np.allclose(grid.columns.to_numpy(), cos_exposure)
+            for site, w in weights.items():
+                night = grid.to_numpy() @ w
+                nights.append(dict(base, Variant=variant, Quantity=quantity, Site=site,
+                                   Latitude=spec["sites"][site]["latitude_deg"], Energy=grid.index.to_numpy(),
+                                   Night=night, Regeneration=night - vacuum[quantity]))
     return {
         "B3_Energy": pd.DataFrame(by_energy),
         "B3_Nadir": pd.DataFrame(by_nadir),
         "B3_Map": pd.DataFrame(maps),
+        "B3_Night": pd.DataFrame(nights),
     }
 
 

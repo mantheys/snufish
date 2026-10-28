@@ -75,9 +75,9 @@ def exact_variants(spec):
             if variant["earth_model"] and "shells" in spec["earth_models"][variant["earth_model"]]]
 
 
-def solve_b3(spec, variant="prem_prob3"):
-    """Long-format records (variant, quantity, energy, cos_nadir, value) for
-    the whole B3 grid of ``spec``."""
+def solve_b3(spec, variant="prem_prob3", grid="map"):
+    """Long-format records (grid, variant, quantity, energy, cos_nadir, value)
+    for one grid of ``spec``."""
     from ..spec import pmns
 
     if variant not in exact_variants(spec):
@@ -86,10 +86,10 @@ def solve_b3(spec, variant="prem_prob3"):
     shells = spec["earth_models"][spec.variants[variant]["earth_model"]]["shells"]
     U = pmns(osc)
     records = []
-    for cos_nadir in spec.axis("cos_nadir"):
-        for energy in spec.axis("energy"):
+    for cos_nadir in spec.axis("cos_nadir", grid):
+        for energy in spec.axis("energy", grid):
             probs = probabilities_ie(energy, cos_nadir, U, osc["dm2_21_eV2"], osc["dm2_31_eV2"],
                                      earth["radius_km"], shells)
             for i, p in enumerate(probs, start=1):
-                records.append((variant, f"P{i}e", energy, cos_nadir, p))
+                records.append((grid, variant, f"P{i}e", energy, cos_nadir, p))
     return records

@@ -10,7 +10,7 @@
 # keep the version they were computed with.
 
 id: B3_earth
-version: 0.2.0
+version: 0.3.0
 status: draft
 title: Earth crossing of solar mass eigenstates
 neutrinos_only: true            # antineutrinos out of scope for B3
@@ -20,11 +20,28 @@ quantities:
   P2e: P(nu_2 -> nu_e) after the Earth chord
   P3e: P(nu_3 -> nu_e) after the Earth chord
 
-# Every contribution gives all quantities on exactly this grid.
-grid:
-  energy:       {start: 1.0, stop: 20.0, step: 0.1, unit: MeV}   # 191 points
-  cos_nadir:    {start: 0.0, stop: 1.0,  step: 0.01}             # 101 points; 0 = horizon, 1 = through the centre
-                                                                 # (cos zenith = -cos nadir)
+# Every contribution gives all quantities on both grids. `map` resolves the
+# energy structure point by point; `exposure` resolves the nadir oscillations
+# finely enough for night averages (f_reg converges to ~1e-3 relative with a
+# 0.001 step; the 0.01 step of `map` is off by up to ~15%).
+grids:
+  map:
+    energy:     {start: 1.0, stop: 20.0, step: 0.1, unit: MeV}    # 191 points
+    cos_nadir:  {start: 0.0, stop: 1.0,  step: 0.01}              # 101 points
+  exposure:
+    energy:     {start: 1.0, stop: 20.0, step: 0.5, unit: MeV}    # 39 points
+    cos_nadir:  {start: 0.0, stop: 1.0,  step: 0.001}             # 1001 points
+# cos_nadir = 0 is the horizon, 1 is through the centre (cos zenith = -cos nadir).
+
+# Detector sites for night averages, weighted with the annual exposure
+# W(eta; latitude) of Lisi & Montanino (hep-ph/9702343, table II). Latitudes
+# in degrees north, with their sources.
+sites:
+  Kamioka: {latitude_deg: 36.48,  source: "hep-ph/9702343, fig. 3 (Super-K, Hyper-K)"}
+  LNGS:    {latitude_deg: 42.45,  source: "hep-ph/9702343, fig. 3 (Borexino)"}
+  SURF:    {latitude_deg: 44.356, source: "arXiv:1707.02322, table 1 (DUNE far detector)"}
+  SNOLAB:  {latitude_deg: 46.47,  source: "hep-ph/9702343, fig. 3 (SNO, SNO+)"}
+  Jiangmen: {latitude_deg: 22.12, source: "approximate JUNO site latitude, to confirm against a JUNO publication"}
 
 # NuFIT 6.0, normal ordering, as used in NuFast-Earth's validation
 # (src/examples/Validation.cpp @ 327586d, "nu-fit 6"). P_ie depends only on
@@ -108,12 +125,13 @@ variants:
       `settings.earth_model`. Shows how much the Earth model, not the
       solver, moves the answer.
 
-# Contribution data.parquet: one row per grid point and quantity.
+# Contribution data.parquet: one row per grid, grid point and quantity.
 columns:
+  grid:      string, a key of `grids`
   variant:   string, a key of `variants`
   quantity:  string, a key of `quantities`
-  energy:    float, MeV, on grid.energy
-  cos_nadir: float, on grid.cos_nadir
+  energy:    float, MeV, on the grid's energy axis
+  cos_nadir: float, on the grid's cos_nadir axis
   value:     float, the probability
 
 checks:
@@ -124,7 +142,4 @@ checks:
 # Open questions (decide before freezing):
 # - Comparison reference: the SNUfish reference solver for prem_prob3; for the
 #   continuous models, a converged sliced solution (to be added)?
-# - cos_nadir step 0.01 undersamples the oscillations above ~12 MeV: finer
-#   grid near the core, or an exposure-averaged quantity (Solar_Weight,
-#   hep-ph/9702343) per detector latitude?
 # - Energy grid down to 0.1 MeV for pp/7Be (Earth effects tiny there)?

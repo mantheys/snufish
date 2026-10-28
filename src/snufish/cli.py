@@ -34,7 +34,8 @@ def cmd_reference(args):
     from .reference import earth
 
     spec = load_spec(args.benchmark)
-    records = [r for variant in earth.exact_variants(spec) for r in earth.solve_b3(spec, variant)]
+    records = [r for variant in earth.exact_variants(spec) for grid in spec.grids
+               for r in earth.solve_b3(spec, variant, grid)]
     meta = {
         "tool": "snufish-reference",
         "tool_version": __version__,

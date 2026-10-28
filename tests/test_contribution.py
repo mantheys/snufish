@@ -52,3 +52,9 @@ def test_detects_missing_meta(reference_dir, spec, tmp_path):
     contribution = _copy(reference_dir, tmp_path)
     del contribution.meta["command"]
     assert any("command" in p for p in validate(contribution, spec))
+
+
+def test_detects_missing_grid(reference_dir, spec, tmp_path):
+    contribution = _copy(reference_dir, tmp_path)
+    contribution.data = contribution.data[contribution.data.grid == "map"]
+    assert any("grids ['exposure'] missing" in p for p in validate(contribution, spec))

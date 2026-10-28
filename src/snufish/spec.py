@@ -19,17 +19,23 @@ class Spec:
     def __getitem__(self, key):
         return self.data[key]
 
-    def axis(self, name):
-        """Grid points of one axis, rounded to the step's decimals so that
-        contributions written as text compare equal."""
-        axis = self.data["grid"][name]
+    def axis(self, name, grid=None):
+        """Grid points of one axis of ``grid`` (default: the first grid),
+        rounded to the step's decimals so that contributions written as text
+        compare equal."""
+        axis = self.data["grids"][grid or self.grids[0]][name]
         n = int(round((axis["stop"] - axis["start"]) / axis["step"])) + 1
         decimals = max(0, -int(np.floor(np.log10(axis["step"]))) + 1)
         return np.round(np.linspace(axis["start"], axis["stop"], n), decimals)
 
     @property
+    def grids(self):
+        return list(self.data["grids"])
+
+    @property
     def grid_names(self):
-        return list(self.data["grid"])
+        """Axis names, shared by every grid."""
+        return list(self.data["grids"][self.grids[0]])
 
     @property
     def quantities(self):

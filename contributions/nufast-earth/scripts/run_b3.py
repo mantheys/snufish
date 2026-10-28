@@ -29,28 +29,28 @@ VERSION = _git("describe", "--tags").removeprefix("v")  # e.g. 1.2.0-3-g327586d
 NATIVE = "PREM_NDiscontinuityLayer(2, 10, 10, 5): piecewise-constant PREM, 27 shells (NuFast-Earth examples)"
 
 
-def run_variant(spec, variant):
-    osc, grid = spec["oscillation"], spec["grid"]
+def run_variant(spec, variant, grid_name):
+    osc, grid = spec["oscillation"], spec["grids"][grid_name]
     argv = [variant, *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
                                              "dm2_21_eV2", "dm2_31_eV2")),
             str(spec["earth"]["detector_depth_km"]),
             *(str(grid[axis][k]) for axis in ("energy", "cos_nadir") for k in ("start", "stop", "step"))]
     out = subprocess.run([str(HERE / "b3_driver"), *argv], capture_output=True, text=True, check=True).stdout
     table = np.loadtxt(out.splitlines())
-    energy, cos_nadir = spec.axis("energy"), spec.axis("cos_nadir")
+    energy, cos_nadir = spec.axis("energy", grid_name), spec.axis("cos_nadir", grid_name)
     # snap the driver's grid onto the spec's rounded values
     table[:, 0] = energy[np.abs(table[:, [0]] - energy).argmin(axis=1)]
     table[:, 1] = cos_nadir[np.abs(table[:, [1]] - cos_nadir).argmin(axis=1)]
     records = []
     for row in table:
         for i in range(3):
-            records.append((variant, f"P{i + 1}e", row[0], row[1], row[2 + 3 * i]))  # m[i][e]
+            records.append((grid_name, variant, f"P{i + 1}e", row[0], row[1], row[2 + 3 * i]))  # m[i][e]
     return records
 
 
 def main():
     spec = load_spec("B3_earth")
-    records = [r for variant in spec.variants for r in run_variant(spec, variant)]
+    records = [r for variant in spec.variants for grid in spec.grids for r in run_variant(spec, variant, grid)]
     meta = {
         "tool": "nufast-earth",
         "tool_version": VERSION,

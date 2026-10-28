@@ -25,7 +25,6 @@ META_REQUIRED = {
     "license": "licence of the data (CC-BY-4.0 recommended)",
 }
 META_OPTIONAL = ("reference", "notes")
-DATA_COLUMNS = ("variant", "quantity", "value")
 
 
 @dataclass
@@ -62,7 +61,7 @@ def load_contribution(path):
 def write_contribution(path, meta, records, spec):
     path = Path(path)
     path.mkdir(parents=True, exist_ok=True)
-    columns = ["variant", "quantity", *spec.grid_names, "value"]
+    columns = ["grid", "variant", "quantity", *spec.grid_names, "value"]
     pd.DataFrame.from_records(records, columns=columns).to_parquet(path / "data.parquet", index=False)
     with (path / "meta.yaml").open("w") as handle:
         yaml.safe_dump(meta, handle, sort_keys=False)
@@ -89,7 +88,7 @@ def validate(contribution, spec=None):
     if str(meta["benchmark_version"]) != spec.version:
         problems.append(f"computed with spec {meta['benchmark_version']}, current spec is {spec.version}")
 
-    columns = ["variant", "quantity", *spec.grid_names, "value"]
+    columns = ["grid", "variant", "quantity", *spec.grid_names, "value"]
     missing = [c for c in columns if c not in df.columns]
     if missing:
         problems.append(f"data.parquet: missing columns {missing}")
@@ -98,12 +97,21 @@ def validate(contribution, spec=None):
     unknown = set(df["variant"]) - set(spec.variants)
     if unknown:
         problems.append(f"unknown variants {sorted(unknown)}")
+    unknown = set(df["grid"]) - set(spec.grids)
+    if unknown:
+        problems.append(f"unknown grids {sorted(unknown)}")
     for name, variant in spec.variants.items():
         if variant.get("required") and name not in set(df["variant"]):
             problems.append(f"required variant '{name}' missing")
-
     for variant, sub in df.groupby("variant"):
-        problems += _check_grid(sub, spec, variant)
+        missing = set(spec.grids) - set(sub["grid"])
+        if missing:
+            problems.append(f"[{variant}] grids {sorted(missing)} missing")
+    if problems:
+        return problems
+
+    for (variant, grid), sub in df.groupby(["variant", "grid"]):
+        problems += _check_grid(sub, spec, variant, grid)
     if problems:
         return problems
 
@@ -118,26 +126,27 @@ def validate(contribution, spec=None):
     return problems
 
 
-def _check_grid(df, spec, variant):
+def _check_grid(df, spec, variant, grid):
     problems = []
+    where = f"[{variant}/{grid}]"
     for name in spec.grid_names:
-        expected = spec.axis(name)
+        expected = spec.axis(name, grid)
         got = np.sort(df[name].unique())
         if len(got) != len(expected) or not np.allclose(got, expected, atol=1e-9):
-            problems.append(f"[{variant}] {name} grid differs from the spec ({len(got)} vs {len(expected)} points)")
+            problems.append(f"{where} {name} grid differs from the spec ({len(got)} vs {len(expected)} points)")
     quantities = set(df["quantity"])
     if quantities != set(spec.quantities):
-        problems.append(f"[{variant}] quantities {sorted(quantities)}, expected {spec.quantities}")
-    n_expected = len(spec.quantities) * int(np.prod([len(spec.axis(n)) for n in spec.grid_names]))
+        problems.append(f"{where} quantities {sorted(quantities)}, expected {spec.quantities}")
+    n_expected = len(spec.quantities) * int(np.prod([len(spec.axis(n, grid)) for n in spec.grid_names]))
     if len(df) != n_expected or df.duplicated(["quantity", *spec.grid_names]).any():
-        problems.append(f"[{variant}] {len(df)} rows, expected {n_expected} unique grid points")
+        problems.append(f"{where} {len(df)} rows, expected {n_expected} unique grid points")
     return problems
 
 
 def _check_b3(df, spec):
     problems = []
     checks = spec["checks"]
-    wide = df.pivot_table(index=["variant", "energy", "cos_nadir"], columns="quantity", values="value")
+    wide = df.pivot_table(index=["grid", "variant", "energy", "cos_nadir"], columns="quantity", values="value")
     total = wide[["P1e", "P2e", "P3e"]].sum(axis=1)
     worst = np.abs(total - 1).max()
     if worst > checks["unitarity_tolerance"]:

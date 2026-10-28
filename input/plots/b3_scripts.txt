@@ -1,11 +1,17 @@
 # B3 Earth crossing. Data: `snufish build --benchmark B3_earth` (build/data).
 # Regeneration P_2e - |U_e2|^2 against energy, mantle-only and core-crossing chords
 line --no_error --datafile B3_Energy -x Energy -y Regeneration --hue Nadir --select Tool -s snufish-reference --select Variant -s prem_prob3 --select Quantity -s P2e --select Nadir -s 0.30 --select Nadir -s 0.60 --select Nadir -s 0.90 --select Nadir -s 1.00 --plot_type line --horizontal 0 --labelx 'Neutrino energy (MeV)' --labely '$P_{2e} - |U_{e2}|^2$' --title 'Earth regeneration (prem_prob3)' --output_suffix energy
-# Same against the nadir cosine at fixed energies
+# Same against the nadir cosine at fixed energies (exposure grid, cos eta step 0.001)
 line --no_error --datafile B3_Nadir -x CosNadir -y Regeneration --hue EnergyBin --select Tool -s snufish-reference --select Variant -s prem_prob3 --select Quantity -s P2e --select EnergyBin -s 5.0 --select EnergyBin -s 10.0 --select EnergyBin -s 15.0 --plot_type line --horizontal 0 --labelx '$\cos\eta$' --labely '$P_{2e} - |U_{e2}|^2$' --title 'Earth regeneration (prem_prob3)' --output_suffix nadir
-# Full (E, cos eta) map of the regeneration
-map --datafile B3_Map -x EnergyGrid -y CosNadirGrid -z RegenerationGrid --select Tool -s snufish-reference --select Variant -s prem_prob3 --select Quantity -s P2e --labelx 'Neutrino energy (MeV)' --labely '$\cos\eta$' --labelz '$P_{2e} - |U_{e2}|^2$' --title 'Earth regeneration (prem_prob3)'
+# Full (E, cos eta) map of the regeneration, on the fine-nadir exposure grid
+map --datafile B3_Map -x EnergyGrid -y CosNadirGrid -z RegenerationGrid --select Grid -s exposure --select Tool -s snufish-reference --select Variant -s prem_prob3 --select Quantity -s P2e --labelx 'Neutrino energy (MeV)' --labely '$\cos\eta$' --labelz '$P_{2e} - |U_{e2}|^2$' --title 'Earth regeneration (prem_prob3)'
 # Tool comparison on prem_prob3: each tool against the reference solver
 line --no_error --datafile B3_Energy -x Energy -y Probability --hue Label --select Variant -s prem_prob3 --select Quantity -s P2e --select Nadir -s 0.90 --plot_type line --lower subtract --reference Label --reference_value 'snufish-reference 0.1.0' --lower_labely 'Tool $-$ reference' --labelx 'Neutrino energy (MeV)' --labely '$P_{2e}$' --title 'Tool comparison, core crossing ($\cos\eta = 0.90$)' --output_suffix tools
 # Earth model comparison (NuFast-Earth): regeneration for each variant
 line --no_error --datafile B3_Energy -x Energy -y Regeneration --hue Variant --select Tool -s nufast-earth --select Quantity -s P2e --select Nadir -s 0.90 --plot_type line --horizontal 0 --labelx 'Neutrino energy (MeV)' --labely '$P_{2e} - |U_{e2}|^2$' --title 'Earth models, core crossing ($\cos\eta = 0.90$)' --output_suffix models
+# Night-averaged regeneration f_reg = <P2e>_night - |U_e2|^2 per detector site (annual exposure, hep-ph/9702343)
+line --no_error --datafile B3_Night -x Energy -y Regeneration --hue Site --select Tool -s snufish-reference --select Variant -s prem_prob3 --select Quantity -s P2e --plot_type line --labelx 'Neutrino energy (MeV)' --labely '$f_\mathrm{reg}$' --title 'Night-averaged regeneration by site (prem_prob3)' --output_suffix sites
+# Tool comparison of f_reg at SURF (DUNE)
+line --no_error --datafile B3_Night -x Energy -y Regeneration --hue Label --select Variant -s prem_prob3 --select Quantity -s P2e --select Site -s SURF --plot_type line --lower subtract --reference Label --reference_value 'snufish-reference 0.1.0' --lower_labely 'Tool $-$ reference' --labelx 'Neutrino energy (MeV)' --labely '$f_\mathrm{reg}$' --title 'Tool comparison of $f_\mathrm{reg}$ at SURF' --output_suffix night_tools
+# Earth models: f_reg at SURF (DUNE) with NuFast-Earth
+line --no_error --datafile B3_Night -x Energy -y Regeneration --hue Variant --select Tool -s nufast-earth --select Quantity -s P2e --select Site -s SURF --plot_type line --labelx 'Neutrino energy (MeV)' --labely '$f_\mathrm{reg}$' --title 'Earth models: $f_\mathrm{reg}$ at SURF' --output_suffix night_models
