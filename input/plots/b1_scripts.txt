@@ -1,0 +1,9 @@
+# B1 solar models and their effect on B5 rates. Data: `snufish build` (build/data).
+# Flux of every component relative to B16-GS98 (bands: the model's own flux uncertainty where published)
+cat --datafile B1_Fluxes -x Component -y RelativeFlux --hue Model --kind point --horizontal 1 --labelx 'Flux component' --labely 'Flux / B16-GS98' --title 'Solar neutrino fluxes by solar model' --output_suffix flux_ratios
+# Electron density: every model against B16-GS98
+line --no_error --datafile B1_Profiles -x Radius -y LogNe --hue Model --plot_type line --rangex 0 0.9 --lower subtract --reference Model --reference_value b16_gs98 --lower_labely 'Difference to B16-GS98' --labelx '$r/R_\odot$' --labely '$\log_{10}(n_e / N_A\,\mathrm{cm}^{-3})$' --title 'Electron density by solar model' --output_suffix density
+# 8B production profiles
+line --no_error --datafile B1_Production -x Radius -y Density --hue Model --select Component -s B8 --plot_type line --rangex 0 0.15 --labelx '$r/R_\odot$' --labely 'Production per unit $r/R_\odot$' --title '$^8$B production profile by solar model' --output_suffix b8_production
+# Solar model vs nuclear model: 8B nu_e CC on 40Ar per kton-year
+cat --no_error --datafile B5_Totals -x SolarModel -y Total --hue Model --select Detector -s argon --select Channel -s cc_nue_ar40 --select Component -s B8 --kind point --sort asc --labelx 'Solar model' --labely 'Interactions / (kt yr)' --title '$^8$B CC on $^{40}$Ar: solar model and nuclear model' --output_suffix b8_ar40_models

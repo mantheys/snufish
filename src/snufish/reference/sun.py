@@ -29,7 +29,7 @@ def adiabatic_fractions(spec, model_name, energies_mev, radius_grid):
     out = np.empty((len(radius_grid), len(E), 3))
     for k, r in enumerate(radius_grid):
         H = vacuum[None] / (2 * E[:, None, None])
-        H[:, 0, 0] += matter_potential(electron_density(spec, model_name, r), 1.0)
+        H[:, 0, 0] += matter_potential(electron_density(model_name, r, spec), 1.0)
         _, vectors = np.linalg.eigh(H)  # eigenvalues ascending
         out[k] = np.abs(vectors[:, 0, :]) ** 2
     return out

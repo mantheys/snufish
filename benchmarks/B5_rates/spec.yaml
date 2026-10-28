@@ -12,23 +12,29 @@
 # Status: DRAFT.
 
 id: B5_rates
-version: 0.1.0
+version: 0.2.0
 status: draft
 title: Solar neutrino interaction rates
 
-# B16-GS98 (arXiv:1611.09867, table 6), cm^-2 s^-1.
+# Spectral shapes and lines (shared by every solar model); the flux of each
+# component comes from the B1 solar model (benchmarks/B1_ssm/models.yaml).
 fluxes:
-  pp:  {flux: 5.98e+10, shape: reference/ssm/shapes/pp_shape.csv}
-  pep: {flux: 1.44e+8,  lines: [[1.442, 1.0]]}
-  hep: {flux: 7.98e+3,  shape: reference/ssm/shapes/hep_shape.csv}
-  Be7: {flux: 4.93e+9,  lines: [[0.8613, 0.8956], [0.3843, 0.1044]]}
-  B8:  {flux: 5.46e+6,  shape: reference/ssm/shapes/8B_shape_Winter_et_al.csv}
-  N13: {flux: 2.78e+8,  shape: reference/ssm/shapes/n13_shape.csv}
-  O15: {flux: 2.05e+8,  shape: reference/ssm/shapes/o15_shape.csv}
-  F17: {flux: 5.28e+6,  shape: reference/ssm/shapes/f17_shape.csv}
+  pp:  {shape: reference/ssm/shapes/pp_shape.csv}
+  pep: {lines: [[1.442, 1.0]]}
+  hep: {shape: reference/ssm/shapes/hep_shape.csv}
+  Be7: {lines: [[0.8613, 0.8956], [0.3843, 0.1044]]}
+  B8:  {shape: reference/ssm/shapes/8B_shape_Winter_et_al.csv}
+  N13: {shape: reference/ssm/shapes/n13_shape.csv}
+  O15: {shape: reference/ssm/shapes/o15_shape.csv}
+  F17: {shape: reference/ssm/shapes/f17_shape.csv}
+
+# Rates for every B1 model, each with the B2 reference oscillations of the
+# same model (production-averaged, daytime).
+solar_models: all
+reference_solar_model: b16_gs98
 
 oscillation:
-  source: B2_sun reference, variant b16_gs98, daytime   # night: next version, from B3
+  source: B2_sun reference, variant = the solar model, daytime   # night: next version, from B3
   
 exposure:
   kton_year: 1.0

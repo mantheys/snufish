@@ -2,7 +2,7 @@ tool: nufast-earth
 tool_version: 1.2.0-3-g327586d
 tool_commit: 327586d
 benchmark: B2_sun
-benchmark_version: 0.1.0
+benchmark_version: 0.2.0
 contributor: SNUfish maintainers (wrapper); NuFast-Earth by P. B. Denton and S. J.
   Parke
 date: '2026-10-28'

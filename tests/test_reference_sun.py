@@ -20,7 +20,7 @@ def spec():
 
 
 def test_density_tail_continuous_at_table_end(spec):
-    inside, outside = electron_density(spec, "b16_gs98", [0.4999, 0.5001])
+    inside, outside = electron_density("b16_gs98", [0.4999, 0.5001], spec)
     assert np.log10(outside / inside) == pytest.approx(0.0, abs=0.01)
 
 
@@ -28,9 +28,9 @@ def test_exponential_matches_outside_the_core_only(spec):
     # Bahcall's exponential is fitted to the outer Sun: within 0.05 dex of B16
     # for r >= 0.2, but 2.4 times too dense at the centre.
     r = np.linspace(0.2, 0.5, 7)
-    ratio = electron_density(spec, "b16_gs98", r) / electron_density(spec, "exponential", r)
+    ratio = electron_density("b16_gs98", r, spec) / electron_density("exponential", r, spec)
     assert np.all(np.abs(np.log10(ratio)) < 0.05)
-    centre = electron_density(spec, "exponential", 0.0) / electron_density(spec, "b16_gs98", 0.0)
+    centre = electron_density("exponential", 0.0, spec) / electron_density("b16_gs98", 0.0, spec)
     assert centre == pytest.approx(2.4, abs=0.05)
 
 
@@ -48,7 +48,7 @@ def test_msw_textbook_values(spec):
 
 
 def test_production_weights_normalised(spec):
-    weights = production_weights(spec, spec.axis("radius"))
+    weights = production_weights("b16_gs98", spec.axis("radius"), spec)
     assert set(weights) == {"pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"}
     for w in weights.values():
         assert w.sum() == pytest.approx(1.0) and (w >= 0).all()

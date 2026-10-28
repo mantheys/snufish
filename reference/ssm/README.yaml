@@ -1,0 +1,14 @@
+# Standard solar model tables in SNUfish format, written by scripts/import_ssm.py.
+# Columns: r/R_sun, log10 n_e [N_A cm^-3], production densities per unit r/R_sun
+# (pp, pep, hep, Be7, B8, N13, O15, F17; each integrates to 1).
+# Per-model sources, checksums, fluxes and licences: benchmarks/B1_ssm/models.yaml.
+retrieved: 2026-10-28
+sources:
+  B16: {reference: "Vinyoles et al., ApJ 835, 202 (2017), arXiv:1611.09867",
+        obtained_from: "https://github.com/michelelucente/PEANUTS Data/ @ 39ef11f (public B16 tables)"}
+  BS05: {reference: "Bahcall, Serenelli & Basu, ApJ 621, L85 (2005), astro-ph/0412440",
+         obtained_from: "https://github.com/michelelucente/PEANUTS Data/ @ 39ef11f (zone fractions converted to densities)"}
+  B23: {reference: "Herrera & Serenelli, Standard Solar Models B23 / SF-III v1.2, doi:10.5281/zenodo.10174172",
+        obtained_from: "https://zenodo.org/records/10822316 (SolarModels_ICE2023_v1.2.zip, sha256 382037d76ed35c9b50a4094d3ada3c90284af025c3235b49cda9d932699f87d0)",
+        license: CC-BY-4.0,
+        cite: ["Magg et al. 2022, A&A 661, A140", "Acharya et al. 2025 (Solar Fusion III), Rev. Mod. Phys. 97, 035002"]}

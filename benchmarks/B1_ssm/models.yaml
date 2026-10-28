@@ -1,0 +1,273 @@
+# Written by scripts/import_ssm.py: do not edit by hand.
+b16_gs98:
+  family: B16
+  composition: GS98
+  reference: arXiv:1611.09867
+  fluxes:
+    pp: 59800000000.0
+    pep: 144000000.0
+    hep: 7980.0
+    Be7: 4930000000.0
+    B8: 5460000.0
+    N13: 278000000.0
+    O15: 205000000.0
+    F17: 5280000.0
+  flux_uncertainty:
+    pp: 0.006
+    pep: 0.01
+    hep: 0.3
+    Be7: 0.06
+    B8: 0.12
+    N13: 0.15
+    O15: 0.17
+    F17: 0.2
+  table: reference/ssm/b16_gs98.dat
+  tail:
+    intercept: 2.3711
+    slope: -4.6246
+    max_residual: 0.0033
+  source:
+    file: PEANUTS Data/nudistr_b16_gs98.dat, fluxes_b16.dat
+    sha256: 3c5c6afb19fd8c2455c462bfeac757959c3b3c7d03575b411648eda57acf2378
+b16_agss09met:
+  family: B16
+  composition: AGSS09met
+  reference: arXiv:1611.09867
+  fluxes:
+    pp: 60300000000.0
+    pep: 146000000.0
+    hep: 8250.0
+    Be7: 4500000000.0
+    B8: 4500000.0
+    N13: 204000000.0
+    O15: 144000000.0
+    F17: 3260000.0
+  flux_uncertainty:
+    pp: 0.005
+    pep: 0.009
+    hep: 0.3
+    Be7: 0.06
+    B8: 0.12
+    N13: 0.14
+    O15: 0.16
+    F17: 0.18
+  table: reference/ssm/b16_agss09met.dat
+  tail:
+    intercept: 2.3924
+    slope: -4.6644
+    max_residual: 0.0031
+  source:
+    file: PEANUTS Data/nudistr_b16_agss09.dat, fluxes_b16.dat
+    sha256: 2fa6908bef59be96200d18faf26a246f039c8813ff65ffe03989730377d823f6
+bs05_op:
+  family: BS05
+  composition: GS98 (OP opacities)
+  reference: astro-ph/0412440
+  fluxes:
+    pp: 59910000000.0
+    pep: 142100000.0
+    hep: 7930.0
+    Be7: 4844000000.0
+    B8: 5691000.0
+    N13: 306600000.0
+    O15: 233100000.0
+    F17: 5836000.0
+  flux_uncertainty: null
+  table: reference/ssm/bs05_op.dat
+  tail:
+    intercept: 2.3788
+    slope: -4.6439
+    max_residual: 0.0033
+  source:
+    file: PEANUTS Data/bs2005opflux.dat
+    sha256: ed89a19169f4ac65bfcf054cb9bbfd90332ed95b3dcc85f7d850c2dc38db535b
+bs05_agsop:
+  family: BS05
+  composition: AGS05 (OP opacities)
+  reference: astro-ph/0412440
+  fluxes:
+    pp: 60580000000.0
+    pep: 145300000.0
+    hep: 8254.0
+    Be7: 4338000000.0
+    B8: 4508000.0
+    N13: 200700000.0
+    O15: 144500000.0
+    F17: 3254000.0
+  flux_uncertainty: null
+  table: reference/ssm/bs05_agsop.dat
+  tail:
+    intercept: 2.4039
+    slope: -4.6907
+    max_residual: 0.003
+  source:
+    file: PEANUTS Data/bs2005agsopflux.csv
+    sha256: 6f1feeb5a9f33fae967ee4d99c3ef66b87c6ae5bb6a8cba79200304adfc73bcd
+b23_gs98:
+  family: B23
+  composition: 'GS98: Grevesse & Sauval (1998)'
+  reference: Zenodo 10.5281/zenodo.10174172
+  fluxes:
+    pp: 59600000000.0
+    pep: 142500000.0
+    hep: 7950.0
+    Be7: 4854000000.0
+    B8: 5025000.0
+    N13: 279500000.0
+    O15: 206700000.0
+    F17: 5350000.0
+  flux_uncertainty:
+    pp: 0.005785
+    pep: 0.01053
+    hep: 0.305
+    Be7: 0.07438
+    B8: 0.1255
+    N13: 0.1598
+    O15: 0.1804
+    F17: 0.1968
+  table: reference/ssm/b23_gs98.dat
+  tail: null
+  source:
+    file: 'SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_GS98.dat, fluxes_SF3_GS98.dat'
+    sha256: 0b89c94221e6b0992f999a96032518ce0941cd65e30ea4b55946c65028ee9d2e
+    license: CC-BY-4.0
+b23_agss09:
+  family: B23
+  composition: 'AGSS09: Asplund et al. (2009)'
+  reference: Zenodo 10.5281/zenodo.10174172
+  fluxes:
+    pp: 60100000000.0
+    pep: 145100000.0
+    hep: 8216.0
+    Be7: 4429000000.0
+    B8: 4135000.0
+    N13: 205200000.0
+    O15: 144700000.0
+    F17: 3290000.0
+  flux_uncertainty:
+    pp: 0.005336
+    pep: 0.00995
+    hep: 0.3046
+    Be7: 0.0752
+    B8: 0.1268
+    N13: 0.1421
+    O15: 0.1671
+    F17: 0.1738
+  table: reference/ssm/b23_agss09.dat
+  tail: null
+  source:
+    file: 'SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_AGSS09.dat, fluxes_SF3_AGSS09.dat'
+    sha256: 92e43b7c5fb8206c32c3e1a1a83f2ade1c5abdba5e1b68d0613fb14578206036
+    license: CC-BY-4.0
+b23_c11:
+  family: B23
+  composition: 'C11: Caffau et al. (2011)'
+  reference: Zenodo 10.5281/zenodo.10174172
+  fluxes:
+    pp: 59900000000.0
+    pep: 144100000.0
+    hep: 8098.0
+    Be7: 4603000000.0
+    B8: 4484000.0
+    N13: 248000000.0
+    O15: 177600000.0
+    F17: 4136000.0
+  flux_uncertainty:
+    pp: 0.006184
+    pep: 0.01271
+    hep: 0.3043
+    Be7: 0.07862
+    B8: 0.1409
+    N13: 0.1676
+    O15: 0.1941
+    F17: 0.2257
+  table: reference/ssm/b23_c11.dat
+  tail: null
+  source:
+    file: 'SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_C11.dat, fluxes_SF3_C11.dat'
+    sha256: 4f63738d7da02c7eee82773d5eea071e9adee2d9e365cdea65316fc8e468a1ce
+    license: CC-BY-4.0
+b23_aag21:
+  family: B23
+  composition: 'AAG21: Asplund et al. (2021)'
+  reference: Zenodo 10.5281/zenodo.10174172
+  fluxes:
+    pp: 60000000000.0
+    pep: 144700000.0
+    hep: 8161.0
+    Be7: 4517000000.0
+    B8: 4309000.0
+    N13: 222100000.0
+    O15: 157700000.0
+    F17: 3401000.0
+  flux_uncertainty:
+    pp: 0.005644
+    pep: 0.01089
+    hep: 0.3051
+    Be7: 0.07346
+    B8: 0.1254
+    N13: 0.1315
+    O15: 0.1586
+    F17: 0.1573
+  table: reference/ssm/b23_aag21.dat
+  tail: null
+  source:
+    file: 'SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_AAG21.dat, fluxes_SF3_AAG21.dat'
+    sha256: 3261eb45d66312282a5f5275b8cd1a53502a189c98c5f3670cd394c49d435633
+    license: CC-BY-4.0
+b23_mb22m:
+  family: B23
+  composition: 'MB22m: Magg et al. (2022), meteoritic'
+  reference: Zenodo 10.5281/zenodo.10174172
+  fluxes:
+    pp: 59500000000.0
+    pep: 142200000.0
+    hep: 7922.0
+    Be7: 4899000000.0
+    B8: 5127000.0
+    N13: 311800000.0
+    O15: 232200000.0
+    F17: 4738000.0
+  flux_uncertainty:
+    pp: 0.005901
+    pep: 0.0109
+    hep: 0.3065
+    Be7: 0.07638
+    B8: 0.1313
+    N13: 0.1472
+    O15: 0.173
+    F17: 0.1602
+  table: reference/ssm/b23_mb22m.dat
+  tail: null
+  source:
+    file: 'SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_MB22m.dat, fluxes_SF3_MB22m.dat'
+    sha256: 8a2a7923ae4c8289be3d99bc5195a60da93447c8cc08aee9410d9ba954430266
+    license: CC-BY-4.0
+b23_mb22p:
+  family: B23
+  composition: 'MB22p: Magg et al. (2022), photospheric'
+  reference: Zenodo 10.5281/zenodo.10174172
+  fluxes:
+    pp: 59500000000.0
+    pep: 142200000.0
+    hep: 7934.0
+    Be7: 4875000000.0
+    B8: 5074000.0
+    N13: 310200000.0
+    O15: 230400000.0
+    F17: 4699000.0
+  flux_uncertainty:
+    pp: 0.006408
+    pep: 0.01312
+    hep: 0.3047
+    Be7: 0.08128
+    B8: 0.1456
+    N13: 0.1509
+    O15: 0.1795
+    F17: 0.1686
+  table: reference/ssm/b23_mb22p.dat
+  tail: null
+  source:
+    file: 'SolarModels_ICE2023_v1.2.zip: SolarModels/struct+nu_SF3_MB22p.dat, fluxes_SF3_MB22p.dat'
+    sha256: 910a8185349a07a86d6e46db244ae315e996fd31fba79973977514b64d5de7b7
+    license: CC-BY-4.0

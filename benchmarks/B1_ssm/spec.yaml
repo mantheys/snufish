@@ -1,0 +1,31 @@
+# SNUfish benchmark B1: the solar neutrino source.
+#
+# A registry of standard solar models in one format (models.yaml, written by
+# scripts/import_ssm.py from the published tables): flux normalisations per
+# component, electron density n_e(r) and the production profile of each
+# component. B2 propagates every model through the Sun, B5 folds every model
+# into rates, so the spread between solar models sits next to the spread
+# between cross sections and Earth models.
+#
+# Status: DRAFT.
+
+id: B1_ssm
+version: 0.1.0
+status: draft
+title: Standard solar models
+models_file: benchmarks/B1_ssm/models.yaml
+reference_model: b16_gs98          # ratios in the B1 plots are taken to this model
+components: [pp, pep, hep, Be7, B8, N13, O15, F17]
+
+# Beyond a table's last radius (B16 and BS05 stop at 0.5 R_sun),
+# log10 n_e = intercept + slope r, fitted to the table for r > 0.4 (models.yaml `tail`).
+# Below the first radius, n_e and the production densities are constant.
+
+checks:
+  production_normalisation_tolerance: 1.0e-6   # each profile integrates to 1
+  density_decreasing_beyond: 0.05              # n_e falls monotonically outside the core
+
+# Open questions:
+# - Spectral shapes are shared by all models (B5); add the Ortiz et al. 8B shape
+#   and the 7Be line widths as shape variants.
+# - Use the B23 flux correlation matrices for rate uncertainties in B5.

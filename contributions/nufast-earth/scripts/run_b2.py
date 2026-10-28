@@ -32,7 +32,7 @@ VERSION = _git("describe", "--tags").removeprefix("v")
 def run(spec, variant, grid):
     osc = spec["oscillation"]
     energies, radii = spec.axis("energy", grid), spec.axis("radius", grid)
-    density = electron_density(spec, spec.variants[variant]["solar_model"], radii)
+    density = electron_density(spec.variants[variant]["solar_model"], radii, spec)
     points = "\n".join(f"{e:.10g} {n:.17g}" for n in density for e in energies)
     argv = [str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
                                   "dm2_21_eV2", "dm2_31_eV2")]

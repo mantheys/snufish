@@ -23,10 +23,12 @@ def cmd_validate(args):
 
 
 def cmd_build(args):
-    from .build import build, combine_day_night, combine_rates
+    from .build import BUILDERS, build, combine_day_night, combine_rates, combine_ssm
 
+    combine_ssm(args.out)
     for benchmark in args.benchmark or available_benchmarks():
-        build(benchmark, extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
+        if benchmark in BUILDERS:
+            build(benchmark, extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
     combine_day_night(args.out)
     combine_rates(args.out)
     return 0

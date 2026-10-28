@@ -13,7 +13,7 @@
 # Status: DRAFT.
 
 id: B2_sun
-version: 0.1.0
+version: 0.2.0
 status: draft
 title: Mass-eigenstate fractions leaving the Sun
 neutrinos_only: true
@@ -47,38 +47,61 @@ sun:
   radius_km: 695700.0           # IAU 2015 nominal solar radius
   path: radial                  # from r0 straight out to the surface
 
-# Electron density profiles n_e(r), in N_A / cm^3 (so V = sqrt(2) G_F N_A n_e).
+# Solar models: every model of the B1 registry (benchmarks/B1_ssm/models.yaml:
+# n_e(r) and production profiles in SNUfish format), plus analytic profiles
+# defined here. n_e is in N_A / cm^3, so V = sqrt(2) G_F N_A n_e.
 solar_models:
-  b16_gs98:
-    description: >
-      B16-GS98 table (reference/ssm/b16_gs98_nudistr.dat, column 3 = log10 n_e),
-      interpolated linearly in log10 n_e against r/R_sun; constant below the
-      first point (0.0005); beyond the last point (0.5),
-      log10 n_e = 2.3711 - 4.6246 r/R_sun (fit to the table for r > 0.4,
-      residual < 0.003).
-    table: reference/ssm/b16_gs98_nudistr.dat
-    radius_column: 0
-    log10_ne_column: 2
-    tail: {intercept: 2.3711, slope: -4.6246}
   exponential:
     description: Bahcall's exponential approximation n_e = 245 exp(-10.54 r/R_sun).
     n0: 245.0
     scale: 10.54
+    production_from: b16_gs98
 
 variants:
   b16_gs98:
     required: true
     solar_model: b16_gs98
-    description: Realistic SSM density; the tool comparison.
+    description: B16-GS98, the tool comparison.
+  b16_agss09met:
+    required: false
+    solar_model: b16_agss09met
+    description: B1 model b16_agss09met.
+  bs05_op:
+    required: false
+    solar_model: bs05_op
+    description: B1 model bs05_op.
+  bs05_agsop:
+    required: false
+    solar_model: bs05_agsop
+    description: B1 model bs05_agsop.
+  b23_gs98:
+    required: false
+    solar_model: b23_gs98
+    description: B1 model b23_gs98.
+  b23_agss09:
+    required: false
+    solar_model: b23_agss09
+    description: B1 model b23_agss09.
+  b23_c11:
+    required: false
+    solar_model: b23_c11
+    description: B1 model b23_c11.
+  b23_aag21:
+    required: false
+    solar_model: b23_aag21
+    description: B1 model b23_aag21.
+  b23_mb22m:
+    required: false
+    solar_model: b23_mb22m
+    description: B1 model b23_mb22m.
+  b23_mb22p:
+    required: false
+    solar_model: b23_mb22p
+    description: B1 model b23_mb22p.
   exponential:
     required: false
     solar_model: exponential
     description: Analytic profile used in many textbook and fast calculations.
-
-# Production profiles used by SNUfish for the averages (columns of the table).
-production:
-  table: reference/ssm/b16_gs98_nudistr.dat
-  components: {pp: 4, pep: 5, hep: 6, Be7: 7, B8: 8, N13: 9, O15: 10, F17: 11}
 
 columns:
   grid:      string, a key of `grids`
@@ -97,4 +120,3 @@ checks:
 #   phase averaging) to measure the O(1/gamma^2) corrections directly.
 # - Radial path vs the true line of sight for off-centre production
 #   (irrelevant while propagation is adiabatic; the reference measures it).
-# - Add AGSS09 (reference table available) as a variant?

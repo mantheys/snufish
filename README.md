@@ -52,7 +52,9 @@ predictions comes from the inputs, not the solvers.
 </tr>
 </table>
 
-As a check against data: the folded pp elastic-scattering rate is 136
+Across the ten solar models the <sup>8</sup>B CC rate on argon spans ±16 %,
+comparable to the spread between nuclear models of the cross section. As a
+check against data: the folded pp elastic-scattering rate (B16-GS98) is 136
 interactions per day per 100 t of scintillator electrons; Borexino measured
 134 ± 10. Figures are regenerated with `python scripts/readme_images.py`
 after `snufish build`.
@@ -61,10 +63,11 @@ after `snufish build`.
 
 | id | Compares |
 |---|---|
-| **B2_sun** | Mass-eigenstate fractions leaving the Sun (B16-GS98 density), averaged per flux component |
+| **B1_ssm** | Ten standard solar models (B16, BS05, B23 / SF-III) in one format: fluxes, electron density, production profiles |
+| **B2_sun** | Mass-eigenstate fractions leaving the Sun for every B1 model, averaged per flux component |
 | **B3_earth** | P(ν<sub>i</sub> → ν<sub>e</sub>) through the Earth on PREM variants; night averages per detector site |
 | **B4_xsec** | Cross sections per detection channel; nuclear models of <sup>40</sup>Ar as variants |
-| **B5_rates** | Interactions per kton-year by detector, channel and flux component, for every B4 model |
+| **B5_rates** | Interactions per kton-year by solar model, detector, channel and flux component, for every B4 model |
 
 B2 and B3 combine into day and night P<sub>ee</sub> and the day-night
 asymmetry. Specs, grids and open questions:
