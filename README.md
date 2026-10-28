@@ -8,6 +8,71 @@ which tools agree, where and by how much.
 (The name: the Solar Neutrino Unit, the Sun, nu, and a fish to swim with
 plotipus.)
 
+## Results so far
+
+<table>
+<tr>
+<td width="50%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/components.png">
+  <img src="docs/images/light/components.png" alt="Daytime electron-neutrino survival probability against energy for each solar flux component, falling from 0.55 to 0.30.">
+</picture>
+<b>MSW in the Sun (B2).</b> Daytime P<sub>ee</sub> for each flux component of
+B16-GS98, averaged over its production region: 0.544 for pp, 0.326 for
+<sup>8</sup>B at 10 MeV.
+</td>
+<td width="50%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/adn_models.png">
+  <img src="docs/images/light/adn_models.png" alt="8B day-night asymmetry at SURF against energy for four Earth models.">
+</picture>
+<b>Day-night asymmetry (B2 × B3).</b> <sup>8</sup>B at SURF (DUNE),
+2(N−D)/(N+D): 2.9 % to 4.0 % over 5–15 MeV depending on the Earth model.
+</td>
+</tr>
+<tr>
+<td width="50%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/ar40_b8_models.png">
+  <img src="docs/images/light/ar40_b8_models.png" alt="8B charged-current interaction spectrum on argon for four nuclear models with the ratio to the default.">
+</picture>
+<b>Rates (B4 → B5).</b> <sup>8</sup>B ν<sub>e</sub> CC interactions on
+<sup>40</sup>Ar per kton-year for four nuclear models: 1,566 to 1,922;
+the cross sections differ by a factor 5–7 at 5 MeV.
+</td>
+<td width="50%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/tools.png">
+  <img src="docs/images/light/tools.png" alt="P2e through the Earth's core for NuFast-Earth and the SNUfish reference; the difference panel is at the 1e-8 level.">
+</picture>
+<b>Tool comparison (B3).</b> NuFast-Earth against the SNUfish reference
+through the core: they agree to 6 × 10<sup>−8</sup>. The spread in
+predictions comes from the inputs, not the solvers.
+</td>
+</tr>
+</table>
+
+As a check against data: the folded pp elastic-scattering rate is 136
+interactions per day per 100 t of scintillator electrons; Borexino measured
+134 ± 10. Figures are regenerated with `python scripts/readme_images.py`
+after `snufish build`.
+
+## Benchmarks
+
+| id | Compares |
+|---|---|
+| **B2_sun** | Mass-eigenstate fractions leaving the Sun (B16-GS98 density), averaged per flux component |
+| **B3_earth** | P(ν<sub>i</sub> → ν<sub>e</sub>) through the Earth on PREM variants; night averages per detector site |
+| **B4_xsec** | Cross sections per detection channel; nuclear models of <sup>40</sup>Ar as variants |
+| **B5_rates** | Interactions per kton-year by detector, channel and flux component, for every B4 model |
+
+B2 and B3 combine into day and night P<sub>ee</sub> and the day-night
+asymmetry. Specs, grids and open questions:
+[benchmarks/README.md](benchmarks/README.md). Tools so far: the SNUfish
+reference solvers, [NuFast-Earth](https://github.com/PeterDenton/NuFast-Earth)
+(B2, B3) and [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) (B4); see
+[catalogue/tools](catalogue/tools).
+
 ## Layout
 
 ```
@@ -16,7 +81,8 @@ catalogue/tools/<tool>.yaml      tool entries
 contributions/<tool>/<benchmark>/<tool_version>/
     data.parquet                 long format, columns set by the spec
     meta.yaml                    provenance (tool, version, commit, settings, ...)
-reference/                       shared inputs (solar models, measurements)
+contributions/<tool>/scripts/    how a tool's contribution is produced
+reference/                       shared inputs (solar model, flux shapes), with provenance
 input/plots/<list>_scripts.txt   plotipus command lists
 src/snufish/                     validator, builder, reference solvers
 ```
@@ -26,31 +92,16 @@ src/snufish/                     validator, builder, reference solvers
 ```bash
 pip install -e ".[dev,plots]"
 snufish validate                 # check every contribution against its spec
-snufish build                    # validated Parquet -> build/data/*.pkl for plotipus
-plotipus run b3                  # figures in output/plots
+snufish build                    # validated contributions -> build/data/*.parquet for plotipus
+plotipus run b3                  # figures in output/plots (also b2, b45)
 pytest
 ```
 
-Pickles exist only in `build/` and are made locally from Parquet: they are
-never committed or exchanged.
+Contributions and build products are Parquet: data only, safe to share and
+to load from others.
 
 `snufish build --extra ../some-overlay/contributions` adds contributions kept
 outside this repository (e.g. results not yet public) to a local build.
-
-## Benchmarks
-
-**B2_sun** (MSW in the Sun) and **B3_earth** (Earth crossing) combine into
-day and night P_ee and the day-night asymmetry per detector site.
-**B4_xsec** (cross sections per channel) folded with B16-GS98 fluxes and B2
-gives **B5_rates**: interactions per kton-year by detector, channel and flux
-component, one set per contributed cross-section model.
-
-See [benchmarks/README.md](benchmarks/README.md). The first one is
-**B3_earth**: P(nu_i -> nu_e) for mass eigenstates crossing a fixed
-four-shell Earth, on a (E, cos nadir) grid. The SNUfish reference solver
-(exact matrix exponentials per shell) and NuFast-Earth are its first
-contributions; on the constant-shell `prem_prob3` Earth they agree to
-6e-8 at every grid point.
 
 ## Contributing
 
