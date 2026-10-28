@@ -1,5 +1,5 @@
-// Plotly figures of a result. Colours come from the CSS variables (style.css), so
-// light and dark themes each use their own validated steps.
+// Plotly figures of a result, in plotipus's look (style.css holds its palette and ink/paper roles):
+// boxed axes, ticks inside on all four sides with minor ticks, no grid, frameless legends, DejaVu Sans.
 import { DISPLAY, percentile } from "./engine.js";
 
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"]; // fixed colour slot per component
@@ -7,8 +7,8 @@ const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"]; // fixed c
 export function colours() {
   const css = getComputedStyle(document.documentElement), v = (name) => css.getPropertyValue(name).trim();
   return {
-    text: v("--text-primary"), secondary: v("--text-secondary"), muted: v("--text-muted"), grid: v("--grid"),
-    surface: v("--surface-1"), sampled: v("--sampled"), range: v("--range"), measured: v("--measured"),
+    text: v("--plot-ink"), secondary: v("--plot-ticklabel"), muted: v("--plot-muted"), axis: v("--plot-axis"),
+    surface: v("--plot-paper"), sampled: v("--sampled"), range: v("--range"), measured: v("--measured"),
     component: Object.fromEntries(ORDER.map((c, i) => [c, v(`--series-${i + 1}`)])),
   };
 }
@@ -18,14 +18,18 @@ function alpha(hex, a) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
+const FONT = '"DejaVu Sans", Verdana, Geneva, sans-serif';
+
 function layout(c, title, xTitle, yTitle, extra = {}) {
-  const axis = { gridcolor: c.grid, zerolinecolor: c.grid, linecolor: c.grid, tickfont: { color: c.secondary },
-                 title: { font: { color: c.secondary, size: 12 } }, automargin: true };
+  const axis = { showline: true, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
+                 tickwidth: 1, tickcolor: c.axis, minor: { ticks: "inside", ticklen: 3, tickcolor: c.axis, showgrid: false },
+                 showgrid: false, zeroline: false, tickfont: { color: c.secondary, size: 12 },
+                 title: { font: { color: c.text, size: 13 } }, automargin: true };
   return {
-    title: { text: title, font: { size: 13, color: c.text }, x: 0.01, xanchor: "left" },
-    paper_bgcolor: c.surface, plot_bgcolor: c.surface, font: { family: "system-ui, sans-serif", color: c.text, size: 12 },
-    margin: { l: 60, r: 16, t: 40, b: 48 }, hoverlabel: { bgcolor: c.surface, bordercolor: c.grid, font: { color: c.text } },
-    legend: { orientation: "h", y: -0.22, x: 0, font: { color: c.secondary } },
+    title: { text: title, font: { size: 14, color: c.text }, x: 0.5, xanchor: "center" },
+    paper_bgcolor: c.surface, plot_bgcolor: c.surface, font: { family: FONT, color: c.text, size: 12 },
+    margin: { l: 60, r: 16, t: 40, b: 48 }, hoverlabel: { bgcolor: c.surface, bordercolor: c.axis, font: { color: c.text, family: FONT } },
+    legend: { orientation: "h", y: -0.22, x: 0, font: { color: c.text } },
     ...extra,
     xaxis: { ...axis, ...extra.xaxis, title: { ...axis.title, text: xTitle } },
     yaxis: { ...axis, ...extra.yaxis, title: { ...axis.title, text: yTitle } },
@@ -112,10 +116,10 @@ export function spectrumPlot(node, result) {
     for (const comp of setup.components) {
       const values = pickPeriod(setup.period, spectra.components[comp].day, spectra.components[comp].night);
       traces.push({ ...stairs(edges, values.map(clip)), mode: "lines", name: DISPLAY[comp],
-                    line: { color: c.component[comp], width: 2 }, hovertemplate: "%{y:.4g}<extra>" + DISPLAY[comp] + "</extra>" });
+                    line: { color: c.component[comp], width: 2.4 }, hovertemplate: "%{y:.4g}<extra>" + DISPLAY[comp] + "</extra>" });
     }
   }
-  traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.5 },
+  traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.4 },
                 hovertemplate: "%{y:.4g}<extra>total</extra>" });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
   return Plotly.react(node, traces, layout(c, title, "Neutrino energy (MeV)", "Interactions / (kt·yr) per bin",

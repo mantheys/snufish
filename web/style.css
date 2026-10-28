@@ -1,39 +1,43 @@
-/* Colours: the validated reference palette (light and dark steps of the same hues). */
+/* Colours: plotipus's (Petroff-10 palette, and its dark twins on #1b1d22; ink/paper roles), so the page and
+   the plotipus figures it downloads look like one family. */
 :root {
   color-scheme: light;
-  --surface-0: #f4f3f0;
-  --surface-1: #fcfcfb;
-  --border: #dddcd6;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #7a7973;
-  --grid: #e6e5df;
-  --accent: #2a78d6;
-  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
-  --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+  --surface-0: #f3f4f6;
+  --surface-1: #ffffff;
+  --border: #d9dbe0;
+  --text-primary: #111214;
+  --text-secondary: #4a4e55;
+  --text-muted: #6b6f76;
+  --grid: #e6e7ea;
+  --accent: #2f7fc9;
+  --plot-paper: #ffffff; --plot-ink: #000000; --plot-axis: #000000; --plot-ticklabel: #000000; --plot-muted: #6b6f76;
+  --series-1: #3f90da; --series-2: #ffa90e; --series-3: #bd1f01; --series-4: #94a4a2; --series-5: #832db6;
+  --series-6: #a96b59; --series-7: #e76300; --series-8: #b9ac70; --series-9: #717581; --series-10: #92dadd;
   --sampled: var(--series-1);
   --range: var(--series-2);
-  --measured: var(--series-3);
+  --measured: #3aa58c;
   --warning-bg: #fff4e0;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --surface-0: #121211; --surface-1: #1a1a19; --border: #33332f;
-    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d85; --grid: #2a2a27;
-    --accent: #3987e5;
-    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
-    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    --surface-0: #141519; --surface-1: #1b1d22; --border: #33363d;
+    --text-primary: #e8eaed; --text-secondary: #b4b8c0; --text-muted: #8b9099; --grid: #2a2d33;
+    --accent: #3f90da;
+    --plot-paper: #1b1d22; --plot-ink: #e8eaed; --plot-axis: #b4b8c0; --plot-ticklabel: #d0d3d8; --plot-muted: #8b9099;
+    --series-3: #e12501; --series-5: #a04bd3; --series-9: #7b7f8b;
+    --measured: #92dadd;
     --warning-bg: #3a2a10;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-0: #121211; --surface-1: #1a1a19; --border: #33332f;
-  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8e8d85; --grid: #2a2a27;
-  --accent: #3987e5;
-  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
-  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  --surface-0: #141519; --surface-1: #1b1d22; --border: #33363d;
+  --text-primary: #e8eaed; --text-secondary: #b4b8c0; --text-muted: #8b9099; --grid: #2a2d33;
+  --accent: #3f90da;
+  --plot-paper: #1b1d22; --plot-ink: #e8eaed; --plot-axis: #b4b8c0; --plot-ticklabel: #d0d3d8; --plot-muted: #8b9099;
+  --series-3: #e12501; --series-5: #a04bd3; --series-9: #7b7f8b;
+  --measured: #92dadd;
   --warning-bg: #3a2a10;
 }
 
@@ -44,6 +48,7 @@ body {
   color: var(--text-primary);
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+.card { background: var(--plot-paper); }
 
 .top {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -126,3 +131,10 @@ button {
 button.ghost { background: transparent; color: var(--text-primary); border-color: var(--border); }
 button:disabled { opacity: 0.5; cursor: default; }
 .footnote { max-width: 70em; }
+
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-top: 10px; }
+.figures figure { margin: 0; }
+.figures img { width: 100%; height: auto; display: block; border-radius: 6px; background: var(--plot-paper); }
+.figures figcaption { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-family: ui-monospace, monospace; word-break: break-all; }
+.plotipus-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.plotipus-head h2 { margin: 0; font-size: 0.95rem; }

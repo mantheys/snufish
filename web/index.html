@@ -94,9 +94,15 @@
       <div id="table"></div>
     </details>
     <div class="actions">
+      <button id="render" type="button" class="ghost" disabled>Render with plotipus</button>
       <button id="download" type="button" disabled>Download data, figures and plotipus commands</button>
       <button id="share" type="button" class="ghost" disabled>Copy link to this setup</button>
     </div>
+    <section id="plotipus" class="card" hidden>
+      <div class="plotipus-head"><h2>plotipus figures</h2><span id="plotipus-status" class="hint"></span></div>
+      <p class="hint">Drawn in your browser by plotipus, exactly as <code>plotipus run app</code> draws them from the download.</p>
+      <div id="plotipus-figures" class="figures"></div>
+    </section>
     <p class="hint footnote">
       Rates are interactions per kiloton-year in true neutrino energy (no detector response yet). Probabilities are
       interpolated from tables of the SNUfish solvers (Sun: B2 reference; Earth: NuFast-Earth), which they reproduce to

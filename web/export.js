@@ -1,5 +1,6 @@
-// "Download": the result as a small plotipus project (Parquet data, command list,
-// plotipus.toml), the page's figures as PNG and a README, zipped. Loaded on first use.
+// The result as a small plotipus project (Parquet data, command list, plotipus.toml,
+// colors.json with the page's colours), used by "Download" (zipped with the page's
+// figures and a README) and by "Render with plotipus" (plotipus-worker.js). Loaded on first use.
 import { DISPLAY } from "./engine.js";
 import { binAsymmetry, budgetSizes } from "./plots.js";
 
@@ -11,9 +12,12 @@ function spectrumColumns(result) {
   const { spectra, setup } = result, edges = spectra.edges, night = spectra.night !== null;
   const cols = { Component: [], Energy: [], EnergyLow: [], EnergyHigh: [], Day: [] };
   if (night) Object.assign(cols, { Night: [], Annual: [], Asymmetry: [] });
+  // bins without interactions (below a threshold, beyond the spectra) are left out, so plotipus's axes fit the data
+  const filled = spectra.day.map((d, b) => d > 0 || (night && spectra.night[b] > 0));
   const add = (name, day, nite) => {
     const a = night ? binAsymmetry(day, nite) : null;
     day.forEach((d, b) => {
+      if (!filled[b]) return;
       cols.Component.push(name); cols.Energy.push(Math.sqrt(edges[b] * edges[b + 1]));
       cols.EnergyLow.push(edges[b]); cols.EnergyHigh.push(edges[b + 1]); cols.Day.push(d);
       if (night) { cols.Night.push(nite[b]); cols.Annual.push(0.5 * (d + nite[b])); cols.Asymmetry.push(100 * a[b]); }
@@ -26,7 +30,7 @@ function spectrumColumns(result) {
 
 function commands(result) {
   const adn = result.quantity === "adn", column = adn ? "Asymmetry" : result.setup.period.replace(/^./, (x) => x.toUpperCase());
-  const spectrum = `line --datafile AppSpectrum -x Energy -y ${column} --hue Component --plot_type step --logx `
+  const spectrum = `line --no_error --datafile AppSpectrum -x Energy -y ${column} --hue Component --plot_type step --logx `
     + (adn ? "--select Component -s total --labely 'A_DN (%)' " : "--logy --labely 'Interactions / (kt yr) per bin' ")
     + "--labelx 'Neutrino energy (MeV)' --output_suffix spectrum";
   const size = adn ? "Uncertainty (%)" : "Relative uncertainty (%)";
@@ -37,8 +41,15 @@ function commands(result) {
   ];
 }
 
-export async function downloadResult(result, description, link) {
-  const [{ parquetWriteBuffer }, { zipSync, strToU8 }] = await Promise.all([import(PARQUET), import(ZIP)]);
+// plotipus colour registry: the same palette slots as the page (style.css), so a component keeps its colour
+const COLOURS = {
+  Component: { pp: "C0", pep: "C1", hep: "C2", "7Be": "C3", "8B": "C4", "13N": "C5", "15O": "C6", "17F": "C7", total: "role:ink" },
+  Kind: { sampled: "C0", "model range": "C1" },
+};
+
+export async function plotipusProject(result, description, link) {
+  const { parquetWriteBuffer } = await import(PARQUET);
+  const strToU8 = (text) => new TextEncoder().encode(text);
   const columns = (cols) => Object.entries(cols).map(([name, data]) =>
     ({ name, data, type: typeof data[0] === "string" ? "STRING" : "DOUBLE" }));
   const rows = result.rows, sizes = budgetSizes(rows, result.quantity, result.scale);
@@ -55,21 +66,27 @@ export async function downloadResult(result, description, link) {
              { name: "element", type: "DOUBLE", repetition_type: "REQUIRED" }],
   });
   const list = commands(result);
-  const files = {
+  return { commands: list, files: {
     "build/data/AppSpectrum.parquet": new Uint8Array(parquetWriteBuffer({ columnData: columns(spectrumColumns(result)) })),
     "build/data/AppBudget.parquet": new Uint8Array(parquetWriteBuffer({ columnData: columns(budget) })),
     "build/data/AppSamples.parquet": new Uint8Array(samples),
     "plotipus.toml": strToU8('[project]\ndata_root = "build/data"\nplots = "input/plots"\noutput = "output"\n'),
     "input/plots/app_scripts.txt": strToU8(`# ${description}\n# ${link}\n${list.join("\n")}\n`),
+    "colors.json": strToU8(JSON.stringify(COLOURS, null, 1)),
     "README.txt": strToU8([
       "SNUfish result", "", description, `Setup: ${link}`, "",
       "build/data/AppSpectrum.parquet  rates per kt yr per energy bin (one row per component and bin; Asymmetry in %)",
       "build/data/AppBudget.parquet    error budget: sampled sigma, or model range Low-High (Size: as plotted)",
       "build/data/AppSamples.parquet   the sampled values of the result (one row, an array)",
-      "figures/                        the page's figures",
+      "figures/                        the page's figures (and plotipus/, if rendered in the page)",
       "", "Plots with plotipus (https://github.com/mantheys/plotipus): plotipus run app", "",
     ].join("\n")),
-  };
+  } };
+}
+
+export async function downloadResult(result, description, link, rendered = []) {
+  const [{ zipSync }, { files }] = await Promise.all([import(ZIP), plotipusProject(result, description, link)]);
+  for (const { name, bytes } of rendered) files[`figures/plotipus/${name}`] = bytes;
   for (const [name, id] of [["spectrum", "plot-spectrum"], ["distribution", "plot-distribution"], ["budget", "plot-budget"]]) {
     const url = await Plotly.toImage(document.getElementById(id), { format: "png", width: 1200, height: 700, scale: 2 });
     files[`figures/${name}.png`] = Uint8Array.from(atob(url.split(",")[1]), (ch) => ch.charCodeAt(0));

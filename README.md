@@ -103,9 +103,12 @@ A static page (plain JavaScript, no server) on top of the same engine: pick
 oscillation parameters, solar model and flux components, site and Earth
 model, target and channel, and get the rate or the day-night asymmetry with
 its spectrum, the distribution of the sampled values and the error budget.
-It opens in under a second and recomputes in ~50 ms. "Download" gives the
-result as Parquet with a plotipus command list (`plotipus run app`) and the
-figures.
+It opens in under a second and recomputes in ~50 ms. Its figures use
+plotipus's palette and frame; "Render with plotipus" draws the plotipus
+figures themselves in the browser (Pyodide in a background worker, loaded on
+first use: ~15 s the first time, ~2 s after). "Download" gives the result as
+Parquet with a plotipus command list and colour registry (`plotipus run
+app`) and the figures.
 
 `web/engine.js` is a port of `snufish.engine`: `tests/test_web_engine.py`
 runs both on the same tables and random draws and requires agreement to
@@ -116,7 +119,7 @@ to 2e-4 for rates and 1% for the day-night asymmetry (3e-4 absolute;
 
 ```bash
 snufish export-app --out build/app      # tables, ~3 min on 8 cores
-python web/build.py --out build/site    # page + tables, plain files for any static host
+python web/build.py --out build/site    # page + tables + plotipus wheel (--plotipus ../plotipus)
 python -m http.server -d build/site     # open http://localhost:8000
 ```
 

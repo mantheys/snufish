@@ -12,7 +12,8 @@ const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 
 const $ = (id) => document.getElementById(id);
-const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false };
+const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
+              worker: null, rendered: [], renderId: 0 };
 
 // ------------------------------------------------------------------ loading
 
@@ -212,6 +213,7 @@ async function compute() {
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
   app.result = { setup, quantity, rows, samples, spectra, scale, unit, live, set: $("set").value, ms };
   render();
+  if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
   const notes = [];
   if (app.tables.clamped) notes.push(`${app.tables.clamped} sampled points fell outside the tables and were moved to their edge.`);
   const fluxSampled = rows.some((r) => r.Source.includes("flux"));
@@ -219,7 +221,7 @@ async function compute() {
   if (!fluxSampled && !allMeasured && !(quantity === "adn" && setup.components.length === 1))
     notes.push("This solar model publishes no flux uncertainties: no flux error is sampled.");
   status(notes.join(" ") || `Computed with ${N_DRAWS} draws in ${Math.round(ms)} ms.`);
-  $("download").disabled = $("share").disabled = false;
+  $("download").disabled = $("share").disabled = $("render").disabled = false;
 }
 
 function render() {
@@ -268,6 +270,52 @@ function setupTheme() {
   apply();
 }
 
+// ------------------------------------------------------------------ plotipus in the page
+
+const isDark = () => document.documentElement.dataset.theme === "dark"
+  || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+
+async function renderPlotipus() {
+  const result = app.result, id = ++app.renderId;
+  if (!result) return;
+  $("plotipus").hidden = false;
+  $("render").disabled = true;
+  app.rendered = [];
+  const say = (text) => { $("plotipus-status").textContent = text; };
+  say("Preparing…");
+  try {
+    if (!app.worker) {
+      app.worker = new Worker("plotipus-worker.js", { type: "module" });
+      app.worker.onmessage = ({ data }) => app.onWorker?.(data);
+    }
+    const wheel = new URL(`py/${(await (await fetch("py/manifest.json")).json()).plotipus}`, location.href).href;
+    const { plotipusProject } = await import("./export.js");
+    const { files, commands } = await plotipusProject(result, describe(result.setup, result.quantity), location.href);
+    const t0 = performance.now();
+    const answer = await new Promise((resolve) => {
+      app.onWorker = (msg) => { if (msg.type === "progress") { if (id === app.renderId) say(msg.text); } else if (msg.id === id) resolve(msg); };
+      app.worker.postMessage({ id, wheel, files, commands, theme: isDark() ? "dark" : "light" });
+    });
+    if (id !== app.renderId) return; // a newer result is being drawn
+    if (answer.type === "error") throw new Error(answer.text);
+    app.rendered = answer.images;
+    const names = { spectrum: commands[0], samples: commands[2], budget: commands[1] }; // the page's order
+    const rank = (name) => Object.keys(names).findIndex((k) => name.includes(`_${k}.png`));
+    answer.images.sort((a, b) => rank(a.name) - rank(b.name));
+    $("plotipus-figures").replaceChildren(...answer.images.map(({ name, bytes }) => {
+      const fig = document.createElement("figure"), key = Object.keys(names).find((k) => name.includes(`_${k}.png`));
+      fig.innerHTML = `<img alt="plotipus figure ${name}"><figcaption>plotipus ${names[key] || name}</figcaption>`;
+      fig.querySelector("img").src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+      return fig;
+    }));
+    say(answer.failed.length ? `Some commands failed: ${answer.failed.join("; ")}` : `Drawn in ${((performance.now() - t0) / 1000).toFixed(1)} s.`);
+  } catch (error) {
+    if (id === app.renderId) say(`plotipus failed: ${error.message}`);
+  } finally {
+    if (id === app.renderId) $("render").disabled = false;
+  }
+}
+
 async function init() {
   setupTheme();
   try {
@@ -292,11 +340,12 @@ async function init() {
     status("Preparing the download…");
     try {
       const { downloadResult } = await import("./export.js");
-      await downloadResult(app.result, describe(app.result.setup, app.result.quantity), location.href);
+      await downloadResult(app.result, describe(app.result.setup, app.result.quantity), location.href, app.rendered);
       status("Downloaded: Parquet data, plotipus commands (plotipus run app) and the figures.");
     } catch (error) { status(`Download failed: ${error.message}`, true); }
     $("download").disabled = false;
   });
+  $("render").addEventListener("click", renderPlotipus);
   await run();
 }
 
