@@ -87,6 +87,13 @@ def _nufast_driver():
 def night_probabilities(osc, earth_model, latitude_deg):
     """(energies MeV, array [E, 3] of P(nu_i -> nu_e) averaged over the night at
     the given latitude), on the B3 exposure grid."""
+    energies, cosines, P = night_grid(osc, earth_model)
+    return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude_deg)))
+
+
+def night_grid(osc, earth_model):
+    """(energies MeV, cos nadir, array [E, cos, 3] of P(nu_i -> nu_e)) on the
+    B3 exposure grid, before averaging over a site's night."""
     spec = load_spec("B3_earth")
     grid = spec["grids"]["exposure"]
     argv = [earth_model, *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
@@ -97,8 +104,7 @@ def night_probabilities(osc, earth_model, latitude_deg):
     table = np.loadtxt(out.splitlines())
     energies, cosines = spec.axis("energy", "exposure"), spec.axis("cos_nadir", "exposure")
     P = table[:, [2, 5, 8]].reshape(len(energies), len(cosines), 3)  # m[i][e], rows E-major
-    w = cell_weights(cosines, np.radians(latitude_deg))
-    return energies, np.einsum("eci,c->ei", P, w)
+    return energies, cosines, P
 
 
 def site_latitude(site):

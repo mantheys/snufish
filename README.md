@@ -89,11 +89,32 @@ reference solvers, [NuFast-Earth](https://github.com/PeterDenton/NuFast-Earth)
 - `snufish budget`: uncertainty propagation to the 8B rates and the
   day-night asymmetry. Solar fluxes (with the B23 correlations, or the SNO
   neutral-current 8B flux) and oscillation parameters are sampled; nuclear
-  model, ES radiative corrections and Earth model are reported as model
-  ranges, never folded into a sigma. Plots: `plotipus run budget`.
+  model, ES radiative corrections, Earth model and solar model are reported
+  as model ranges, never folded into a sigma. Plots: `plotipus run budget`.
 
 Both use the solvers the benchmarks validate (the B2 adiabatic reference,
-NuFast-Earth for the night: `make` in `contributions/nufast-earth/scripts`).
+NuFast-Earth for the night: `make` in `contributions/nufast-earth/scripts`),
+through `snufish.engine`: the folding of fluxes, probabilities and cross
+sections and the uncertainty budget, in NumPy only.
+
+## The app (in development)
+
+The same engine runs in the browser (Panel on Pyodide): pick oscillation
+parameters, solar model, detector, channel, site and Earth model, and get
+the rate or day-night asymmetry with its error budget, plotted by plotipus.
+In the browser the Sun and Earth solvers are replaced by tables of their
+results on a (sin^2 theta12, Delta m^2_21) grid; they reproduce the exact
+solvers to 2e-4 for rates and 1% for the day-night asymmetry (3e-4
+absolute), checked by `tests/test_engine.py` (also
+`snufish budget --tables build/app`).
+
+```bash
+pip install -e ".[app]"
+snufish export-app --out build/app                       # tables, ~3 min on 8 cores, 16 MB
+python app/build.py --plotipus ../plotipus --out build/site
+python -m http.server -d build/site                     # open /snufish_app.html
+panel serve app/snufish_app.py                           # or locally, without Pyodide
+```
 
 ## Layout
 
@@ -106,7 +127,8 @@ contributions/<tool>/<benchmark>/<tool_version>/
 contributions/<tool>/scripts/    how a tool's contribution is produced
 reference/                       shared inputs (solar model, flux shapes), with provenance
 input/plots/<list>_scripts.txt   plotipus command lists
-src/snufish/                     validator, builder, reference solvers
+src/snufish/                     validator, builder, reference solvers, engine
+app/                             the browser app (Panel on Pyodide)
 ```
 
 ## Use

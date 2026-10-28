@@ -1,4 +1,4 @@
-# Uncertainty propagation. Data: `snufish budget` (build/data). Relative = sigma / central (sampled) or largest deviation of the alternatives (model spread).
+# Uncertainty propagation. Data: `snufish budget` (build/data). Relative = sigma / central (sampled) or largest deviation of the alternatives (model range).
 cat --no_error --datafile Budget -x Source -y Relative --hue Flux --select Quantity -s argon_cc_b8 --select Set -s juno_2025 --kind bar --orient h --labely 'Relative uncertainty' --title '$^8$B CC on $^{40}$Ar (JUNO parameters)' --output_suffix argon_cc
 cat --no_error --datafile Budget -x Source -y Relative --hue Flux --select Quantity -s water_es_b8_t349 --select Set -s juno_2025 --kind bar --orient h --labely 'Relative uncertainty' --title '$^8$B ES in water, $T>3.49$ MeV' --output_suffix water_es
 cat --no_error --datafile Budget -x Source -y Relative --hue Set --select Quantity -s kamioka_adn_es --kind bar --orient h --labely 'Relative uncertainty' --title 'Day-night asymmetry at Kamioka' --output_suffix adn

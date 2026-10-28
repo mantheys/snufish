@@ -95,13 +95,24 @@ def cmd_scan(args):
 def cmd_budget(args):
     from .build import _write_frame
     from .paths import build_dir
+    from .engine import TableProbabilities
     from .uncertainty import predictions, write_budget
 
-    frames = write_budget(args.sets, args.solar_model, args.n, args.seed)
+    probabilities = TableProbabilities(args.tables) if args.tables else None
+    frames = write_budget(args.sets, args.solar_model, args.n, args.seed, probabilities=probabilities)
     frames["Budget_Predictions"] = predictions(frames["Budget"])
     _write_frame(frames["Budget_Predictions"], build_dir() / "Budget_Predictions.parquet")
     for name, frame in frames.items():
         print(f"wrote   build/data/{name}.parquet ({len(frame)} rows)")
+    return 0
+
+
+def cmd_export_app(args):
+    from .export import export_app
+
+    manifest = export_app(args.out, s12=args.s12, dm21=args.dm21, jobs=args.jobs)
+    for name in manifest["files"]:
+        print(f"wrote   {args.out}/{name}")
     return 0
 
 
@@ -140,7 +151,16 @@ def main(argv=None):
     p.add_argument("--solar_model", default="b23_gs98")
     p.add_argument("--n", type=int, default=400)
     p.add_argument("--seed", type=int, default=1)
+    p.add_argument("--tables", help="app tables directory (snufish export-app) instead of the exact solvers")
     p.set_defaults(func=cmd_budget)
+
+    p = sub.add_parser("export-app", help="inputs and probability tables of the SNUfish app")
+    p.add_argument("--out", default="build/app")
+    p.add_argument("--s12", type=float, nargs=3, default=[0.24, 0.38, 0.01], metavar=("START", "STOP", "STEP"))
+    p.add_argument("--dm21", type=float, nargs=3, default=[3.0, 11.0, 0.2], metavar=("START", "STOP", "STEP"),
+                   help="1e-5 eV^2")
+    p.add_argument("--jobs", type=int, default=None, help="worker processes (default: all cores)")
+    p.set_defaults(func=cmd_export_app)
 
     args = parser.parse_args(argv)
     return args.func(args)
