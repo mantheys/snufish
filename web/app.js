@@ -1,6 +1,7 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
 import { budgetPlot, distributionPlot, spectrumPlot } from "./plots.js";
+import { forStep, render as renderSources } from "./sources.js";
 
 const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
@@ -70,15 +71,22 @@ function buildControls() {
 const radio = (name) => document.querySelector(`input[name="${name}"]:checked`).value;
 const setRadio = (name, value) => { const el = document.querySelector(`input[name="${name}"][value="${value}"]`); if (el) el.checked = true; };
 
+const number = (id, fallback = 0) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : fallback; };
+
+function exposure() {
+  const mass = number("mass"), years = number("years");
+  return mass > 0 && years > 0 ? mass * years : null;
+}
+
 function readSetup() {
-  const exposure = parseFloat($("exposure").value);
   return engine.makeSetup({
     solar_model: $("solar").value,
     components: [...document.querySelectorAll('input[name="components"]:checked')].map((x) => x.value),
     b8_flux: radio("b8"), site: $("site").value, earth_model: $("earth").value, detector: $("detector").value,
     channel: $("channel").value, xsec_model: $("xsec").value || "default", es_model: radio("es"),
-    recoil_threshold: parseFloat($("threshold").value) || 0, period: radio("period"),
-    exposure: exposure > 0 ? exposure : null,
+    period: radio("period"), threshold: number("threshold"), resolution_a: number("res-a"),
+    resolution_b: number("res-b") / 100, efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"),
+    efficiency_width: number("eff-width", 0.5), exposure: exposure(),
   });
 }
 
@@ -88,7 +96,14 @@ function sync() {
   const channels = Object.keys(d.detectors[detector].channels);
   fillSelect($("channel"), channels.map((c) => [c, CHANNELS[c] || c]), $("channel").value);
   const es = $("channel").value === "es";
-  $("threshold-row").hidden = $("es-row").hidden = !es;
+  $("es-row").hidden = !es;
+  $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
+  const q = d.visible_offset_MeV[$("channel").value];
+  $("observable-note").textContent = es
+    ? "Observed: the recoil electron's kinetic energy T."
+    : `Observed: the visible energy E_ν − Q (Q = ${q} MeV; electron and de-excitation gammas, no neutron or binding losses).`;
+  const exp = exposure();
+  $("exposure-note").textContent = exp ? `Exposure ${fmt(exp)} kt·yr (half by night).` : "Set both for a statistical error.";
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
   const keep = models.includes($("xsec").value) ? $("xsec").value : "default"; // the nominal model unless one was chosen
   fillSelect($("xsec"), models.map((m) => [m, XSEC[m] || m]), keep);
@@ -110,7 +125,8 @@ function sync() {
 // ------------------------------------------------------------------ URL state
 
 const KEYS = { set: "set", solar: "solar", site: "site", earth: "earth", detector: "target", channel: "channel",
-               xsec: "xsec", threshold: "threshold", exposure: "exposure" };
+               xsec: "xsec", threshold: "threshold", "res-a": "a", "res-b": "b", eff: "eff", "eff-e50": "e50",
+               "eff-width": "width", mass: "mass", years: "years" };
 const RADIOS = { b8: "b8", es: "es", quantity: "q", period: "period" };
 
 function saveHash() {
@@ -161,7 +177,7 @@ function fmt(value, error) {
 const signed = (v) => (v === 0 ? "±0" : `${v > 0 ? "+" : "−"}${Math.abs(v) < 0.1 ? Math.abs(v).toPrecision(2) : Math.abs(v).toFixed(1)}`);
 
 function measuredBand(setup, quantity) {
-  if (quantity === "adn" && setup.channel === "es" && setup.site === "Kamioka" && Math.abs(setup.recoil_threshold - 3.49) < 0.01) {
+  if (quantity === "adn" && setup.channel === "es" && setup.site === "Kamioka" && Math.abs(setup.threshold - 3.49) < 0.01) {
     const m = app.inputs.data.measurements.sk_day_night;
     return [-m.value, Math.hypot(m.stat, m.syst), "Super-K ±1σ"];
   }
@@ -170,7 +186,11 @@ function measuredBand(setup, quantity) {
 
 function describe(setup, quantity) {
   const comps = setup.components.map((c) => engine.DISPLAY[c]).join(", ");
-  const what = CHANNELS[setup.channel] + (setup.channel === "es" ? `, T > ${setup.recoil_threshold} MeV` : "");
+  const response = [];
+  if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E_vis"} > ${setup.threshold} MeV`);
+  if (setup.resolution_a > 0 || setup.resolution_b > 0) response.push("smeared");
+  if (setup.efficiency < 1 || setup.efficiency_e50 > 0) response.push("efficiency");
+  const what = CHANNELS[setup.channel] + (response.length ? `, ${response.join(", ")}` : "");
   return quantity === "adn" ? `Day-night asymmetry 2(N−D)/(N+D) · ${comps} · ${what} · ${setup.site}`
                             : `${setup.period[0].toUpperCase()}${setup.period.slice(1)} rate · ${comps} · ${what}`;
 }
@@ -317,6 +337,16 @@ async function renderPlotipus() {
   }
 }
 
+function refreshSources() {
+  // the open info boxes follow the current selection
+  if (!app.inputs) return;
+  const setup = readSetup(), quantity = radio("quantity");
+  document.querySelectorAll(".step").forEach((step) => {
+    const box = step.querySelector(".sources-box");
+    if (!box.hidden) box.innerHTML = renderSources(forStep(Number(step.dataset.step), setup, quantity, app.inputs, $("set").value));
+  });
+}
+
 async function init() {
   setupTheme();
   try {
@@ -330,8 +360,14 @@ async function init() {
   sync();
   loadHash();
   sync();
-  $("controls").addEventListener("change", () => { sync(); schedule(); });
-  $("controls").addEventListener("input", (e) => { if (e.target.type === "number") schedule(); });
+  $("controls").addEventListener("change", () => { sync(); refreshSources(); schedule(); });
+  document.querySelectorAll("button.info").forEach((button) => button.addEventListener("click", () => {
+    const box = button.closest(".step").querySelector(".sources-box"), open = box.hidden;
+    box.hidden = !open;
+    button.setAttribute("aria-expanded", String(open));
+    refreshSources();
+  }));
+  $("controls").addEventListener("input", (e) => { if (e.target.type === "number") { sync(); schedule(); } });
   $("share").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(location.href); status("Link copied."); }
     catch { status(`Link: ${location.href}`); }

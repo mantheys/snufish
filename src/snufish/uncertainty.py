@@ -34,11 +34,11 @@ QUANTITIES = {
     # name: engine setup and quantity (rate by day, or the day-night asymmetry)
     "argon_cc_b8": dict(setup=dict(detector="argon", channel="cc_nue_ar40"), quantity="rate",
                         label="8B CC on 40Ar"),
-    "argon_es_b8_t5": dict(setup=dict(detector="argon", channel="es", recoil_threshold=5.0), quantity="rate",
+    "argon_es_b8_t5": dict(setup=dict(detector="argon", channel="es", threshold=5.0), quantity="rate",
                            label="8B ES in argon, T > 5 MeV"),
-    "water_es_b8_t349": dict(setup=dict(detector="water", channel="es", recoil_threshold=3.49), quantity="rate",
+    "water_es_b8_t349": dict(setup=dict(detector="water", channel="es", threshold=3.49), quantity="rate",
                              label="8B ES in water, T > 3.49 MeV"),
-    "kamioka_adn_es": dict(setup=dict(detector="water", channel="es", recoil_threshold=3.49, site="Kamioka"),
+    "kamioka_adn_es": dict(setup=dict(detector="water", channel="es", threshold=3.49, site="Kamioka"),
                            quantity="adn", label="ES day-night asymmetry at Kamioka"),
 }
 NOMINAL = dict(xsec_model="default", es_model="tree", earth_model="prem_full")

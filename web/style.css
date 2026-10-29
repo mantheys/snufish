@@ -139,3 +139,31 @@ button:disabled { opacity: 0.5; cursor: default; }
 .figures figcaption { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-family: ui-monospace, monospace; word-break: break-all; }
 .plotipus-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .plotipus-head h2 { margin: 0; font-size: 0.95rem; }
+
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.row.three { grid-template-columns: 1fr 1fr 1fr; }
+.row label { margin-top: 0; }
+.step h2 .info {
+  margin-left: auto; width: 22px; height: 22px; padding: 0; border-radius: 50%; font: italic 600 0.8rem/1 Georgia, serif;
+  background: transparent; color: var(--text-secondary); border: 1px solid var(--border);
+}
+.step h2 .info[aria-expanded="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sources-box { margin: 4px 0 8px; padding: 8px 10px; border-radius: 8px; background: var(--surface-0); font-size: 0.8rem; }
+ul.sources { margin: 0; padding-left: 16px; }
+ul.sources li { margin: 3px 0; color: var(--text-secondary); }
+ul.sources a { color: var(--accent); }
+ul.sources .ref { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: 0.75rem; white-space: nowrap; }
+.home-link { color: inherit; text-decoration: none; }
+
+/* home page */
+a.button { display: inline-block; padding: 8px 14px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-size: 0.9rem; }
+.home { max-width: 1100px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.hero { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; }
+.hero h2 { margin: 0 0 8px; font-size: 1.4rem; }
+.hero p { color: var(--text-secondary); max-width: 62em; }
+.hero a:not(.button) { color: var(--accent); }
+.home-grid, .credits { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+ul.plain { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.9rem; }
+ul.plain li { margin: 4px 0; }
+.credits-title { margin: 8px 0 0; font-size: 1.15rem; }
+.credits ul.sources { font-size: 0.85rem; }

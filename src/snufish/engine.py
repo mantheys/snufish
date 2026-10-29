@@ -28,6 +28,7 @@ reported as the range of the alternatives and never folded into a sigma.
 
 import json
 from dataclasses import dataclass, replace
+from math import erf
 from pathlib import Path
 
 import numpy as np
@@ -146,8 +147,14 @@ class Setup:
     channel: str = "es"
     xsec_model: str = "default"     # nuclear model of a CC channel (B4 variants)
     es_model: str = "tree"          # "tree" or "snowglobes" (radiative corrections)
-    recoil_threshold: float = 0.0   # MeV of electron kinetic energy, ES only
     period: str = "day"             # "day", "night" or "annual"
+    # detector response, in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
+    threshold: float = 0.0          # MeV
+    resolution_a: float = 0.0       # sigma = sqrt((a sqrt(E))^2 + (b E)^2), a in MeV^1/2
+    resolution_b: float = 0.0       # b: constant term, a fraction
+    efficiency: float = 1.0         # plateau
+    efficiency_e50: float = 0.0     # MeV where the efficiency reaches half its plateau (0: flat)
+    efficiency_width: float = 0.5   # MeV, width of the logistic turn-on
     exposure: float = None          # kton-years, for the statistical uncertainty
     profile_model: str = None       # solar model of the day fractions, if not solar_model
 
@@ -166,6 +173,10 @@ def check(inputs, setup, quantity="rate"):
         if value not in options:
             raise ValueError(f"{what} {value!r} is not available; choose one of: {', '.join(map(str, options))}")
 
+    def within(what, value, low, high):
+        if not low <= value <= high:
+            raise ValueError(f"{what} must be between {low:g} and {high:g} (got {value:g})")
+
     allowed("quantity", quantity, QUANTITY_NAMES)
     allowed("period", setup.period, PERIODS)
     allowed("solar model", setup.solar_model, list(inputs["solar_models"]))
@@ -183,68 +194,231 @@ def check(inputs, setup, quantity="rate"):
         allowed("ES model", setup.es_model, ["tree", "snowglobes"])
     else:
         allowed(f"cross-section model of {setup.channel}", setup.xsec_model, inputs.xsec_models(setup.channel))
-    if setup.recoil_threshold < 0:
-        raise ValueError("the recoil threshold must be >= 0")
+    within("the threshold (MeV)", setup.threshold, 0.0, OBSERVED_MAX)
+    within("the resolution a (MeV^1/2)", setup.resolution_a, 0.0, 2.0)
+    within("the resolution b", setup.resolution_b, 0.0, 1.0)
+    within("the efficiency", setup.efficiency, 0.0, 1.0)
+    within("the efficiency turn-on (MeV)", setup.efficiency_e50, 0.0, OBSERVED_MAX)
+    within("the turn-on width (MeV)", setup.efficiency_width, 1e-3, 10.0)
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
     if setup.exposure is not None and setup.exposure <= 0:
         raise ValueError("the exposure must be > 0 (or None for no statistical uncertainty)")
 
 
-def cross_sections(inputs, setup, energy):
-    """(sigma nu_e, sigma nu_mu/tau) in cm^2 per target, and targets per kton."""
+# ---------------------------------------------------------------- observed energy
+
+OBSERVED_MIN, OBSERVED_MAX = 0.01, 25.0   # MeV; a first bin [0, 0.01] collects everything below
+PER_DECADE, FINE = 16, 4                  # display bins per decade, fine bins per display bin
+
+
+def observed_edges(threshold=0.0):
+    """(fine, display) bin edges in observed energy: 0, then log-spaced from
+    0.01 to 25 MeV; the threshold is a fine edge, so the cut is exact."""
+    n = int(round(np.log10(OBSERVED_MAX / OBSERVED_MIN) * PER_DECADE))
+    display = np.concatenate([[0.0], np.logspace(np.log10(OBSERVED_MIN), np.log10(OBSERVED_MAX), n + 1)])
+    fine = np.concatenate([[0.0], np.logspace(np.log10(OBSERVED_MIN), np.log10(OBSERVED_MAX), n * FINE + 1)])
+    if threshold > 0 and not np.any(np.isclose(fine, threshold, rtol=0, atol=1e-9)):
+        fine = np.sort(np.append(fine, threshold))
+    return fine, display
+
+
+def observable(channel):
+    return "Electron kinetic energy T (MeV)" if channel == "es" else "Visible energy E_nu - Q (MeV)"
+
+
+def _quadrature(kind, energy, weight):
+    """Weights q_k with sum_k q_k f(E_k) = the trapezoid integral of shape * f (continuum),
+    or sum of branching * f (lines)."""
+    if kind == "line":
+        return weight
+    q = np.zeros_like(energy)
+    q[:-1] += 0.5 * np.diff(energy)
+    q[1:] += 0.5 * np.diff(energy)
+    return q * weight
+
+
+def _targets(inputs, setup):
     detector = inputs["detectors"][setup.detector]
-    targets = detector["targets"][detector["channels"][setup.channel]]
-    if setup.channel == "es":
-        sigmas = []
-        for flavour in ("nue", "numu"):
-            s = es_above(energy, flavour, inputs["constants"], setup.recoil_threshold)
-            if setup.es_model == "snowglobes":
-                e, ratio = inputs.es_ratio[flavour]
-                s = s * np.interp(energy, e, ratio, left=1.0, right=1.0)
-            sigmas.append(s)
-        return sigmas[0], sigmas[1], targets
-    e, sigma = inputs.xsec[setup.channel][setup.xsec_model]
-    s = np.interp(energy, e, sigma, left=0.0, right=0.0)  # zero outside the table
-    threshold = inputs["xsec_thresholds_MeV"].get(setup.channel, 0.0)
-    return np.where(energy < threshold, 0.0, s), np.zeros_like(energy), targets
+    return detector["targets"][detector["channels"][setup.channel]]
 
 
-def component_rates(inputs, probabilities, setup, osc, night=True):
-    """{component: dict(kind, energy, day, night)}, per kton-year: a
-    continuum's differential rate per MeV of neutrino energy, or a line's
-    rate per line. ``night`` False skips the Earth (night = None)."""
+def _kernels(inputs, setup, component, edges):
+    """Cached, oscillation-independent pieces of one component: ES: per neutrino
+    energy, the cross section into each recoil bin [E, bins] for nu_e and nu_x;
+    CC: the cross section sigma(E)."""
+    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold)
+    cache = inputs.__dict__.setdefault("_kernels", {})
+    if key not in cache:
+        kind, energy, weight = inputs.components[component]
+        if setup.channel == "es":
+            out = []
+            for flavour in ("nue", "numu"):
+                above = np.stack([es_above(energy, flavour, inputs["constants"], t) for t in edges], axis=1)
+                k = above[:, :-1] - above[:, 1:]  # sigma(E; T in bin), exact for the tree-level formula
+                if setup.es_model == "snowglobes":
+                    e, ratio = inputs.es_ratio[flavour]
+                    k = k * np.interp(energy, e, ratio, left=1.0, right=1.0)[:, None]
+                out.append(k)
+            cache[key] = tuple(out)
+        else:
+            e, sigma = inputs.xsec[setup.channel][setup.xsec_model]
+            s = np.interp(energy, e, sigma, left=0.0, right=0.0)  # zero outside the table
+            cache[key] = np.where(energy < inputs["xsec_thresholds_MeV"].get(setup.channel, 0.0), 0.0, s)
+    return cache[key]
+
+
+def _response(inputs, setup, edges):
+    """(matrix [true bin, observed bin], acceptance per observed bin): Gaussian
+    resolution, efficiency and threshold. Identity and ones for a perfect detector."""
+    key = (setup.threshold, setup.resolution_a, setup.resolution_b, setup.efficiency, setup.efficiency_e50,
+           setup.efficiency_width)
+    cache = inputs.__dict__.setdefault("_responses", {})
+    if key not in cache:
+        centres = 0.5 * (edges[1:] + edges[:-1])
+        sigma = np.hypot(setup.resolution_a * np.sqrt(centres), setup.resolution_b * centres)
+        matrix = np.eye(len(centres))
+        smeared = sigma > 0
+        if np.any(smeared):
+            cdf = np.vectorize(lambda z: 0.5 * (1 + erf(z / np.sqrt(2))))
+            z = (edges[None, :] - centres[smeared, None]) / sigma[smeared, None]
+            matrix[smeared] = np.diff(cdf(z), axis=1)  # what falls below 0 or above the last edge is lost
+        acceptance = np.full(len(centres), setup.efficiency)
+        if setup.efficiency_e50 > 0:
+            acceptance = acceptance / (1 + np.exp(-(centres - setup.efficiency_e50) / setup.efficiency_width))
+        acceptance = np.where(edges[:-1] >= setup.threshold - 1e-12, acceptance, 0.0)
+        cache[key] = (matrix, acceptance)
+    return cache[key]
+
+
+def survival(inputs, probabilities, setup, osc, night=True):
+    """{component: (P_ee by day, P_ee by night or None)} at the component's energies."""
     U2 = np.abs(pmns(osc)) ** 2
-    seconds = inputs["seconds_per_year"]
     night_e = night_p = None
     if night:
         night_e, night_p = probabilities.night(osc, setup.earth_model, setup.site)
     out = {}
     for c in setup.components:
-        kind, energy, weight = inputs.components[c]
+        energy = inputs.components[c][1]
         F = probabilities.day(osc, setup.profile_model or setup.solar_model, c, energy)
-        sigma_e, sigma_x, targets = cross_sections(inputs, setup, energy)
-        scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds * weight
-
-        def rate(pee):
-            return scale * (pee * sigma_e + (1 - pee) * sigma_x)
-
-        entry = dict(kind=kind, energy=energy, day=rate(F @ U2[0]), night=None)
+        pee_night = None
         if night:
             P = np.stack([np.interp(energy, night_e, night_p[:, i], left=U2[0, i]) for i in range(3)], axis=-1)
-            entry["night"] = rate(np.sum(F * P, axis=1))
-        out[c] = entry
+            pee_night = np.sum(F * P, axis=1)
+        out[c] = (F @ U2[0], pee_night)
     return out
+
+
+def _visible(inputs, setup, kind, energy, density, edges):
+    """CC: the rate in each fine bin of visible energy E - Q (a continuum's density
+    integrated over the bin, lines in the bin holding them; below the first edge: first bin)."""
+    shifted = edges + inputs["visible_offset_MeV"][setup.channel]
+    shifted[0], shifted[-1] = -np.inf, np.inf
+    if kind == "line":
+        return np.histogram(energy, shifted, weights=density)[0].astype(float)
+    cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(energy))])
+    return np.diff(np.interp(shifted, energy, cumulative, left=0.0, right=cumulative[-1]))
+
+
+def observed_rates(inputs, probabilities, setup, osc, night=True):
+    """{component: {"day", "night"}}: interactions per kton-year in each fine
+    bin of observed energy (``observed_edges``), after the detector response.
+    The reference path: ``component_totals`` and ``component_spectra`` give the
+    same numbers faster."""
+    edges, _ = observed_edges(setup.threshold)
+    matrix, acceptance = _response(inputs, setup, edges)
+    seconds, targets = inputs["seconds_per_year"], _targets(inputs, setup)
+    out = {}
+    for c, (pee_day, pee_night) in survival(inputs, probabilities, setup, osc, night).items():
+        kind, energy, weight = inputs.components[c]
+        scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds
+        kernels = _kernels(inputs, setup, c, edges)
+
+        def spectrum(pee):
+            if pee is None:
+                return None
+            if setup.channel == "es":
+                q = scale * _quadrature(kind, energy, weight)
+                true = (q * pee) @ kernels[0] + (q * (1 - pee)) @ kernels[1]
+            else:
+                true = _visible(inputs, setup, kind, energy, scale * weight * pee * kernels, edges)
+            return (true @ matrix) * acceptance
+
+        out[c] = {"day": spectrum(pee_day), "night": spectrum(pee_night)}
+    return out
+
+
+def _prepared(inputs, setup, component):
+    """Cached products of the kernels with the detector response, so that a draw
+    costs one short product per component: for each true bin, the accepted
+    fraction g = R a; ES also the kernels times g (totals) and times R, a and the
+    display re-binning (spectra)."""
+    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold,
+           setup.resolution_a, setup.resolution_b, setup.efficiency, setup.efficiency_e50, setup.efficiency_width)
+    cache = inputs.__dict__.setdefault("_prepared", {})
+    if key not in cache:
+        edges, display = observed_edges(setup.threshold)
+        matrix, acceptance = _response(inputs, setup, edges)
+        identity = np.array_equal(matrix, np.eye(len(matrix)))
+
+        def observe(rows):  # true bins (last axis) -> accepted, display-binned observed bins
+            smeared = rows if identity else rows @ matrix
+            return np.apply_along_axis(rebin, -1, smeared * acceptance, edges, display)
+
+        kind, energy, weight = inputs.components[component]
+        prep = dict(edges=edges, display=display, matrix=matrix, acceptance=acceptance, identity=identity,
+                    accepted=acceptance if identity else matrix @ acceptance)
+        kernels = _kernels(inputs, setup, component, edges)
+        if setup.channel == "es":
+            q = _quadrature(kind, energy, weight)
+            diff, base = kernels[0] - kernels[1], q @ kernels[1]  # true = (q P) @ (K_e - K_x) + q @ K_x
+            prep.update(q=q, diff_total=diff @ prep["accepted"], base_total=float(base @ prep["accepted"]),
+                        diff_display=observe(diff), base_display=observe(base))
+        else:
+            prep.update(sigma=kernels)
+        cache[key] = prep
+    return cache[key]
+
+
+def _fast(inputs, probabilities, setup, osc, night, spectra):
+    out = {}
+    for c, peeses in survival(inputs, probabilities, setup, osc, night).items():
+        kind, energy, weight = inputs.components[c]
+        prep = _prepared(inputs, setup, c)
+        scale = inputs["seconds_per_year"] * _targets(inputs, setup) * inputs.flux(setup.solar_model, c, setup.b8_flux)
+
+        def value(pee):
+            if pee is None:
+                return None if spectra else np.nan
+            if setup.channel == "es":
+                w = prep["q"] * pee
+                if spectra:
+                    return scale * (w @ prep["diff_display"] + prep["base_display"])
+                return float(scale * (w @ prep["diff_total"] + prep["base_total"]))
+            true = _visible(inputs, setup, kind, energy, scale * weight * pee * prep["sigma"], prep["edges"])
+            if not spectra:
+                return float(true @ prep["accepted"])
+            smeared = true if prep["identity"] else true @ prep["matrix"]
+            return rebin(smeared * prep["acceptance"], prep["edges"], prep["display"])
+
+        out[c] = {"day": value(peeses[0]), "night": value(peeses[1])}
+    return out
+
+
+def component_totals(inputs, probabilities, setup, osc, night=True):
+    """{component: {"day", "night"}} of observed rates per kton-year (= totals of observed_rates)."""
+    return _fast(inputs, probabilities, setup, osc, night, spectra=False)
+
+
+def component_spectra(inputs, probabilities, setup, osc, night=True):
+    """{component: {"day", "night"}} per display bin of observed energy (= observed_rates re-binned)."""
+    return _fast(inputs, probabilities, setup, osc, night, spectra=True)
 
 
 def totals(rates):
     """{component: {"day", "night"}} of total rates per kton-year."""
-    def total(kind, energy, values):
-        if values is None:
-            return np.nan
-        return float(np.trapezoid(values, energy)) if kind == "continuum" else float(np.sum(values))
-
-    return {c: {p: total(r["kind"], r["energy"], r[p]) for p in ("day", "night")} for c, r in rates.items()}
+    return {c: {p: (float(np.sum(r[p])) if r[p] is not None else np.nan) for p in ("day", "night")}
+            for c, r in rates.items()}
 
 
 def combine(per_component, components, multipliers=None):
@@ -279,29 +453,10 @@ def needs_night(quantity, period):
     return quantity == "adn" or period != "day"
 
 
-def binned(rates, edges):
-    """{component: {"day", "night"}} of rates per kton-year in each energy bin
-    (continua integrated over the bin, lines put in the bin holding them)."""
-    def counts(kind, energy, values):
-        if values is None:
-            return None
-        if kind == "line":
-            return np.histogram(energy, edges, weights=values)[0]
-        cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (values[1:] + values[:-1]) * np.diff(energy))])
-        return np.diff(np.interp(edges, energy, cumulative))
-
-    return {c: {p: counts(r["kind"], r["energy"], r[p]) for p in ("day", "night")} for c, r in rates.items()}
-
-
-def energy_edges(inputs, components, per_decade=16):
-    """Log-spaced bin edges covering the components' energies."""
-    low, high = [], []
-    for c in components:
-        _, energy, _ = inputs.components[c]
-        low.append(energy.min())
-        high.append(energy.max())
-    lo, hi = np.log10(max(min(low) * 0.9, 0.05)), np.log10(max(high) * 1.05)
-    return np.logspace(lo, hi, max(int(np.ceil((hi - lo) * per_decade)), 4) + 1)
+def rebin(values, fine, display):
+    """Fine-bin values summed into the display bins (each fine bin goes where its centre falls)."""
+    index = np.clip(np.searchsorted(display, 0.5 * (fine[1:] + fine[:-1])) - 1, 0, len(display) - 2)
+    return np.bincount(index, weights=values, minlength=len(display) - 1)
 
 
 # ---------------------------------------------------------------- budget
@@ -342,11 +497,11 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
     comps = list(setup.components)
 
     def value(osc=None, s=setup, multipliers=None):
-        per = totals(component_rates(inputs, probabilities, s, osc or oscillation(params), night))
+        per = component_totals(inputs, probabilities, s, osc or oscillation(params), night)
         return quantity_value(quantity, s.period, *combine(per, comps, multipliers))
 
     rng, osc_draws, flux_draws = _draws(inputs, setup, params, n, seed)
-    nominal = totals(component_rates(inputs, probabilities, setup, oscillation(params), night))
+    nominal = component_totals(inputs, probabilities, setup, oscillation(params), night)
     day0, night0 = combine(nominal, comps)
     central = quantity_value(quantity, setup.period, day0, night0)
 
@@ -359,7 +514,7 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
                          Relative=_relative(sigma, central), Low=np.nan, High=np.nan))
         samples[source] = values
 
-    per_draw = [totals(component_rates(inputs, probabilities, setup, o, night)) for o in osc_draws]
+    per_draw = [component_totals(inputs, probabilities, setup, o, night) for o in osc_draws]
     sampled("oscillation parameters",
             [quantity_value(quantity, setup.period, *combine(p, comps)) for p in per_draw])
     total = np.array([quantity_value(quantity, setup.period, *combine(p, comps, flux_draws[i]
@@ -404,27 +559,27 @@ def _draws(inputs, setup, params, n, seed):
     return rng, osc_draws, sample_fluxes(inputs, rng, setup.solar_model, list(setup.components), n, setup.b8_flux)
 
 
-def spectra(inputs, probabilities, setup, params, edges=None, n=400, seed=1, night=True):
-    """Binned rates per kton-year: dict(edges, components={c: {"day", "night"}}
-    at the central parameters, day/night totals, and draws_day/draws_night
-    [n, bins] of the totals for the sampled oscillation parameters and fluxes
-    (the draws of ``budget`` with the same seed)."""
+def spectra(inputs, probabilities, setup, params, n=400, seed=1, night=True):
+    """Rates per kton-year in display bins of observed energy: dict(edges,
+    observable, components={c: {"day", "night"}} at the central parameters,
+    day/night totals, and draws_day/draws_night [n, bins] of the totals for the
+    sampled oscillation parameters and fluxes (the draws of ``budget`` with the
+    same seed)."""
     check(inputs, setup)
-    edges = energy_edges(inputs, setup.components) if edges is None else np.asarray(edges)
+    _, display = observed_edges(setup.threshold)
     comps = list(setup.components)
     _, osc_draws, flux_draws = _draws(inputs, setup, params, n, seed)
 
     def total(per, multipliers=None):
         m = np.ones(len(comps)) if multipliers is None else multipliers
         day = sum(m[k] * per[c]["day"] for k, c in enumerate(comps))
-        nite = sum(m[k] * per[c]["night"] for k, c in enumerate(comps)) if night else None
-        return day, nite
+        return day, (sum(m[k] * per[c]["night"] for k, c in enumerate(comps)) if night else None)
 
-    nominal = binned(component_rates(inputs, probabilities, setup, oscillation(params), night), edges)
-    draws = [total(binned(component_rates(inputs, probabilities, setup, o, night), edges),
+    nominal = component_spectra(inputs, probabilities, setup, oscillation(params), night)
+    draws = [total(component_spectra(inputs, probabilities, setup, o, night),
                    None if flux_draws is None else flux_draws[i]) for i, o in enumerate(osc_draws)]
     day, nite = total(nominal)
-    return dict(edges=edges, components=nominal, day=day, night=nite,
+    return dict(edges=display, observable=observable(setup.channel), components=nominal, day=day, night=nite,
                 draws_day=np.array([d for d, _ in draws]),
                 draws_night=np.array([x for _, x in draws]) if night else None)
 

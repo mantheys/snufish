@@ -2,7 +2,7 @@
 
     snufish export-app --out build/app
     python web/build.py --out build/site     # --plotipus: the plotipus checkout (default ../plotipus)
-    python -m http.server -d build/site      # open http://localhost:8000
+    python -m http.server -d build/site      # open http://localhost:8000 (home), rates.html (calculator)
 
 The result is plain files (HTML, JS, CSS, JSON, binary tables): any static
 host serves it (GitHub Pages, a lab web server).
@@ -17,7 +17,8 @@ from pathlib import Path
 
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
-PAGE = ["index.html", "style.css", "app.js", "engine.js", "plots.js", "export.js", "plotipus-worker.js"]
+PAGE = ["index.html", "rates.html", "style.css", "app.js", "engine.js", "plots.js", "export.js", "sources.js",
+        "plotipus-worker.js"]
 
 
 def main():

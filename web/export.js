@@ -18,7 +18,7 @@ function spectrumColumns(result) {
     const a = night ? binAsymmetry(day, nite) : null;
     day.forEach((d, b) => {
       if (!filled[b]) return;
-      cols.Component.push(name); cols.Energy.push(Math.sqrt(edges[b] * edges[b + 1]));
+      cols.Component.push(name); cols.Energy.push(Math.sqrt(Math.max(edges[b], 0.005) * edges[b + 1]));
       cols.EnergyLow.push(edges[b]); cols.EnergyHigh.push(edges[b + 1]); cols.Day.push(d);
       if (night) { cols.Night.push(nite[b]); cols.Annual.push(0.5 * (d + nite[b])); cols.Asymmetry.push(100 * a[b]); }
     });
@@ -32,7 +32,7 @@ function commands(result) {
   const adn = result.quantity === "adn", column = adn ? "Asymmetry" : result.setup.period.replace(/^./, (x) => x.toUpperCase());
   const spectrum = `line --no_error --datafile AppSpectrum -x Energy -y ${column} --hue Component --plot_type step --logx `
     + (adn ? "--select Component -s total --labely 'A_DN (%)' " : "--logy --labely 'Interactions / (kt yr) per bin' ")
-    + "--labelx 'Neutrino energy (MeV)' --output_suffix spectrum";
+    + `--labelx '${result.spectra.observable}' --output_suffix spectrum`;
   const size = adn ? "Uncertainty (%)" : "Relative uncertainty (%)";
   return [
     spectrum,

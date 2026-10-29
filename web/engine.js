@@ -161,15 +161,23 @@ export function sampleFluxes(inputs, rng, solarModel, components, n, b8Flux = "m
 
 export const DEFAULT_SETUP = {
   solar_model: "b23_gs98", components: ["B8"], b8_flux: "model", earth_model: "prem_full", site: "Kamioka",
-  detector: "water", channel: "es", xsec_model: "default", es_model: "tree", recoil_threshold: 0.0,
-  period: "day", exposure: null, profile_model: null,
+  detector: "water", channel: "es", xsec_model: "default", es_model: "tree", period: "day",
+  // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
+  threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,
+  exposure: null, profile_model: null,
 };
 
 export function makeSetup(changes = {}) { return { ...DEFAULT_SETUP, ...changes }; }
 
+export const OBSERVED_MIN = 0.01, OBSERVED_MAX = 25.0; // MeV; a first bin [0, 0.01] collects everything below
+const PER_DECADE = 16, FINE = 4;                        // display bins per decade, fine bins per display bin
+
 export function check(inputs, setup, quantity = "rate") {
   const allowed = (what, value, options) => {
     if (!options.includes(value)) throw new Error(`${what} '${value}' is not available; choose one of: ${options.join(", ")}`);
+  };
+  const within = (what, value, low, high) => {
+    if (!(value >= low && value <= high)) throw new Error(`${what} must be between ${low} and ${high} (got ${value})`);
   };
   const d = inputs.data;
   allowed("quantity", quantity, QUANTITIES);
@@ -183,7 +191,12 @@ export function check(inputs, setup, quantity = "rate") {
   if (!channels.includes(setup.channel)) throw new Error(`channel '${setup.channel}' is not available in ${setup.detector}; choose one of: ${channels.join(", ")}`);
   if (setup.channel === "es") allowed("ES model", setup.es_model, ["tree", "snowglobes"]);
   else allowed(`cross-section model of ${setup.channel}`, setup.xsec_model, inputs.xsecModels(setup.channel));
-  if (!(setup.recoil_threshold >= 0)) throw new Error("the recoil threshold must be >= 0");
+  within("the threshold (MeV)", setup.threshold, 0, OBSERVED_MAX);
+  within("the resolution a (MeV^1/2)", setup.resolution_a, 0, 2);
+  within("the resolution b", setup.resolution_b, 0, 1);
+  within("the efficiency", setup.efficiency, 0, 1);
+  within("the efficiency turn-on (MeV)", setup.efficiency_e50, 0, OBSERVED_MAX);
+  within("the turn-on width (MeV)", setup.efficiency_width, 1e-3, 10);
   allowed("site", setup.site, Object.keys(d.sites));
   allowed("Earth model", setup.earth_model, d.earth_models);
   if (setup.exposure !== null && !(setup.exposure > 0)) throw new Error("the exposure must be > 0 (or none)");
@@ -191,7 +204,42 @@ export function check(inputs, setup, quantity = "rate") {
 
 export const needsNight = (quantity, period) => quantity === "adn" || period !== "day";
 
-// ------------------------------------------------------------------ cross sections and rates
+// ------------------------------------------------------------------ observed energy
+
+function logspace(lo, hi, n) { // numpy.logspace: 10 ** (lo + i * step), the last point exactly hi
+  const step = (hi - lo) / (n - 1);
+  return Array.from({ length: n }, (_, i) => 10 ** (i === n - 1 ? hi : lo + i * step));
+}
+
+export function observedEdges(threshold = 0) {
+  // [fine, display] bin edges: 0, then log-spaced from 0.01 to 25 MeV; the threshold is a fine edge
+  const n = Math.round(Math.log10(OBSERVED_MAX / OBSERVED_MIN) * PER_DECADE);
+  const lo = Math.log10(OBSERVED_MIN), hi = Math.log10(OBSERVED_MAX);
+  const display = [0, ...logspace(lo, hi, n + 1)];
+  let fine = [0, ...logspace(lo, hi, n * FINE + 1)];
+  if (threshold > 0 && !fine.some((e) => Math.abs(e - threshold) <= 1e-9)) fine = [...fine, threshold].sort((x, y) => x - y);
+  return [fine, display];
+}
+
+export const observable = (channel) => (channel === "es" ? "Electron kinetic energy T (MeV)" : "Visible energy E_nu - Q (MeV)");
+
+export function erf(x) {
+  // series for |x| < 3, continued fraction for erfc beyond: ~1e-15 relative
+  const ax = Math.abs(x);
+  if (ax < 3) {
+    let term = ax, total = ax;
+    for (let n = 1; n < 200 && Math.abs(term) > 1e-17 * Math.abs(total); n++) { term *= -ax * ax / n; total += term / (2 * n + 1); }
+    return Math.sign(x) * 2 / Math.sqrt(Math.PI) * total;
+  }
+  let f = ax, c = ax, dd = 0; // modified Lentz for erfc(x) = exp(-x^2)/sqrt(pi) / (x + 1/2/(x + 1/(x + 3/2/(x + ...))))
+  for (let n = 1; n < 300; n++) {
+    const an = n / 2;
+    dd = ax + an * dd; dd = 1 / dd; c = ax + an / c;
+    const delta = c * dd; f *= delta;
+    if (Math.abs(delta - 1) < 1e-16) break;
+  }
+  return Math.sign(x) * (1 - Math.exp(-ax * ax) / Math.sqrt(Math.PI) / f);
+}
 
 export function esAbove(E, flavour, c, tMin) {
   // tree-level nu-e cross section (cm^2 per electron) integrated over T from tMin to T_max
@@ -202,47 +250,199 @@ export function esAbove(E, flavour, c, tMin) {
   return 2 * G ** 2 * me / Math.PI * (primitive(tMax) - primitive(lo)) * hbarc2;
 }
 
-export function crossSections(inputs, setup, energy) {
-  const d = inputs.data, det = d.detectors[setup.detector];
-  const targets = det.targets[det.channels[setup.channel]];
-  if (setup.channel === "es") {
-    const sigma = ["nue", "numu"].map((fl) => energy.map((e) => {
-      let s = esAbove(e, fl, d.constants, setup.recoil_threshold);
-      if (setup.es_model === "snowglobes") { const r = d.es_radiative_ratio[fl]; s *= interp(e, r.energy, r.ratio, 1, 1); }
-      return s;
-    }));
-    return [sigma[0], sigma[1], targets];
-  }
-  const table = d.xsec[setup.channel][setup.xsec_model], threshold = d.xsec_thresholds_MeV[setup.channel] || 0;
-  const sigmaE = energy.map((e) => (e < threshold ? 0 : interp(e, table.energy, table.sigma, 0, 0)));
-  return [sigmaE, energy.map(() => 0), targets];
+function quadrature(kind, energy, weight) {
+  if (kind === "line") return weight;
+  const q = energy.map(() => 0);
+  for (let k = 0; k + 1 < energy.length; k++) { const h = 0.5 * (energy[k + 1] - energy[k]); q[k] += h; q[k + 1] += h; }
+  return q.map((v, k) => v * weight[k]);
 }
 
-export function componentRates(inputs, probabilities, setup, osc, night = true) {
-  // {component: {kind, energy, day, night}} per kton-year: per MeV for a continuum, per line for lines
-  const U2 = ue2(osc), seconds = inputs.data.seconds_per_year;
-  const nightTable = night ? probabilities.night(osc, setup.earth_model, setup.site) : null;
+const targetsOf = (inputs, setup) => { const det = inputs.data.detectors[setup.detector]; return det.targets[det.channels[setup.channel]]; };
+
+function kernels(inputs, setup, component, edges) {
+  // cached, oscillation-independent: ES [E][bin] cross sections into each recoil bin (nu_e, nu_x); CC sigma(E)
+  const key = [component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold].join("|");
+  inputs.kernelCache ||= new Map();
+  if (!inputs.kernelCache.has(key)) {
+    const { energy } = inputs.components[component], d = inputs.data;
+    let value;
+    if (setup.channel === "es") {
+      value = ["nue", "numu"].map((fl) => energy.map((e) => {
+        const above = edges.map((t) => esAbove(e, fl, d.constants, t));
+        let ratio = 1;
+        if (setup.es_model === "snowglobes") { const r = d.es_radiative_ratio[fl]; ratio = interp(e, r.energy, r.ratio, 1, 1); }
+        return Float64Array.from({ length: edges.length - 1 }, (_, j) => (above[j] - above[j + 1]) * ratio);
+      }));
+    } else {
+      const table = d.xsec[setup.channel][setup.xsec_model], threshold = d.xsec_thresholds_MeV[setup.channel] || 0;
+      value = energy.map((e) => (e < threshold ? 0 : interp(e, table.energy, table.sigma, 0, 0)));
+    }
+    inputs.kernelCache.set(key, value);
+  }
+  return inputs.kernelCache.get(key);
+}
+
+function response(inputs, setup, edges) {
+  // [rows of the resolution matrix (null: identity), acceptance per observed bin]
+  const key = [setup.threshold, setup.resolution_a, setup.resolution_b, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+  inputs.responseCache ||= new Map();
+  if (!inputs.responseCache.has(key)) {
+    const n = edges.length - 1, centres = Array.from({ length: n }, (_, j) => 0.5 * (edges[j] + edges[j + 1]));
+    const rows = centres.map((c) => {
+      const sigma = Math.hypot(setup.resolution_a * Math.sqrt(c), setup.resolution_b * c);
+      if (!(sigma > 0)) return null;
+      const cdf = edges.map((e) => 0.5 * (1 + erf((e - c) / sigma / Math.SQRT2)));
+      return Float64Array.from({ length: n }, (_, j) => cdf[j + 1] - cdf[j]);
+    });
+    const acceptance = centres.map((c, j) => {
+      let a = setup.efficiency;
+      if (setup.efficiency_e50 > 0) a = a / (1 + Math.exp(-(c - setup.efficiency_e50) / setup.efficiency_width));
+      return edges[j] >= setup.threshold - 1e-12 ? a : 0;
+    });
+    inputs.responseCache.set(key, [rows, acceptance]);
+  }
+  return inputs.responseCache.get(key);
+}
+
+export function survival(inputs, probabilities, setup, osc, night = true) {
+  // {component: [P_ee by day, P_ee by night or null]} at the component's energies
+  const U2 = ue2(osc), nightTable = night ? probabilities.night(osc, setup.earth_model, setup.site) : null;
   const out = {};
   for (const c of setup.components) {
-    const { kind, energy, weight } = inputs.components[c];
+    const { energy } = inputs.components[c];
     const F = probabilities.day(osc, setup.profile_model || setup.solar_model, c, energy);
-    const [sigmaE, sigmaX, targets] = crossSections(inputs, setup, energy);
-    const flux = inputs.flux(setup.solar_model, c, setup.b8_flux);
-    const rate = (pee) => pee.map((p, i) => targets * flux * seconds * weight[i] * (p * sigmaE[i] + (1 - p) * sigmaX[i]));
-    const entry = { kind, energy, day: rate(F.map((f) => f[0] * U2[0] + f[1] * U2[1] + f[2] * U2[2])), night: null };
+    let peeNight = null;
     if (night) {
       const [nE, nP] = nightTable;
       const P = [0, 1, 2].map((i) => { const col = nP.map((row) => row[i]); return energy.map((e) => interp(e, nE, col, U2[i])); });
-      entry.night = rate(F.map((f, k) => f[0] * P[0][k] + f[1] * P[1][k] + f[2] * P[2][k]));
+      peeNight = F.map((f, k) => f[0] * P[0][k] + f[1] * P[1][k] + f[2] * P[2][k]);
     }
-    out[c] = entry;
+    out[c] = [F.map((f) => f[0] * U2[0] + f[1] * U2[1] + f[2] * U2[2]), peeNight];
   }
   return out;
 }
 
+function visible(inputs, setup, kind, energy, density, edges) {
+  // CC: rate per fine bin of visible energy E - Q; below the first edge goes to the first bin
+  const nb = edges.length - 1, offset = inputs.data.visible_offset_MeV[setup.channel];
+  const shifted = edges.map((e, j) => (j === 0 ? -Infinity : j === nb ? Infinity : e + offset));
+  const truth = new Float64Array(nb);
+  if (kind === "line") {
+    energy.forEach((e, i) => { for (let j = 0; j < nb; j++) if (e >= shifted[j] && e < shifted[j + 1]) { truth[j] += density[i]; break; } });
+    return truth;
+  }
+  const cumulative = [0];
+  for (let i = 1; i < energy.length; i++) cumulative.push(cumulative[i - 1] + 0.5 * (density[i] + density[i - 1]) * (energy[i] - energy[i - 1]));
+  const at = shifted.map((x) => interp(x, energy, cumulative, 0, cumulative[cumulative.length - 1]));
+  for (let j = 0; j < nb; j++) truth[j] = at[j + 1] - at[j];
+  return truth;
+}
+
+export function observedRates(inputs, probabilities, setup, osc, night = true) {
+  // {component: {day, night}}: interactions per kton-year in each fine bin of observed energy, after the response.
+  // The reference path: componentTotals and componentSpectra give the same numbers faster.
+  const [edges] = observedEdges(setup.threshold), [rows, acceptance] = response(inputs, setup, edges);
+  const nb = edges.length - 1, seconds = inputs.data.seconds_per_year, targets = targetsOf(inputs, setup);
+  const out = {};
+  for (const [c, [peeDay, peeNight]] of Object.entries(survival(inputs, probabilities, setup, osc, night))) {
+    const { kind, energy, weight } = inputs.components[c];
+    const scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds, k = kernels(inputs, setup, c, edges);
+    const spectrum = (pee) => {
+      if (pee === null) return null;
+      let truth = new Float64Array(nb);
+      if (setup.channel === "es") {
+        const q = quadrature(kind, energy, weight);
+        energy.forEach((_, i) => {
+          const we = scale * q[i] * pee[i], wx = scale * q[i] * (1 - pee[i]), ke = k[0][i], kx = k[1][i];
+          for (let j = 0; j < nb; j++) truth[j] += we * ke[j] + wx * kx[j];
+        });
+      } else {
+        truth = visible(inputs, setup, kind, energy, energy.map((_, i) => scale * weight[i] * pee[i] * k[i]), edges);
+      }
+      const observed = new Float64Array(nb);
+      for (let j = 0; j < nb; j++) {
+        if (truth[j] === 0) continue;
+        if (rows[j] === null) observed[j] += truth[j];
+        else for (let m = 0; m < nb; m++) observed[m] += truth[j] * rows[j][m];
+      }
+      return Array.from(observed, (v, m) => v * acceptance[m]);
+    };
+    out[c] = { day: spectrum(peeDay), night: spectrum(peeNight) };
+  }
+  return out;
+}
+
+const rebinIndex = (fine, display) => Array.from({ length: fine.length - 1 }, (_, j) => {
+  const centre = 0.5 * (fine[j] + fine[j + 1]);
+  let b = 0;
+  while (b < display.length - 2 && display[b + 1] < centre) b++;
+  return b;
+});
+
+function prepared(inputs, setup, component) {
+  // cached products of the kernels with the response: per true bin the accepted fraction g = R a;
+  // ES also the kernels times g (totals) and times R, a and the display re-binning (spectra)
+  const key = [component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold, setup.resolution_a,
+               setup.resolution_b, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+  inputs.preparedCache ||= new Map();
+  if (!inputs.preparedCache.has(key)) {
+    const [edges, display] = observedEdges(setup.threshold), [rows, acceptance] = response(inputs, setup, edges);
+    const nb = edges.length - 1, nd = display.length - 1, index = rebinIndex(edges, display);
+    const identity = rows.every((r) => r === null);
+    const accepted = rows.map((r, j) => (r === null ? acceptance[j] : r.reduce((t, v, m) => t + v * acceptance[m], 0)));
+    // true bin -> display bin: resolution, acceptance and re-binning in one [nb][nd] matrix
+    const toDisplay = rows.map((r, j) => {
+      const out = new Float64Array(nd);
+      if (r === null) out[index[j]] = acceptance[j]; else for (let m = 0; m < nb; m++) out[index[m]] += r[m] * acceptance[m];
+      return out;
+    });
+    const observe = (vec) => { // true bins -> accepted, display-binned observed bins
+      const out = new Float64Array(nd);
+      for (let j = 0; j < nb; j++) { const v = vec[j]; if (v === 0) continue; const t = toDisplay[j]; for (let b = 0; b < nd; b++) out[b] += v * t[b]; }
+      return out;
+    };
+    const { kind, energy, weight } = inputs.components[component], k = kernels(inputs, setup, component, edges);
+    const prep = { edges, display, rows, acceptance, accepted, identity, observe, index };
+    if (setup.channel === "es") {
+      const q = quadrature(kind, energy, weight), base = new Float64Array(nb);
+      const diff = energy.map((_, i) => Float64Array.from({ length: nb }, (__, j) => k[0][i][j] - k[1][i][j]));
+      energy.forEach((_, i) => { for (let j = 0; j < nb; j++) base[j] += q[i] * k[1][i][j]; }); // true = (q P)(K_e - K_x) + q K_x
+      const dot = (v) => v.reduce((t, x, j) => t + x * accepted[j], 0);
+      Object.assign(prep, { q, diffTotal: diff.map(dot), baseTotal: dot(base), diffDisplay: diff.map(observe), baseDisplay: observe(base) });
+    } else prep.sigma = k;
+    inputs.preparedCache.set(key, prep);
+  }
+  return inputs.preparedCache.get(key);
+}
+
+function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
+  const out = {};
+  for (const [c, [peeDay, peeNight]] of Object.entries(survival(inputs, probabilities, setup, osc, night))) {
+    const { kind, energy, weight } = inputs.components[c], prep = prepared(inputs, setup, c);
+    const scale = inputs.data.seconds_per_year * targetsOf(inputs, setup) * inputs.flux(setup.solar_model, c, setup.b8_flux);
+    const value = (pee) => {
+      if (pee === null) return wantSpectra ? null : NaN;
+      if (setup.channel === "es") {
+        const w = prep.q.map((qi, i) => qi * pee[i]);
+        if (!wantSpectra) return scale * (w.reduce((t, wi, i) => t + wi * prep.diffTotal[i], 0) + prep.baseTotal);
+        const out2 = Array.from(prep.baseDisplay);
+        w.forEach((wi, i) => { const row = prep.diffDisplay[i]; for (let b = 0; b < out2.length; b++) out2[b] += wi * row[b]; });
+        return out2.map((v) => scale * v);
+      }
+      const truth = visible(inputs, setup, kind, energy, energy.map((_, i) => scale * weight[i] * pee[i] * prep.sigma[i]), prep.edges);
+      if (!wantSpectra) return truth.reduce((t, v, j) => t + v * prep.accepted[j], 0);
+      return Array.from(prep.observe(truth));
+    };
+    out[c] = { day: value(peeDay), night: value(peeNight) };
+  }
+  return out;
+}
+
+export const componentTotals = (inputs, probabilities, setup, osc, night = true) => fast(inputs, probabilities, setup, osc, night, false);
+export const componentSpectra = (inputs, probabilities, setup, osc, night = true) => fast(inputs, probabilities, setup, osc, night, true);
+
 export function totals(rates) {
-  const total = (r, values) => (values === null ? NaN : r.kind === "continuum" ? trapezoid(values, r.energy) : sum(values));
-  return Object.fromEntries(Object.entries(rates).map(([c, r]) => [c, { day: total(r, r.day), night: total(r, r.night) }]));
+  return Object.fromEntries(Object.entries(rates).map(([c, r]) => [c, { day: r.day === null ? NaN : sum(r.day), night: r.night === null ? NaN : sum(r.night) }]));
 }
 
 export function combine(per, components, multipliers = null) {
@@ -267,33 +467,16 @@ export function statisticalSigma(quantity, period, day, night, exposure) {
   return Math.sqrt(rate * live) / live;
 }
 
-export function binned(rates, edges) {
-  // {component: {day, night}} of rates per kton-year in each energy bin
-  const counts = (r, values) => {
-    if (values === null) return null;
-    const out = new Array(edges.length - 1).fill(0);
-    if (r.kind === "line") {
-      r.energy.forEach((e, i) => {
-        for (let b = 0; b < out.length; b++) {
-          if (e >= edges[b] && (e < edges[b + 1] || (b === out.length - 1 && e === edges[b + 1]))) { out[b] += values[i]; break; }
-        }
-      });
-      return out;
-    }
-    const cumulative = [0];
-    for (let i = 1; i < r.energy.length; i++) cumulative.push(cumulative[i - 1] + 0.5 * (values[i] + values[i - 1]) * (r.energy[i] - r.energy[i - 1]));
-    const at = edges.map((x) => interp(x, r.energy, cumulative));
-    return out.map((_, b) => at[b + 1] - at[b]);
-  };
-  return Object.fromEntries(Object.entries(rates).map(([c, r]) => [c, { day: counts(r, r.day), night: counts(r, r.night) }]));
-}
-
-export function energyEdges(inputs, components, perDecade = 16) {
-  const lows = [], highs = [];
-  for (const c of components) { const e = inputs.components[c].energy; lows.push(Math.min(...e)); highs.push(Math.max(...e)); }
-  const lo = Math.log10(Math.max(Math.min(...lows) * 0.9, 0.05)), hi = Math.log10(Math.max(...highs) * 1.05);
-  const n = Math.max(Math.ceil((hi - lo) * perDecade), 4);
-  return Array.from({ length: n + 1 }, (_, i) => 10 ** (lo + (hi - lo) * i / n));
+export function rebin(values, fine, display) {
+  // fine-bin values summed into the display bins (each fine bin goes where its centre falls)
+  const out = new Array(display.length - 1).fill(0);
+  for (let j = 0; j + 1 < fine.length; j++) {
+    const centre = 0.5 * (fine[j] + fine[j + 1]);
+    let b = 0;
+    while (b < display.length - 2 && display[b + 1] < centre) b++;
+    out[b] += values[j];
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------ budget
@@ -331,9 +514,9 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
   check(inputs, setup, quantity);
   const night = needsNight(quantity, setup.period), comps = setup.components;
   const valueOf = (s, osc = oscillation(params), m = null) =>
-    quantityValue(quantity, s.period, ...combine(totals(componentRates(inputs, probabilities, s, osc, night)), comps, m));
+    quantityValue(quantity, s.period, ...combine(componentTotals(inputs, probabilities, s, osc, night), comps, m));
   const d = given || draws(inputs, setup, params, n, seed);
-  const nominal = totals(componentRates(inputs, probabilities, setup, oscillation(params), night));
+  const nominal = componentTotals(inputs, probabilities, setup, oscillation(params), night);
   const [day0, night0] = combine(nominal, comps);
   const central = quantityValue(quantity, setup.period, day0, night0);
   const rows = [], samples = {};
@@ -342,7 +525,7 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
     rows.push({ Source: source, Kind: "sampled", Central: central, Sigma: sigma, Relative: relative(sigma, central), Low: NaN, High: NaN });
     samples[source] = values;
   };
-  const perDraw = d.osc.map((o) => totals(componentRates(inputs, probabilities, setup, o, night)));
+  const perDraw = d.osc.map((o) => componentTotals(inputs, probabilities, setup, o, night));
   sampled("oscillation parameters", perDraw.map((p) => quantityValue(quantity, setup.period, ...combine(p, comps))));
   let total = perDraw.map((p, i) => quantityValue(quantity, setup.period, ...combine(p, comps, d.flux ? d.flux[i] : null)));
   if (d.flux && !(quantity === "adn" && comps.length === 1)) // one flux cancels in a ratio
@@ -369,20 +552,21 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
   return { rows, samples };
 }
 
-export function spectra(inputs, probabilities, setup, params, { edges = null, n = 400, seed = 1, night = true, given = null } = {}) {
-  // binned rates per kton-year: central per component and in total, and the totals of every draw
+export function spectra(inputs, probabilities, setup, params, { n = 400, seed = 1, night = true, given = null } = {}) {
+  // rates per kton-year in display bins of observed energy: central per component and in total, and every draw's totals
   check(inputs, setup);
-  edges = edges || energyEdges(inputs, setup.components);
-  const comps = setup.components, d = given || draws(inputs, setup, params, n, seed);
+  const [, display] = observedEdges(setup.threshold), comps = setup.components, nd = display.length - 1;
+  const d = given || draws(inputs, setup, params, n, seed);
   const total = (per, m = null) => {
-    const day = new Array(edges.length - 1).fill(0), nite = night ? new Array(edges.length - 1).fill(0) : null;
+    const day = new Array(nd).fill(0), nite = night ? new Array(nd).fill(0) : null;
     comps.forEach((c, k) => { const f = m ? m[k] : 1; per[c].day.forEach((v, b) => { day[b] += f * v; }); if (night) per[c].night.forEach((v, b) => { nite[b] += f * v; }); });
     return [day, nite];
   };
-  const nominal = binned(componentRates(inputs, probabilities, setup, oscillation(params), night), edges);
-  const each = d.osc.map((o, i) => total(binned(componentRates(inputs, probabilities, setup, o, night), edges), d.flux ? d.flux[i] : null));
-  const [day, nite] = total(nominal);
-  return { edges, components: nominal, day, night: nite, draws_day: each.map((x) => x[0]), draws_night: night ? each.map((x) => x[1]) : null };
+  const components = componentSpectra(inputs, probabilities, setup, oscillation(params), night);
+  const each = d.osc.map((o, i) => total(componentSpectra(inputs, probabilities, setup, o, night), d.flux ? d.flux[i] : null));
+  const [day, nite] = total(components);
+  return { edges: display, observable: observable(setup.channel), components, day, night: nite,
+           draws_day: each.map((x) => x[0]), draws_night: night ? each.map((x) => x[1]) : null };
 }
 
 // ------------------------------------------------------------------ tables

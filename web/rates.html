@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SNUfish rates</title>
+  <meta name="description" content="Solar neutrino interaction rates and day-night asymmetries with their uncertainty budget.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23eda100'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@4.1.2/plotly-basic.min.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1><a href="index.html" class="home-link">SNUfish</a> <span>solar neutrino rates and their uncertainties</span></h1>
+  </div>
+  <button id="theme" class="ghost" type="button" aria-label="Switch colour theme">Theme: system</button>
+</header>
+
+<div class="layout">
+  <form id="controls" class="controls" autocomplete="off">
+    <section class="step" data-step="0">
+      <h2><span>0</span> Result <button type="button" class="info" data-step="0" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+      <div class="sources-box" hidden></div>
+      <div class="seg" role="radiogroup" aria-label="Quantity">
+        <label><input type="radio" name="quantity" value="rate" checked><span>Interaction rate</span></label>
+        <label><input type="radio" name="quantity" value="adn"><span>Day-night asymmetry</span></label>
+      </div>
+      <div class="seg" id="period-row" role="radiogroup" aria-label="Period">
+        <label><input type="radio" name="period" value="day" checked><span>Day</span></label>
+        <label><input type="radio" name="period" value="night"><span>Night</span></label>
+        <label><input type="radio" name="period" value="annual"><span>Annual</span></label>
+      </div>
+    </section>
+
+    <section class="step" data-step="1">
+      <h2><span>1</span> Oscillation parameters <button type="button" class="info" data-step="1" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+      <div class="sources-box" hidden></div>
+      <label>Parameter set <select id="set"></select></label>
+      <p id="set-info" class="hint"></p>
+    </section>
+
+    <section class="step" data-step="2">
+      <h2><span>2</span> Sun <button type="button" class="info" data-step="2" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+      <div class="sources-box" hidden></div>
+      <label>Solar model <select id="solar"></select></label>
+      <div class="field">
+        <span class="field-label">Flux components</span>
+        <div id="components" class="chips" role="group" aria-label="Flux components"></div>
+        <p class="hint">Interactions are summed over the selected components.</p>
+      </div>
+      <div class="field" id="b8-row">
+        <span class="field-label">⁸B flux</span>
+        <div class="seg" role="radiogroup" aria-label="8B flux">
+          <label><input type="radio" name="b8" value="model" checked><span>From the solar model</span></label>
+          <label><input type="radio" name="b8" value="sno_nc"><span>Measured (SNO NC)</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" data-step="3">
+      <h2><span>3</span> Earth <button type="button" class="info" data-step="3" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+      <div class="sources-box" hidden></div>
+      <p id="earth-note" class="hint"></p>
+      <label>Site <select id="site"></select></label>
+      <label>Earth model <select id="earth"></select></label>
+    </section>
+
+    <section class="step" data-step="4">
+      <h2><span>4</span> Interaction <button type="button" class="info" data-step="4" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+      <div class="sources-box" hidden></div>
+      <label>Target <select id="detector"></select></label>
+      <label>Channel <select id="channel"></select></label>
+      <div class="field" id="es-row">
+        <span class="field-label">ES cross section</span>
+        <div class="seg" role="radiogroup" aria-label="ES cross section">
+          <label><input type="radio" name="es" value="tree" checked><span>Tree level</span></label>
+          <label><input type="radio" name="es" value="snowglobes"><span>Radiative corrections</span></label>
+        </div>
+      </div>
+      <label id="xsec-row">Nuclear model <select id="xsec"></select></label>
+    </section>
+
+    <section class="step" data-step="5">
+      <h2><span>5</span> Detector <button type="button" class="info" data-step="5" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+      <div class="sources-box" hidden></div>
+      <p id="observable-note" class="hint"></p>
+      <label><span id="threshold-label">Threshold (MeV)</span>
+        <input id="threshold" type="number" min="0" max="25" step="0.01" value="3.49"></label>
+      <div class="field">
+        <span class="field-label">Energy resolution σ = √((a√E)² + (bE)²)</span>
+        <div class="row">
+          <label>a (MeV<sup>½</sup>) <input id="res-a" type="number" min="0" max="2" step="0.01" value="0"></label>
+          <label>b (%) <input id="res-b" type="number" min="0" max="100" step="0.1" value="0"></label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">Efficiency</span>
+        <div class="row three">
+          <label>plateau (%) <input id="eff" type="number" min="0" max="100" step="1" value="100"></label>
+          <label>50 % at (MeV) <input id="eff-e50" type="number" min="0" max="25" step="0.1" value="0" title="0: flat"></label>
+          <label>width (MeV) <input id="eff-width" type="number" min="0.001" max="10" step="0.1" value="0.5"></label>
+        </div>
+        <p class="hint">Turn-on point 0: a flat efficiency.</p>
+      </div>
+      <div class="field">
+        <span class="field-label">Exposure (for the statistical error)</span>
+        <div class="row">
+          <label>target mass (kt) <input id="mass" type="number" min="0" step="any" placeholder="none"></label>
+          <label>live time (years) <input id="years" type="number" min="0" step="any" placeholder="none"></label>
+        </div>
+        <p id="exposure-note" class="hint"></p>
+      </div>
+    </section>
+  </form>
+
+  <main class="results">
+    <div id="status" class="status" role="status" aria-live="polite">Loading the inputs…</div>
+    <section id="headline" class="headline"></section>
+    <div class="trio"><!-- the same order as the plotipus figures: spectrum, sampled values, uncertainties -->
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-spectrum" class="plot"></div></section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-distribution" class="plot"></div></section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-budget" class="plot"></div></section>
+    </div>
+    <details class="card">
+      <summary>Budget table</summary>
+      <div id="table"></div>
+    </details>
+    <div class="actions">
+      <button id="render" type="button" class="ghost" disabled>Render with plotipus</button>
+      <button id="download" type="button" disabled>Download data, figures and plotipus commands</button>
+      <button id="share" type="button" class="ghost" disabled>Copy link to this setup</button>
+    </div>
+    <section id="plotipus" class="card" hidden>
+      <div class="plotipus-head"><h2>plotipus figures</h2><span id="plotipus-status" class="hint"></span></div>
+      <p class="hint">Drawn in your browser by plotipus, exactly as <code>plotipus run app</code> draws them from the download.</p>
+      <div id="plotipus-figures" class="figures"></div>
+    </section>
+    <p class="hint footnote">
+      Rates are interactions per kiloton-year, in observed energy after the detector response of step 5 (ES: electron
+      kinetic energy; CC: visible energy E_ν − Q, no neutron or binding losses). Probabilities are interpolated from tables of the SNUfish solvers (Sun: B2 reference; Earth: NuFast-Earth), which they reproduce to
+      2×10⁻⁴ for rates and 1 % for the day-night asymmetry. Sampled (1σ): oscillation parameters, solar fluxes with
+      their correlations, statistics. Model ranges are the spread of the available models, not probabilities, and are
+      never folded into the σ. <a href="index.html#credits">Sources and credits</a>.
+    </p>
+  </main>
+</div>
+</body>
+</html>

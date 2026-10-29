@@ -43,8 +43,8 @@ def test_parameters_merge_set_and_custom(inputs):
 
 def test_vacuum_rates_have_no_day_night_and_scale_with_flux(inputs):
     params = engine.parameters(inputs, "juno_2025")
-    setup = engine.Setup(components=("Be7", "B8"), detector="argon", recoil_threshold=0.0)
-    per = engine.totals(engine.component_rates(inputs, Vacuum(), setup, engine.oscillation(params)))
+    setup = engine.Setup(components=("Be7", "B8"), detector="argon", threshold=0.0)
+    per = engine.totals(engine.observed_rates(inputs, Vacuum(), setup, engine.oscillation(params)))
     day, night = engine.combine(per, ["Be7", "B8"])
     assert night == pytest.approx(day, rel=1e-12)
     assert engine.quantity_value("adn", "day", day, night) == pytest.approx(0.0, abs=1e-12)
@@ -81,17 +81,17 @@ def test_tables_reproduce_exact_solvers(inputs, set_name):
     tables, exact = engine.TableProbabilities(APP), ExactProbabilities()
     osc = engine.oscillation(engine.parameters(inputs, set_name, custom={"sin2_theta12": 0.3137}))  # off grid
     cases = [(engine.Setup(detector="argon", channel="cc_nue_ar40"), "rate", 1e-3),
-             (engine.Setup(recoil_threshold=3.49), "rate", 1e-3),
+             (engine.Setup(threshold=3.49), "rate", 1e-3),
              (engine.Setup(components=("pp", "Be7", "pep", "N13", "O15"), detector="argon"), "rate", 1e-3),
              # A_DN is a small difference: the night tables' interpolation in Delta m^2_21 leaves up to
              # ~1% of it (~3e-4 absolute, 1/30 of Super-K's error)
-             (engine.Setup(recoil_threshold=3.49, site="Kamioka"), "adn", 1e-2),
+             (engine.Setup(threshold=3.49, site="Kamioka"), "adn", 1e-2),
              (engine.Setup(detector="argon", channel="cc_nue_ar40", site="SURF", earth_model="prem_four"), "adn",
               1e-2)]
     for setup, quantity, tolerance in cases:
         values = []
         for provider in (tables, exact):
-            rates = engine.component_rates(inputs, provider, setup, osc, engine.needs_night(quantity, setup.period))
+            rates = engine.observed_rates(inputs, provider, setup, osc, engine.needs_night(quantity, setup.period))
             per = engine.totals(rates)
             values.append(engine.quantity_value(quantity, setup.period, *engine.combine(per, list(setup.components))))
         assert values[0] == pytest.approx(values[1], rel=tolerance), (setup, quantity)
@@ -134,3 +134,82 @@ def test_zero_asymmetry_has_no_relative_error(inputs):
     params = engine.parameters(inputs, "juno_2025")
     rows, _ = engine.budget(inputs, Vacuum(), engine.Setup(), params, "adn", n=20, ranges=())
     assert rows[0]["Central"] == pytest.approx(0, abs=1e-12) and np.isnan(rows[0]["Relative"])
+
+
+def true_energy_total(inputs, provider, setup, osc):
+    """The rate integrated over neutrino energy, as before the detector response
+    existed: tree-level ES above the threshold, or the CC cross section."""
+    from snufish.reference.xsec import es_above
+
+    total = 0.0
+    seconds, targets = inputs["seconds_per_year"], engine._targets(inputs, setup)
+    for c, (pee, _) in engine.survival(inputs, provider, setup, osc, night=False).items():
+        kind, energy, weight = inputs.components[c]
+        if setup.channel == "es":
+            s_e, s_x = (es_above(energy, f, inputs["constants"], setup.threshold) for f in ("nue", "numu"))
+            f = pee * s_e + (1 - pee) * s_x
+        else:
+            f = pee * engine._kernels(inputs, setup, c, engine.observed_edges(setup.threshold)[0])
+        values = targets * inputs.flux(setup.solar_model, c) * seconds * weight * f
+        total += float(np.trapezoid(values, energy)) if kind == "continuum" else float(np.sum(values))
+    return total
+
+
+@pytest.mark.parametrize("changes", [
+    dict(components=("pp", "Be7", "pep", "B8", "hep"), detector="argon", threshold=0.0),
+    dict(threshold=3.49),
+    dict(components=("Be7",), threshold=0.25),
+    dict(detector="argon", channel="cc_nue_ar40", xsec_model="ar40_marley"),
+    dict(channel="cc_nue_o16", components=("B8", "hep")),
+])
+def test_perfect_detector_reproduces_true_energy_rates(inputs, changes):
+    setup = engine.Setup(**changes)
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+    observed = sum(v["day"] for v in engine.totals(engine.observed_rates(inputs, Vacuum(), setup, osc, False)).values())
+    assert observed == pytest.approx(true_energy_total(inputs, Vacuum(), setup, osc), rel=1e-9)
+
+
+def test_resolution_efficiency_and_threshold(inputs):
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+
+    def rate(**changes):
+        setup = engine.Setup(detector="argon", channel="cc_nue_ar40", **changes)
+        return engine.totals(engine.observed_rates(inputs, Vacuum(), setup, osc, False))["B8"]["day"]
+
+    perfect = rate()
+    assert rate(resolution_a=0.2, resolution_b=0.05) == pytest.approx(perfect, rel=1e-3)  # smearing keeps events
+    assert rate(efficiency=0.8) == pytest.approx(0.8 * perfect, rel=1e-12)
+    assert rate(efficiency_e50=5.0, efficiency_width=0.5) < rate(efficiency_e50=2.0, efficiency_width=0.5) < perfect
+    assert rate(threshold=8.0) < rate(threshold=5.0) < perfect
+    # smearing moves events across a threshold: above the spectrum's peak more leave than enter
+    assert rate(threshold=8.0, resolution_a=0.3) != pytest.approx(rate(threshold=8.0), rel=1e-3)
+    fine, display = engine.observed_edges(5.0)
+    assert np.any(np.isclose(fine, 5.0)) and display[0] == 0 and display[-1] == pytest.approx(25.0)
+
+
+def test_spectrum_is_in_observed_energy(inputs):
+    params = engine.parameters(inputs, "juno_2025")
+    es = engine.spectra(inputs, Vacuum(), engine.Setup(threshold=3.49), params, n=5, night=False)
+    cc = engine.spectra(inputs, Vacuum(), engine.Setup(detector="argon", channel="cc_nue_ar40"), params, n=5, night=False)
+    centres = np.sqrt(es["edges"][1:] * np.maximum(es["edges"][:-1], 1e-3))
+    assert es["day"][centres < 3.3].sum() == 0 and es["day"].sum() > 0          # nothing below the threshold
+    assert cc["day"][centres > 16.5 - 1.504 + 0.6].sum() == 0                   # 8B ends at ~16.5 MeV, minus Q
+    assert es["observable"].startswith("Electron") and cc["observable"].startswith("Visible")
+
+
+@pytest.mark.parametrize("changes", [
+    dict(components=("pp", "Be7", "pep", "B8", "hep", "O15"), detector="argon", threshold=0.2, resolution_a=0.1),
+    dict(threshold=3.49, resolution_a=0.45, resolution_b=0.02, efficiency=0.9, efficiency_e50=5.0),
+    dict(detector="argon", channel="cc_nue_ar40", components=("B8", "hep"), threshold=4.0, resolution_a=0.3),
+    dict(channel="cc_nue_o16", components=("B8", "hep")),
+])
+def test_fast_paths_match_the_reference(inputs, changes):
+    setup = engine.Setup(**changes)
+    osc = engine.oscillation(engine.parameters(inputs, "solar_global_2024"))
+    reference = engine.observed_rates(inputs, Vacuum(), setup, osc)
+    fast, spectra = engine.component_totals(inputs, Vacuum(), setup, osc), engine.component_spectra(inputs, Vacuum(), setup, osc)
+    fine, display = engine.observed_edges(setup.threshold)
+    for c, r in reference.items():
+        for p in ("day", "night"):
+            assert fast[c][p] == pytest.approx(r[p].sum(), rel=1e-10)
+            assert spectra[c][p] == pytest.approx(engine.rebin(r[p], fine, display), rel=1e-9, abs=1e-12 * r[p].sum())

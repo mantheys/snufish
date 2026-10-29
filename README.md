@@ -99,10 +99,15 @@ sections and the uncertainty budget, in NumPy only.
 
 ## The web page (in development)
 
-A static page (plain JavaScript, no server) on top of the same engine: pick
+A static site (plain JavaScript, no server) on top of the same engine: a home
+page crediting every experiment, model and tool used (`index.html`), and the
+calculator (`rates.html`): choose the result (rate or day-night asymmetry),
 oscillation parameters, solar model and flux components, site and Earth
-model, target and channel, and get the rate or the day-night asymmetry with
-its spectrum, the distribution of the sampled values and the error budget.
+model, interaction (target, channel, cross-section model) and detector
+(threshold, Gaussian resolution, efficiency, exposure), each step with links
+to its sources; get the spectrum in observed energy (ES: electron kinetic
+energy; CC: E_nu - Q), the distribution of the sampled values and the error
+budget.
 It opens in under a second and recomputes in ~50 ms. Its figures use
 plotipus's palette and frame; "Render with plotipus" draws the plotipus
 figures themselves in the browser (Pyodide in a background worker, loaded on

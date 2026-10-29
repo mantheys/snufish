@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None or not (APP / "inpu
                                 reason="needs node and the app tables (snufish export-app)")
 
 CASES = [
-    ("water ES 8B rate, day", dict(recoil_threshold=3.49), "rate", "juno_2025", "fluxes"),
+    ("water ES 8B rate, day", dict(threshold=3.49), "rate", "juno_2025", "fluxes"),
     ("argon CC 8B+hep annual, SNO NC, exposure", dict(detector="argon", channel="cc_nue_ar40", components=["B8", "hep"],
                                                       b8_flux="sno_nc", period="annual", exposure=40.0,
                                                       site="SURF", earth_model="prem_four"), "rate",
@@ -29,11 +29,19 @@ CASES = [
     ("argon ES low-energy night", dict(detector="argon", components=["pp", "Be7", "pep", "N13", "O15", "F17"],
                                        period="night", site="LNGS", es_model="snowglobes"), "rate", "kamland_2013",
      "fluxes"),
-    ("Kamioka ES A_DN", dict(recoil_threshold=3.49), "adn", "solar_global_2024", "full"),
+    ("Kamioka ES A_DN", dict(threshold=3.49), "adn", "solar_global_2024", "full"),
     ("water CC O16 A_DN, exposure", dict(channel="cc_nue_o16", components=["B8", "hep"], exposure=500.0,
                                          site="SNOLAB"), "adn", "nufit60_global", "full"),
     ("BS05 (no flux errors) argon CC", dict(solar_model="bs05_op", detector="argon", channel="cc_nue_ar40",
                                             xsec_model="ar40_marley"), "rate", "juno_2025", "fluxes"),
+    ("water ES with a full detector response", dict(threshold=4.5, resolution_a=0.45, resolution_b=0.02, efficiency=0.9,
+                                                    efficiency_e50=5.0, efficiency_width=0.4, period="annual",
+                                                    components=["B8", "hep"]), "rate", "juno_2025", "fluxes"),
+    ("argon CC A_DN, smeared", dict(detector="argon", channel="cc_nue_ar40", threshold=5.0, resolution_a=0.3,
+                                    site="SURF"), "adn", "solar_global_2024", "full"),
+    ("argon ES 7Be line, smeared, low threshold", dict(detector="argon", components=["Be7", "pep"], threshold=0.3,
+                                                      resolution_a=0.1, period="night", site="LNGS"), "rate",
+     "nufit60_global", "fluxes"),
 ]
 INVALID = [
     (dict(detector="water", channel="cc_nue_ar40"), "rate", "not available in water"),
@@ -75,7 +83,7 @@ def test_web_engine_matches_python(tmp_path):
                           draws=dict(osc=osc_draws, flux=flux_draws, stat_noise=stat_noise),
                           spectra=dict(edges=spec["edges"], day=spec["day"], night=spec["night"],
                                        draws_day=spec["draws_day"]),
-                          default_edges=engine.energy_edges(inputs, setup.components)))
+                          ))
     invalid = [dict(setup=s, quantity=q, message=m) for s, q, m in INVALID]
     path = tmp_path / "fixtures.json"
     path.write_text(json.dumps(clean(dict(cases=cases, invalid=invalid))))

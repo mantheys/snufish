@@ -36,6 +36,9 @@ from .spec import load_spec
 B8_MEASURED = {"flux": 5.25e6, "error": 0.0381, "source": "SNO NC, as applied in arXiv:2312.12907"}
 # Below its table nu_e-40Ar CC is zero: the 40K* threshold.
 XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504}
+# Visible energy of a CC interaction, E_nu - Q (the electron plus the de-excitation gammas, no losses):
+# Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV.
+VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42}
 
 S12_GRID = (0.24, 0.38, 0.01)
 DM21_GRID = (3.0, 11.0, 0.2)   # 1e-5 eV^2; 0.1 is no closer to the exact solvers
@@ -72,7 +75,8 @@ def collect_inputs():
             comps[name] = {"lines": [list(line) for line in entry[1]]}
         else:
             comps[name] = {"energy": entry[1].tolist(), "shape": entry[2].tolist()}
-    solar = {name: {"label": f"{m['family']} {m['composition'].split(':')[0]}", "fluxes": m["fluxes"],
+    solar = {name: {"label": f"{m['family']} {m['composition'].split(':')[0]}", "family": m["family"],
+                    "composition": m["composition"], "reference": m["reference"], "fluxes": m["fluxes"],
                     "flux_uncertainty": m.get("flux_uncertainty"), "flux_correlation": m.get("flux_correlation")}
              for name, m in models().items()}
     sigma = pd.read_parquet(build_dir() / "B4_Sigma.parquet")
@@ -98,6 +102,7 @@ def collect_inputs():
         "seconds_per_year": b5["exposure"]["seconds_per_year"],
         "xsec": xsec,
         "xsec_thresholds_MeV": XSEC_THRESHOLDS,
+        "visible_offset_MeV": VISIBLE_OFFSET,
         "es_radiative_ratio": ratio,
         "earth_models": list(b3["earth_models"]),
         "sites": b3["sites"],

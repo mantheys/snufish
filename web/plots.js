@@ -38,12 +38,12 @@ function layout(c, node, title, xTitle, yTitle, extra = {}) {
 
 const CONFIG = { responsive: true, displaylogo: false, displayModeBar: "hover",
                  modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d", "zoomIn2d", "zoomOut2d"] };
-const ENERGY_TICKS = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
+const ENERGY_TICKS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
 
 function energyAxis(edges, values, floor) {
   // log axis over the bins with interactions, labelled 1-2-5
   const used = values.map((v, b) => (v > floor ? b : -1)).filter((b) => b >= 0);
-  const lo = edges[used.length ? used[0] : 0], hi = edges[used.length ? used[used.length - 1] + 1 : edges.length - 1];
+  const lo = Math.max(edges[used.length ? used[0] : 0], 0.01), hi = edges[used.length ? used[used.length - 1] + 1 : edges.length - 1];
   const pad = 0.04 * Math.log10(hi / lo);
   return { type: "log", range: [Math.log10(lo) - pad, Math.log10(hi) + pad], tickvals: ENERGY_TICKS, ticktext: ENERGY_TICKS.map(String) };
 }
@@ -96,7 +96,7 @@ export function spectrumPlot(node, result) {
     traces.push(...bandTraces(c, edges, low, high));
     traces.push({ ...stairs(edges, a), mode: "lines", name: "central",
                   line: { color: c.text, width: 2 }, hovertemplate: "%{y:.3f} %<extra>A_DN</extra>" });
-    return Plotly.react(node, traces, layout(c, node, "Day-night asymmetry per energy bin", "Neutrino energy (MeV)", "A_DN (%)",
+    return Plotly.react(node, traces, layout(c, node, "Day-night asymmetry per energy bin", spectra.observable, "A_DN (%)",
       { xaxis: energyAxis(edges, spectra.day, 1e-9 * Math.max(...spectra.day)), hovermode: "x unified",
         shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 0, y1: 0, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
   }
@@ -122,7 +122,7 @@ export function spectrumPlot(node, result) {
   traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.4 },
                 hovertemplate: "%{y:.4g}<extra>total</extra>" });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
-  return Plotly.react(node, traces, layout(c, node, title, "Neutrino energy (MeV)", "Interactions / (kt·yr) per bin",
+  return Plotly.react(node, traces, layout(c, node, title, spectra.observable, "Interactions / (kt·yr) per bin",
     { xaxis: energyAxis(edges, total, floor), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified" }), CONFIG);
 }
 

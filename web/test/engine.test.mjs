@@ -42,12 +42,11 @@ for (const c of fixtures.cases) {
     if (r.Source !== p.Source) { failures++; console.log(`  ${c.name}: row ${i} ${r.Source} vs ${p.Source}`); }
     for (const k of ["Central", "Sigma", "Low", "High"]) close(r[k], nan(p[k]), `${c.name} ${r.Source} ${k}`);
   });
-  const s = engine.spectra(inputs, tables, setup, params, { edges: c.spectra.edges, night: c.spectra.night !== null, given });
+  const s = engine.spectra(inputs, tables, setup, params, { night: c.spectra.night !== null, given });
+  s.edges.forEach((v, b) => close(v, c.spectra.edges[b], `${c.name} edges ${b}`));
   s.day.forEach((v, b) => close(v, c.spectra.day[b], `${c.name} spectrum day bin ${b}`));
   if (s.night) s.night.forEach((v, b) => close(v, c.spectra.night[b], `${c.name} spectrum night bin ${b}`));
   s.draws_day.forEach((row, i) => row.forEach((v, b) => close(v, c.spectra.draws_day[i][b], `${c.name} draw ${i} bin ${b}`)));
-  const edges = engine.energyEdges(inputs, setup.components);
-  edges.forEach((v, b) => close(v, c.default_edges[b], `${c.name} edges ${b}`));
 }
 for (const bad of fixtures.invalid) {
   try { engine.check(inputs, engine.makeSetup(bad.setup), bad.quantity); failures++; console.log(`  accepted invalid setup ${JSON.stringify(bad.setup)}`); }
