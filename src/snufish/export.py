@@ -38,7 +38,7 @@ B8_MEASURED = {"flux": 5.25e6, "error": 0.0381, "source": "SNO NC, as applied in
 XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504}
 # Visible energy of a CC interaction, E_nu - Q (the electron plus the de-excitation gammas, no losses):
 # Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV.
-VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42}
+VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42, "cc_nue_d": 1.442}  # d: d(nu_e, e-)pp threshold
 # Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
 XSEC_INCOMPLETE = {"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]}
 MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"
@@ -47,6 +47,10 @@ APP_DETECTORS = {
     "scintillator_pc": {
         "description": "pseudocumene + PPO (Borexino): (3.307 +- 0.003) x 10^31 electrons per 100 t, arXiv:1707.09279",
         "targets": {"electron": 3.307e32}, "channels": {"es": "electron"}},
+    "heavy_water": {
+        "description": "D2O (SNO, 99.92 % isotopic purity, arXiv:1109.0763), M = 20.03 g/mol: per kt "
+                       "2 x 10^9 / 20.03 x N_A = 6.014 x 10^31 deuterons and 3.007 x 10^32 electrons",
+        "targets": {"electron": 3.007e32, "deuteron": 6.014e31}, "channels": {"es": "electron", "cc_nue_d": "deuteron"}},
     "scintillator_lab": {
         "description": "linear alkylbenzene (JUNO): 3.38 x 10^32 electrons per kt, arXiv:2006.11760",
         "targets": {"electron": 3.38e32}, "channels": {"es": "electron"}},

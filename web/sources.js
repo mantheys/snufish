@@ -32,6 +32,8 @@ export const SOURCES = {
   exposure: S("Night exposure per latitude: Lisi & Montanino 1997", "hep-ph/9702343"),
   surf: S("SURF latitude (DUNE far detector)", "arXiv:1707.02322"),
   borexino: S("Borexino Phase-II: pp, ⁷Be, pep rates, electron density, fiducial mass, exposure (table II, sec. II)", "arXiv:1707.09279"),
+  sno: S("SNO combined analysis: D₂O, fiducial volume, thresholds, live times, energy scale", "arXiv:1109.0763"),
+  hyperk: S("Hyper-K design report: fiducial volume, solar threshold, energy-scale and resolution uncertainties, site", "arXiv:1805.04163"),
   juno_b8: S("JUNO ⁸B study: LAB electron density, 2 MeV threshold, 3 %/√E, energy scale and efficiency uncertainties", "arXiv:2006.11760"),
   es_tree: S("ES at tree level in the Standard Model, sin²θ_W = 0.23857 (PDG 2024, MS-bar at Q² → 0)"),
   es_radiative: S("ES radiative corrections: Bahcall, Kamionkowski & Sirlin 1995", "astro-ph/9502003"),
@@ -107,6 +109,8 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   const out = [];
   if (preset === "borexino" || setup.detector === "scintillator_pc") out.push(SOURCES.borexino);
   if (preset === "juno" || setup.detector === "scintillator_lab") out.push(SOURCES.juno_b8);
+  if (preset === "sno" || setup.detector === "heavy_water") out.push(SOURCES.sno);
+  if (preset === "hyperk") out.push(SOURCES.hyperk);
   if (preset === "sk4" || setup.resolution_poly.length)
     out.push(S("Super-K IV energy resolution: eq. 9", sk));
   if (preset === "sk4")
@@ -123,7 +127,7 @@ export const CREDITS = [
   ["Measurements and fits", [SOURCES.sk_solar, SOURCES.borexino, SOURCES.juno, SOURCES.kamland, SOURCES.nufit]],
   ["Solar models and spectra", [SOURCES.b16, SOURCES.bs05, SOURCES.b23, SOURCES.b23_papers, SOURCES.shape_pp_hep, SOURCES.shape_b8, SOURCES.shape_cno]],
   ["Earth", [SOURCES.prem, SOURCES.nufast, SOURCES.exposure, SOURCES.surf]],
-  ["Detectors", [SOURCES.borexino, SOURCES.juno_b8]],
+  ["Detectors", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.sno, SOURCES.borexino, SOURCES.juno_b8]],
   ["Cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
                       SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.klmv]],
   ["Tools", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus]],

@@ -5,9 +5,10 @@ import { forStep, render as renderSources } from "./sources.js";
 
 const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
-const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O" };
+const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O",
+                   cc_nue_d: "νe CC on deuterium" };
 const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
-                    scintillator_lab: "Liquid scintillator: LAB (JUNO)" };
+                    scintillator_lab: "Liquid scintillator: LAB (JUNO)", heavy_water: "Heavy water, D₂O (SNO)" };
 const XSEC = {
   ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
   ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
@@ -41,6 +42,14 @@ const PRESETS = {
   juno: { unit: "ktday", detector: "scintillator_lab", channel: "es", site: "Jiangmen", threshold: 2.0, "res-model": "quadrature",
           "res-a": 0.03, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "",
           "unc-scale": 0.3, "unc-res": 0, "unc-norm": 1, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
+  // SNO phases I and II (arXiv:1109.0763): 770 t fiducial D2O, T_eff > 3.5 MeV, 277.3 + 391.4 days, energy scale 0.41 %
+  sno: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 3.5, "res-model": "quadrature",
+         "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +((277.3 + 391.4) / DAYS).toFixed(4),
+         "unc-scale": 0.41, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], quantity: "rate", period: "annual" },
+  // Hyper-K design report (arXiv:1805.04163): 187 kt fiducial per tank, 4.5 MeV kinetic threshold, scale 0.5 %, resolution 0.6 %
+  hyperk: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 4.5, "res-model": "sk4", "eff-model": "parametric",
+            eff: 100, "eff-e50": 0, mass: 187, years: 10, "unc-scale": 0.5, "unc-res": 0.6, "unc-norm": 0, components: ["B8", "hep"],
+            quantity: "rate", period: "annual" },
   sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
          mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
 };
@@ -55,6 +64,13 @@ const PRESET_NOTES = {
   juno: "JUNO ⁸B study (arXiv:2006.11760): LAB with 3.38 × 10³² electrons per kt, a 2 MeV recoil threshold, 3 %/√E resolution, "
       + "the SNO NC ⁸B flux, energy scale ±0.3 % and efficiency ±1 %. Not included: its energy-dependent fiducial volume, the 48 % "
       + "muon-veto dead time and the scintillator non-linearity. All energies, this reproduces its 4.36 counts per day per kt to 2 %.",
+  sno: "SNO phases I and II (arXiv:1109.0763): νe CC on deuterium in 770 t of fiducial D₂O (r < 550 cm), T_eff > 3.5 MeV, "
+     + "277.3 + 391.4 days live, energy scale ±0.41 %. Not included: SNO's resolution function (the paper gives only extra "
+     + "smearing terms) and its efficiencies. The CC cross section is SNOwGLoBES's table, which starts at 5 MeV.",
+  hyperk: "Hyper-K, one tank (design report, arXiv:1805.04163): 187 kt fiducial, 4.5 MeV kinetic threshold, energy scale ±0.5 % "
+        + "and resolution ±0.6 %, 10 years. Its resolution is not published as a function and is expected to be better than "
+        + "Super-K's: Super-K IV's is used as a conservative stand-in. Kamioka's latitude is used (Tochibora is 0.12° south). "
+        + "Efficiencies are not included: the report's 130 events a day above 4.5 MeV include them.",
   sk4: "Super-K IV as published (arXiv:2312.12907): resolution, threshold, fiducial mass, live time and detector uncertainties. "
      + "Its selection efficiency is only published as a figure (fig. 28) and is not included (100 %). "
      + "Without it, the energy-scale effect on the rate comes out ±0.5 % against Super-K's ±0.8 % (table IV).",
@@ -280,7 +296,7 @@ function describe(setup, quantity) {
   const comps = setup.components.map((c) => engine.DISPLAY[c]).join(", ");
   const response = [];
   if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E_vis"} > ${setup.threshold} MeV`);
-  if (setup.resolution_a > 0 || setup.resolution_b > 0) response.push("smeared");
+  if (setup.resolution_a > 0 || setup.resolution_b > 0 || setup.resolution_poly.length || setup.smearing_table) response.push("smeared");
   if (setup.efficiency < 1 || setup.efficiency_e50 > 0) response.push("efficiency");
   const what = CHANNELS[setup.channel] + (response.length ? `, ${response.join(", ")}` : "");
   return quantity === "adn" ? `Day-night asymmetry 2(N−D)/(N+D) · ${comps} · ${what} · ${setup.site}`
@@ -341,7 +357,7 @@ async function compute() {
 }
 
 // Target densities (g/cm^3), for the cross-section area of a 1 kt cube: water; liquid argon at its boiling point.
-const DENSITY = { water: 1.0, argon: 1.3954 };
+const DENSITY = { water: 1.0, argon: 1.3954, heavy_water: 1.105 }; // D2O at 20 °C
 
 function renderFlux() {
   const r = app.result, f = r.flux, d = app.inputs.data, card = $("flux");
