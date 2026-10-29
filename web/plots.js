@@ -224,3 +224,33 @@ export function budgetPlot(node, result) {
     { barmode: "overlay", showlegend: false, margin: { l: 30, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
       yaxis: { categoryorder: "array", categoryarray: [...letters].reverse(), tickmode: "array", tickvals: letters, ticktext: letters } }), CONFIG);
 }
+
+export function officialPlot(node, figure) {
+  // a published figure recreated (official.js): SNUfish's curves as lines, the paper's numbers as points with
+  // error bars, a band where a curve carries errors; the same data plotipus draws
+  const c = colours(), { columns, points, band } = figure, palette = Object.values(c.component);
+  const series = [...new Set(columns.Series)], traces = [];
+  // labelled x (windows, components): numeric positions, each point series a little to the side, so none hides another
+  const labels = typeof columns.X[0] === "string" ? [...new Set(columns.X)] : null;
+  const shift = (name) => (labels ? 0.12 * (points.indexOf(name) - (points.length - 1) / 2) : 0);
+  series.forEach((name, i) => {
+    const rows = columns.Series.map((s, k) => (s === name ? k : -1)).filter((k) => k >= 0);
+    const x = rows.map((k) => (labels ? labels.indexOf(columns.X[k]) + shift(name) : columns.X[k])), y = rows.map((k) => columns.Y[k]), e = rows.map((k) => columns.YError[k]);
+    const colour = palette[i % palette.length];
+    if (name === band) traces.push({ x: [...x, ...[...x].reverse()], y: [...y.map((v, k) => v + e[k]), ...y.map((v, k) => v - e[k]).reverse()],
+      mode: "lines", fill: "toself", line: { width: 0 }, fillcolor: alpha(colour, 0.3), name: `${name} 1σ`, hoverinfo: "skip" });
+    const point = points.includes(name);
+    traces.push({ x, y, name, mode: point ? "markers" : "lines", line: { color: colour, width: 2.4 },
+                  marker: { color: colour, size: 9, symbol: ["circle", "square", "diamond"][points.indexOf(name) % 3] },
+                  error_y: point && e.some((v) => v > 0) ? { type: "data", array: e, color: colour, thickness: 1.5, width: 4 } : undefined,
+                  text: labels ? rows.map((k) => columns.X[k]) : undefined,
+                  hovertemplate: `${labels ? "%{text}" : "%{x}"}: %{y:.4g}<extra>${name}</extra>` });
+  });
+  htmlLegend(node, traces.map((t) => (t.fill ? { label: t.name, colour: t.fillcolor, fill: true }
+    : { label: t.name, colour: t.line.color, dash: false, fill: t.mode === "markers" })));
+  const shapes = figure.horizontal !== undefined
+    ? [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: figure.horizontal, y1: figure.horizontal, line: { color: c.muted, dash: "dot", width: 1 } }] : [];
+  return Plotly.react(node, traces, layout(c, node, figure.title, figure.xLabel, figure.yLabel,
+    { showlegend: false, shapes, hovermode: "closest",
+      xaxis: labels ? { tickvals: labels.map((_, i) => i), ticktext: labels, range: [-0.5, labels.length - 0.5], minor: { ticks: "" } } : {} }), CONFIG);
+}

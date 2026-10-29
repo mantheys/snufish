@@ -191,3 +191,4 @@ ul.plain li { margin: 4px 0; }
 .import input[type="file"] { font-size: 0.8rem; color: var(--text-secondary); max-width: 100%; }
 label.check { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .import a { color: var(--accent); }
+.official-caption { margin: 4px 12px 12px; }

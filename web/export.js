@@ -35,11 +35,23 @@ function commands(result) {
            : `--select Component -s ${result.setup.components.map((c) => DISPLAY[c]).join(" ")} --logy --labely 'Interactions / (kt yr) per bin' `)
     + `--labelx '${result.spectra.observable}' --output_suffix spectrum`;
   const size = adn ? "Uncertainty (%)" : "Relative uncertainty (%)";
+  const official = result.official ? [officialCommand(result.official)] : [];
   return [
     spectrum,
     `cat --no_error --datafile AppBudget -x Source -y Size --hue Kind --kind bar --orient h --labely '${size}' --output_suffix budget`,
     `hist --datafile AppSamples -x Value --labelx '${{ adn: "A_DN", ratio: "Rate / unoscillated rate" }[result.quantity] || "Rate"} (${result.unit})' --output_suffix samples`,
+    ...official,
   ];
+}
+
+function officialCommand(f) {
+  // the paper's figure: SNUfish's curves as lines (a band where the series has errors), the paper's numbers as points
+  const quote = (text) => `'${text.replace(/'/g, "")}'`;
+  const points = f.points.length ? ` --series_type ${f.points.map((p) => quote(`${p}=errorbar`)).join(" ")}` : "";
+  const horizontal = f.horizontal !== undefined ? ` --horizontal ${f.horizontal}` : "";
+  const dodge = typeof f.columns.X[0] === "string" ? " --dodge 0.12" : ""; // labelled x: points side by side
+  return `line --datafile AppOfficial -x X -y Y --hue Series --plot_type line${points}${horizontal}${dodge} --legend_order data `
+    + `--labelx ${quote(f.xLabel)} --labely ${quote(f.yLabel)} --title ${quote(f.title.split(":")[0] + ", recomputed")} --output_suffix official`;
 }
 
 // plotipus colour registry: the same palette slots as the page (style.css), so a component keeps its colour
@@ -71,6 +83,7 @@ export async function plotipusProject(result, description, link) {
     "build/data/AppSpectrum.parquet": new Uint8Array(parquetWriteBuffer({ columnData: columns(spectrumColumns(result)) })),
     "build/data/AppBudget.parquet": new Uint8Array(parquetWriteBuffer({ columnData: columns(budget) })),
     "build/data/AppSamples.parquet": new Uint8Array(samples),
+    ...(result.official ? { "build/data/AppOfficial.parquet": new Uint8Array(parquetWriteBuffer({ columnData: columns(result.official.columns) })) } : {}),
     "plotipus.toml": strToU8('[project]\ndata_root = "build/data"\nplots = "input/plots"\noutput = "output"\n'),
     "input/plots/app_scripts.txt": strToU8(`# ${description}\n# ${link}\n${list.join("\n")}\n`),
     "colors.json": strToU8(JSON.stringify(COLOURS, null, 1)),
@@ -79,6 +92,7 @@ export async function plotipusProject(result, description, link) {
       "build/data/AppSpectrum.parquet  rates per kt yr per energy bin (one row per component and bin; Asymmetry in %)",
       "build/data/AppBudget.parquet    error budget: sampled sigma, or model range Low-High (Size: as plotted)",
       "build/data/AppSamples.parquet   the sampled values of the result (one row, an array)",
+      ...(result.official ? [`build/data/AppOfficial.parquet  ${result.official.title} (${result.official.source}), recomputed`] : []),
       "figures/                        the page's figures (and plotipus/, if rendered in the page)",
       "", "Plots with plotipus (https://github.com/mantheys/plotipus): plotipus run app", "",
     ].join("\n")),
@@ -89,7 +103,9 @@ export async function downloadResult(result, description, link, rendered = [], s
   // save(blob, filename): a host's own save (the claude.ai downloads capability), else a download link
   const [{ zipSync }, { files }] = await Promise.all([import(ZIP), plotipusProject(result, description, link)]);
   for (const { name, bytes } of rendered) files[`figures/plotipus/${name}`] = bytes;
-  for (const [name, id] of [["spectrum", "plot-spectrum"], ["distribution", "plot-distribution"], ["budget", "plot-budget"]]) {
+  const plots = [["spectrum", "plot-spectrum"], ["distribution", "plot-distribution"], ["budget", "plot-budget"]];
+  if (result.official) plots.push(["official", "plot-official"]);
+  for (const [name, id] of plots) {
     const url = await Plotly.toImage(document.getElementById(id), { format: "png", width: 1200, height: 700, scale: 2 });
     files[`figures/${name}.png`] = Uint8Array.from(atob(url.split(",")[1]), (ch) => ch.charCodeAt(0));
   }

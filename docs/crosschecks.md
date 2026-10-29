@@ -7,7 +7,9 @@ and **measurements** (SNUfish's prediction for them, which should agree within t
 Day-night asymmetries are in the paper's convention, (D − N)/((D + N)/2).
 
 In the calculator, **Reproduce a published number** (above step 0) sets every step to one of these and shows the
-paper's number next to SNUfish's (all but the BKS cross sections, SNO's φ_CC/φ_ES and P_ee, which are not page quantities).
+paper's number next to SNUfish's (all but the BKS cross sections, SNO's φ_CC/φ_ES and P_ee, which are not page quantities). The menu is grouped by result (rates, flux ratios, day-night asymmetry); each entry links its paper and,
+where the paper prints the numbers for it, recomputes an official figure (Super-K figs. 49 and 52, JUNO fig. 3 and table 7,
+SNO fig. 10, Borexino table II) as a Plotly preview and a plotipus figure (web/official.js).
 
 ## Predictions: reproduced
 

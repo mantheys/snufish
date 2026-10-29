@@ -1,8 +1,9 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
-import { budgetPlot, distributionPlot, spectrumPlot } from "./plots.js";
+import { budgetPlot, distributionPlot, officialPlot, spectrumPlot } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
-import { CHECKS, PAPER_SETS } from "./checks.js";
+import { CHECKS, PAPER_SETS, RESULTS } from "./checks.js";
+import { officialFigure } from "./official.js";
 
 const DATA = "data/";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted build carries its own copy (build.py)
@@ -135,11 +136,11 @@ function buildControls() {
   const d = app.inputs.data;
   Object.assign(d.parameter_sets.sets, PAPER_SETS); // the papers' own values, for the published checks
   const groups = {};
-  for (const c of CHECKS) (groups[c.group] ||= []).push(c);
+  for (const c of CHECKS) (groups[RESULTS[c.published.kind]] ||= []).push(c); // by result, the experiment in the label
   $("check").replaceChildren(option("", "None: set the steps by hand", true), ...Object.entries(groups).map(([name, list]) => {
     const group = document.createElement("optgroup");
     group.label = name;
-    list.forEach((c) => group.append(option(c.id, c.label)));
+    list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
     return group;
   }));
   const set = $("set");
@@ -247,8 +248,8 @@ function sync() {
     sin²θ₁₂ = ${s.value.toFixed(4)} (−${s.error[0].toFixed(4)} +${s.error[1].toFixed(4)})<br>
     ${p.sin2_theta13 ? `sin²θ₁₃ = ${p.sin2_theta13.value}; θ₂₃, δ, Δm²₃₁` : "θ₁₃, θ₂₃, δ, Δm²₃₁"}: NuFIT 6.0 · ${p.source}`;
   const check = CHECKS.find((c) => c.id === $("check").value);
-  $("check-note").textContent = check ? `${check.source}.${check.note ? ` ${check.note}` : ""} Change any setting to leave the check.`
-    : "Sets every step to a paper's inputs and shows its number next to SNUfish's.";
+  $("check-note").innerHTML = check ? `${sourceLink(check)}.${check.note ? ` ${check.note}` : ""} Change any setting to leave the check.`
+    : "Sets every step to a paper's inputs and shows its number next to SNUfish's, with the paper's figure recreated.";
 }
 
 // ------------------------------------------------------------------ URL state
@@ -351,6 +352,8 @@ function measuredLine(r) {
     the prediction is ${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it (measurement error only).</div>`;
 }
 
+const sourceLink = (c) => `<a href="https://arxiv.org/abs/${c.arxiv}" target="_blank" rel="noopener">${c.source}</a>`;
+
 function checkBand(r) {
   // the selected check's measurement, in the engine's units (per kt yr, or a fraction), for the histogram
   const p = r.check?.published;
@@ -379,7 +382,7 @@ function publishedLine(r) {
           + `${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it`;
   } else shown = `Published: <b>${digits(p.value)}</b>${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff})`;
   const convention = p.kind === "adn" ? " A_DN here in the paper's convention (D − N)/mean, the opposite sign of the headline's." : "";
-  return `<div class="sub check-line"><b>${c.group}: ${c.label}</b> (${c.source}). ${shown}.${convention}</div>`;
+  return `<div class="sub check-line"><b>${c.group}: ${c.label}</b> (${sourceLink(c)}). ${shown}.${convention}</div>`;
 }
 
 function describe(setup, quantity) {
@@ -452,6 +455,7 @@ async function compute() {
   const check = CHECKS.find((c) => c.id === $("check").value) || null;
   app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check,
                  lines: lineMarks(setup) };
+  app.result.official = await officialFigure(check, { inputs: app.inputs, tables: app.tables, setup, set: $("set").value });
   render();
   setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
@@ -520,6 +524,16 @@ function thumbLine(r) {
     while ${fmt(r.flux.total)} neutrinos cross each cm² of it every second.</div>`;
 }
 
+function renderOfficial(r) {
+  // the selected check's official figure, recomputed: a Plotly preview here, plotipus with "Render with plotipus"
+  const card = $("official"), f = r.official;
+  card.hidden = !f;
+  if (!f) return;
+  $("official-caption").innerHTML = `${f.caption} Source: <a href="${f.url}" target="_blank" rel="noopener">${f.source}</a>.
+    <b>Render with plotipus</b> (below) draws it with plotipus, with the other figures.`;
+  officialPlot($("plot-official"), f);
+}
+
 function render() {
   const r = app.result;
   if (!r) return;
@@ -541,6 +555,7 @@ function render() {
   spectrumPlot($("plot-spectrum"), r);
   distributionPlot($("plot-distribution"), r, checkBand(r) || measuredBand(setup, quantity));
   budgetPlot($("plot-budget"), r);
+  renderOfficial(r);
   const cell = (v) => (Number.isFinite(v) ? fmt(v * scale) : "–");
   $("table").innerHTML = `<table><thead><tr><th>Source</th><th>Kind</th><th class="num">σ or range</th><th class="num">Relative</th></tr></thead><tbody>${
     rows.map((x) => `<tr><td>${x.Source}</td><td>${x.Kind}</td><td class="num">${x.Kind === "sampled" ? cell(x.Sigma) : `${cell(x.Low)} to ${cell(x.High)}`}</td><td class="num">${Number.isFinite(x.Relative) ? (100 * x.Relative).toFixed(2) + " %" : "–"}</td></tr>`).join("")
@@ -599,7 +614,7 @@ async function renderPlotipus() {
     if (id !== app.renderId) return; // a newer result is being drawn
     if (answer.type === "error") throw new Error(answer.text);
     app.rendered = answer.images;
-    const names = { spectrum: commands[0], samples: commands[2], budget: commands[1] }; // the page's order
+    const names = { spectrum: commands[0], samples: commands[2], budget: commands[1], official: commands[3] }; // the page's order
     const rank = (name) => Object.keys(names).findIndex((k) => name.includes(`_${k}.png`));
     answer.images.sort((a, b) => rank(a.name) - rank(b.name));
     $("plotipus-figures").replaceChildren(...answer.images.map(({ name, bytes }) => {
