@@ -1,5 +1,7 @@
 # SNUfish
 
+**Calculator: [mantheys.github.io/snufish](https://mantheys.github.io/snufish/)**
+
 Community benchmarks of solar neutrino tools. Every tool computes the same
 fixed problem; SNUfish validates the outputs and plots them side by side
 with [plotipus](https://github.com/mantheys/plotipus), so users can see
@@ -97,9 +99,9 @@ NuFast-Earth for the night: `make` in `contributions/nufast-earth/scripts`),
 through `snufish.engine`: the folding of fluxes, probabilities and cross
 sections and the uncertainty budget, in NumPy only.
 
-## The web page (in development)
+## The web page
 
-A static site (plain JavaScript, no server) on top of the same engine: a home
+**[mantheys.github.io/snufish](https://mantheys.github.io/snufish/)**: a static site (plain JavaScript, no server) on top of the same engine: a home
 page crediting every experiment, model and tool used (`index.html`), and the
 calculator (`rates.html`): choose the result (rate or day-night asymmetry),
 oscillation parameters, solar model and flux components, site and Earth
@@ -128,6 +130,7 @@ to 2e-4 for rates and 1% for the day-night asymmetry (3e-4 absolute;
 snufish export-app --out build/app      # tables, ~3 min on 8 cores
 python web/build.py --out build/site    # page + tables + plotipus wheel (--plotipus ../plotipus)
 python -m http.server -d build/site     # open http://localhost:8000
+bash web/deploy.sh                      # build and publish to GitHub Pages (gh-pages branch)
 ```
 
 ## Layout
