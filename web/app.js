@@ -137,7 +137,10 @@ function buildControls() {
   Object.assign(d.parameter_sets.sets, PAPER_SETS); // the papers' own values, for the published checks
   const groups = {};
   for (const c of CHECKS) (groups[RESULTS[c.published.kind]] ||= []).push(c); // by result, the experiment in the label
-  $("check").replaceChildren(option("", "None: set the steps by hand", true), ...Object.entries(groups).map(([name, list]) => {
+  const envelope = document.createElement("optgroup"); // the opening example, the page's default
+  envelope.label = "Back of the envelope";
+  envelope.append(option("thumb", "Your thumb against the Sun", true));
+  $("check").replaceChildren(option("", "None: set the steps by hand"), envelope, ...Object.entries(groups).map(([name, list]) => {
     const group = document.createElement("optgroup");
     group.label = name;
     list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
@@ -249,6 +252,7 @@ function sync() {
     ${p.sin2_theta13 ? `sin²θ₁₃ = ${p.sin2_theta13.value}; θ₂₃, δ, Δm²₃₁` : "θ₁₃, θ₂₃, δ, Δm²₃₁"}: NuFIT 6.0 · ${p.source}`;
   const check = CHECKS.find((c) => c.id === $("check").value);
   $("check-note").innerHTML = check ? `${sourceLink(check)}.${check.note ? ` ${check.note}` : ""} Change any setting to leave the check.`
+    : $("check").value === "thumb" ? PRESET_NOTES.thumb
     : "Sets every step to a paper's inputs and shows its number next to SNUfish's, with the paper's figure recreated.";
 }
 
@@ -273,6 +277,7 @@ function loadHash() {
   if (HOSTED) return;
   const p = new URLSearchParams(location.hash.slice(1));
   if (!p.size) return;
+  $("check").value = ""; // a link without a template is set by hand
   if (p.has("target")) { $("detector").value = p.get("target"); sync(); }
   if (p.has("channel")) { $("channel").value = p.get("channel"); sync(); }
   for (const [id, key] of Object.entries(KEYS)) if (p.has(key) && id !== "detector" && id !== "channel") $(id).value = p.get(key);
@@ -743,6 +748,7 @@ const CHECK_BASE = { set: "nufit60_global", solar: "b23_gs98", b8: "model", es: 
 const STEP5 = ["threshold", "res-model", "res-a", "res-b", "eff-model", "eff", "eff-e50", "eff-width", "mass", "years", "unc-scale", "unc-res", "unc-norm"];
 
 function applyCheck(id) {
+  if (id === "thumb") { applyValues(CHECK_BASE); $("preset").value = "thumb"; applyPreset("thumb"); return; }
   const c = CHECKS.find((x) => x.id === id);
   if (!c) return;
   const { preset, ...values } = c.values;
@@ -794,7 +800,7 @@ async function init() {
     }
     if (e.target.id === "check") applyCheck(e.target.value);
     else if (e.target.closest(".step")) $("check").value = ""; // edited by hand: no longer the published setup
-    if (e.target.id === "preset") applyPreset(e.target.value);
+    if (e.target.id === "preset") { applyPreset(e.target.value); if (e.target.value === "thumb") $("check").value = "thumb"; }
     else if (e.target.id === "check") { /* set above */ }
     else if (e.target.closest('.step[data-step="5"]') || ($("preset").value === "thumb" && e.target.closest('.step[data-step="0"], .step[data-step="2"], .step[data-step="4"]')))
       $("preset").value = "custom"; // edited by hand: no longer the preset
