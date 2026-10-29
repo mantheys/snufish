@@ -20,14 +20,21 @@ const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first 
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
+const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
 // Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
 // (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
 const SK4_RESOLUTION = [-0.05525, 0.3162, 0.04572];
 const PRESETS = {
+  // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector
+  thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
+           "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
+           components: ORDER, quantity: "rate", period: "annual" },
   sk4: { detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
          mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
 };
 const PRESET_NOTES = {
+  thumb: `A thumb, as ${THUMB_GRAMS} g of water: every solar flux component, elastic scattering on its electrons, `
+       + "no threshold and a perfect detector, averaged over day and night. Change any setting to start from it.",
   custom: "",
   sk4: "Super-K IV as published (arXiv:2312.12907): resolution, threshold, fiducial mass, live time and detector uncertainties. "
      + "Its selection efficiency is only published as a figure (fig. 28) and is not included (100 %). "
@@ -295,7 +302,6 @@ async function compute() {
 
 // Target densities (g/cm^3), for the cross-section area of a 1 kt cube: water; liquid argon at its boiling point.
 const DENSITY = { water: 1.0, argon: 1.3954 };
-const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
 
 function renderFlux() {
   const r = app.result, f = r.flux, d = app.inputs.data, card = $("flux");
@@ -341,6 +347,14 @@ function showThumb() {
     in a thumb sees one scatter on an electron about once every <b>${fmt(1 / t.perYear)}</b> years.</p>`;
 }
 
+function thumbLine(r) {
+  // the thumb preset: how often a thumb sees one of these interactions
+  if ($("preset").value !== "thumb" || r.quantity !== "rate") return "";
+  const perYear = r.rows[0].Central * THUMB_GRAMS * 1e-9; // per kt yr x kt
+  return `<div class="sub thumb-line">In a ${THUMB_GRAMS} g thumb: ${fmt(perYear)} interactions a year, one about every <b>${fmt(1 / perYear)}</b> years,
+    while ${fmt(r.flux.total)} neutrinos cross each cm² of it every second.</div>`;
+}
+
 function render() {
   const r = app.result;
   if (!r) return;
@@ -357,7 +371,7 @@ function render() {
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
-    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>`;
+    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}`;
   renderFlux();
   spectrumPlot($("plot-spectrum"), r);
   distributionPlot($("plot-distribution"), r, measuredBand(setup, quantity));
@@ -525,7 +539,12 @@ function applyPreset(name) {
   const values = PRESETS[name];
   if (!values) return;
   for (const id of ["detector", "channel"]) if (id in values) { $(id).value = values[id]; sync(); }
-  for (const [id, v] of Object.entries(values)) if (!["detector", "channel"].includes(id)) $(id).value = v;
+  for (const [id, v] of Object.entries(values)) {
+    if (["detector", "channel"].includes(id)) continue;
+    if (id === "components") document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = v.includes(x.value); });
+    else if (id === "quantity" || id === "period") setRadio(id, v);
+    else $(id).value = v;
+  }
 }
 
 function refreshSources() {
@@ -549,11 +568,14 @@ async function init() {
   app.tables = new engine.TableProbabilities(loadTable);
   buildControls();
   sync();
+  applyPreset($("preset").value); // the opening example, unless the link carries a setup
+  sync();
   loadHash();
   sync();
   $("controls").addEventListener("change", (e) => {
     if (e.target.id === "preset") applyPreset(e.target.value);
-    else if (e.target.closest('.step[data-step="5"]')) $("preset").value = "custom"; // edited by hand: no longer the preset
+    else if (e.target.closest('.step[data-step="5"]') || ($("preset").value === "thumb" && e.target.closest('.step[data-step="0"], .step[data-step="2"], .step[data-step="4"]')))
+      $("preset").value = "custom"; // edited by hand: no longer the preset
     sync(); refreshSources(); schedule();
   });
   document.querySelectorAll("button.info").forEach((button) => button.addEventListener("click", () => {
