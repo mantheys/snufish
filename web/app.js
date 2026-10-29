@@ -35,6 +35,9 @@ const PRESET_NOTES = {
 };
 
 const $ = (id) => document.getElementById(id);
+// In a hosted view (a claude.ai artifact) the page cannot start downloads, load Python from a CDN, or keep the
+// setup in the address: those controls are hidden there and the files below say how to run the site locally.
+const HOSTED = document.querySelector('meta[name="snufish-host"]')?.content === "artifact";
 const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
               worker: null, rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
 
@@ -44,6 +47,11 @@ async function loadTable(name) {
   const meta = await (await fetch(`${DATA}${name}.json`)).json();
   const response = await fetch(`${DATA}${meta.bin}`);
   if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
+  if (meta.encoding === "base64") { // hosted copies keep the float32 tables as base64 text
+    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
+    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
+    return { meta, buffer: bytes.buffer };
+  }
   return { meta, buffer: await response.arrayBuffer() };
 }
 
@@ -165,6 +173,7 @@ const KEYS = { set: "set", solar: "solar", site: "site", earth: "earth", detecto
 const RADIOS = { b8: "b8", es: "es", quantity: "q", period: "period" };
 
 function saveHash() {
+  if (HOSTED) return;
   const p = new URLSearchParams();
   for (const [id, key] of Object.entries(KEYS)) if ($(id).value) p.set(key, $(id).value);
   for (const [name, key] of Object.entries(RADIOS)) p.set(key, radio(name));
@@ -173,6 +182,7 @@ function saveHash() {
 }
 
 function loadHash() {
+  if (HOSTED) return;
   const p = new URLSearchParams(location.hash.slice(1));
   if (!p.size) return;
   if (p.has("target")) { $("detector").value = p.get("target"); sync(); }
@@ -567,6 +577,14 @@ async function init() {
     } catch (error) { status(`Download failed: ${error.message}`, true); }
     $("download").disabled = false;
   });
+  if (HOSTED) {
+    for (const id of ["render", "download", "share", "smear-template", "eff-template"]) $(id).hidden = true;
+    const note = document.createElement("p");
+    note.className = "hint";
+    note.textContent = "In this hosted view the page cannot download files or draw plotipus figures, and the setup is not "
+      + "kept in the link. Run the site locally for those (python web/build.py, then python -m http.server -d build/site).";
+    $("download").closest(".actions").after(note);
+  }
   $("render").addEventListener("click", renderPlotipus);
   setupImport("smearing", "smear-file", "smear-info", parseSmearing);
   setupImport("efficiency", "eff-file", "eff-info", parseEfficiency);
