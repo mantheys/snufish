@@ -745,7 +745,11 @@ function cell(axis, x) {
 
 export class TableProbabilities {
   // Tables of `snufish export-app` (JSON index + float32 binary); `loader(name)` -> {meta, buffer}
-  constructor(loader) { this.loader = loader; this.tables = {}; this.clamped = 0; }
+  // theta13 is followed as nu_3 decouples: F_1,2 and P_1e,2e scale with cos^2 theta13, F_3 and P_3e with
+  // sin^2 theta13 (P_ee = c13^4 P_ee^2nu + s13^4); `referenceS13` is the tables' (the registry default)
+  constructor(loader, referenceS13) { this.loader = loader; this.tables = {}; this.clamped = 0; this.referenceS13 = referenceS13; }
+
+  theta13(osc) { const s = osc.sin2_theta13, r = this.referenceS13 ?? s; return [(1 - s) / (1 - r), s / r]; }
 
   async ensure(names) {
     await Promise.all(names.filter((n) => !this.tables[n]).map(async (name) => {
@@ -783,11 +787,11 @@ export class TableProbabilities {
 
   day(osc, solarModel, component, energies) {
     const t = this.get(`day_${solarModel}`), e = t[`energy_${component}`], F = t[`F_${component}`];
-    const F12 = this.blend(F, 0, t.dm21.length, e.length * 2, this.point(t, osc));
+    const F12 = this.blend(F, 0, t.dm21.length, e.length * 2, this.point(t, osc)), [c] = this.theta13(osc);
     const loge = e.map(Math.log), f1 = e.map((_, k) => F12[2 * k]), f2 = e.map((_, k) => F12[2 * k + 1]);
     return energies.map((x) => {
       const l = Math.log(Math.min(Math.max(x, e[0]), e[e.length - 1]));
-      const a = interp(l, loge, f1), b = interp(l, loge, f2);
+      const a = c * interp(l, loge, f1), b = c * interp(l, loge, f2);
       return [a, b, 1 - a - b];
     });
   }
@@ -795,7 +799,7 @@ export class TableProbabilities {
   night(osc, earthModel, site) {
     const t = this.get(`night_${earthModel}`), s = t.sites.indexOf(site), P = t.P;
     const [, ns, nd, ne] = P.shape, rest = ne * 3;
-    const flat = this.blend(P, s * ns * nd * rest, nd, rest, this.point(t, osc));
-    return [t.energy, Array.from({ length: ne }, (_, k) => [flat[3 * k], flat[3 * k + 1], flat[3 * k + 2]])];
+    const flat = this.blend(P, s * ns * nd * rest, nd, rest, this.point(t, osc)), [c, s3] = this.theta13(osc);
+    return [t.energy, Array.from({ length: ne }, (_, k) => [c * flat[3 * k], c * flat[3 * k + 1], s3 * flat[3 * k + 2]])];
   }
 }

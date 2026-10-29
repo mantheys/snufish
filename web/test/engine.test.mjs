@@ -12,7 +12,7 @@ const tables = new engine.TableProbabilities(async (name) => {
   const meta = JSON.parse(fs.readFileSync(path.join(tablesDir, `${name}.json`), "utf8"));
   const bytes = fs.readFileSync(path.join(tablesDir, meta.bin));
   return { meta, buffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
-});
+}, inputs.data.parameter_sets.defaults.sin2_theta13.value);
 await tables.ensure([...Object.keys(inputs.data.solar_models).map((m) => `day_${m}`),
                      ...inputs.data.earth_models.map((e) => `night_${e}`)]);
 

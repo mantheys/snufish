@@ -667,7 +667,7 @@ async function init() {
     status(`Could not load the inputs (${error.message}). The page needs the data/ directory of snufish export-app.`, true);
     return;
   }
-  app.tables = new engine.TableProbabilities(loadTable);
+  app.tables = new engine.TableProbabilities(loadTable, app.inputs.data.parameter_sets.defaults.sin2_theta13.value);
   buildControls();
   for (const [name, c] of Object.entries(app.inputs.data.efficiency_curves || {})) // published curves, before "Imported curve"
     $("eff-model").insertBefore(new Option(`Published: ${c.label}`, `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));

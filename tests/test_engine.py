@@ -390,3 +390,17 @@ def test_against_super_k_iv_and_sno():
     assert rows[0]["Central"] == pytest.approx(0.340, abs=0.038)
     rows, _ = engine.budget(inputs, tables, engine.Setup(channel="nc_d", **sno), params, "ratio", n=10)
     assert rows[0]["Central"] == pytest.approx(1.0, abs=1e-12)
+
+
+@needs_tables
+def test_tables_follow_theta13():
+    """The app tables are made at one theta13; the nu_3-decoupling rescaling keeps them on the exact solvers."""
+    from snufish.export import ExactProbabilities
+
+    inputs, tables, exact = engine.Inputs.load(APP / "inputs.json"), engine.TableProbabilities(APP), ExactProbabilities()
+    setup = engine.Setup(components=("B8",), threshold=4.49, site="Kamioka")
+    for s13 in (0.015, 0.03):
+        osc = engine.oscillation(engine.parameters(inputs, "nufit60_global", custom={"sin2_theta13": s13}))
+        (d, n, _), (d0, n0, _) = (engine.combine(engine.component_totals(inputs, p, setup, osc), ["B8"]) for p in (tables, exact))
+        assert d == pytest.approx(d0, rel=1e-3)
+        assert 2 * (n - d) / (n + d) == pytest.approx(2 * (n0 - d0) / (n0 + d0), rel=0.025)  # tables: ~1 % at any theta13

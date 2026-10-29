@@ -822,14 +822,26 @@ def read_table(directory, name):
 class TableProbabilities:
     """Probabilities interpolated from an app bundle: bilinear in
     (sin^2 theta12, Delta m^2_21), linear in log E (day) or E (night). The
-    tables are computed at the default theta13, theta23, delta and Delta m^2_31;
-    those enter here only through |U_ei|^2. Points outside the grid are
-    clamped to its edge and counted in ``clamped``."""
+    tables are computed at the default theta13, theta23, delta and Delta m^2_31.
+    theta13 is followed as nu_3 decouples: F_1,2 and P_1e,2e scale with
+    cos^2 theta13, F_3 and P_3e with sin^2 theta13 (P_ee = c13^4 P_ee^2nu + s13^4,
+    without the c13^2 in the matter potential); the others enter only through
+    |U_ei|^2. Points outside the grid are clamped to its edge and counted in
+    ``clamped``."""
 
-    def __init__(self, directory):
+    def __init__(self, directory, reference_s13=None):
         self.directory = Path(directory)
         self._tables = {}
         self.clamped = 0
+        if reference_s13 is None:  # the theta13 the tables were made with: the registry default
+            with (self.directory / "inputs.json").open() as handle:
+                reference_s13 = json.load(handle)["parameter_sets"]["defaults"]["sin2_theta13"]["value"]
+        self.reference_s13 = reference_s13
+
+    def _theta13(self, osc):
+        """(cos^2 ratio, sin^2 ratio) of theta13 to the tables'."""
+        s13 = osc["sin2_theta13"]
+        return (1 - s13) / (1 - self.reference_s13), s13 / self.reference_s13
 
     def _load(self, name):
         if name not in self._tables:
@@ -847,10 +859,12 @@ class TableProbabilities:
         table_e = t[f"energy_{component}"]
         F12 = _bilinear(t["s12"], t["dm21"], t[f"F_{component}"], *self._point(t, osc))  # [E, 2]
         log_e = np.log(np.clip(energies, table_e[0], table_e[-1]))
-        F1, F2 = (np.interp(log_e, np.log(table_e), F12[:, i]) for i in (0, 1))
+        c, _ = self._theta13(osc)
+        F1, F2 = (c * np.interp(log_e, np.log(table_e), F12[:, i]) for i in (0, 1))
         return np.stack([F1, F2, 1 - F1 - F2], axis=-1)
 
     def night(self, osc, earth_model, site):
         t = self._load(f"night_{earth_model}")
         s = list(t["sites"]).index(site)
-        return t["energy"], _bilinear(t["s12"], t["dm21"], t["P"][s], *self._point(t, osc))
+        c, s3 = self._theta13(osc)
+        return t["energy"], _bilinear(t["s12"], t["dm21"], t["P"][s], *self._point(t, osc)) * np.array([c, c, s3])
