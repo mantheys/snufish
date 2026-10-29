@@ -37,7 +37,7 @@ function commands(result) {
   return [
     spectrum,
     `cat --no_error --datafile AppBudget -x Source -y Size --hue Kind --kind bar --orient h --labely '${size}' --output_suffix budget`,
-    `hist --datafile AppSamples -x Value --labelx '${adn ? "A_DN" : "Rate"} (${result.unit})' --output_suffix samples`,
+    `hist --datafile AppSamples -x Value --labelx '${{ adn: "A_DN", ratio: "Rate / unoscillated rate" }[result.quantity] || "Rate"} (${result.unit})' --output_suffix samples`,
   ];
 }
 

@@ -111,7 +111,7 @@ export function spectrumPlot(node, result) {
   }
   // computed per kt yr; shown in the chosen unit (k per kt yr); log axis: empty bins hidden
   // the first bin (0 to 0.01 MeV, linear among log bins, also holding what smears below 0) is not drawn
-  const k = result.scale, floor = Math.max(...total.slice(1)) * 1e-6;
+  const k = result.spectrumScale ?? result.scale, floor = Math.max(...total.slice(1)) * 1e-6;
   const clip = (v, b) => (b > 0 && v > floor ? v * k : null);
   traces.push(...bandTraces(c, edges, low.map((v, b) => (b > 0 && total[b] > floor ? Math.max(v, floor) * k : null)),
                             high.map((v, b) => (b > 0 && total[b] > floor ? v * k : null))));
@@ -125,7 +125,7 @@ export function spectrumPlot(node, result) {
   traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.4 },
                 hovertemplate: "%{y:.4g}<extra>total</extra>" });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
-  return Plotly.react(node, traces, layout(c, node, title, spectra.observable, `Interactions ${result.unit}, per bin`,
+  return Plotly.react(node, traces, layout(c, node, title, spectra.observable, `Interactions ${result.spectrumUnit ?? result.unit}, per bin`,
     { xaxis: energyAxis(edges, total, floor), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified" }), CONFIG);
 }
 
@@ -158,7 +158,7 @@ export function distributionPlot(node, result, measured) {
   const trace = { type: "bar", x: counts.map((_, i) => start + (i + 0.5) * width), y: counts, width: width * 0.92,
                   marker: { color: alpha(c.sampled, 0.8) }, name: `${values.length} draws`,
                   hovertemplate: `%{x:.4g} ${unit}: %{y} draws<extra></extra>` };
-  const name = quantity === "adn" ? "A_DN" : "Rate";
+  const name = { adn: "A_DN", ratio: "Rate ÷ unoscillated" }[quantity] || "Rate";
   return Plotly.react(node, [trace], layout(c, node, quantity === "adn" ? "Sampled A_DN and model ranges" : "Sampled rates and model ranges", `${name} (${unit})`, "Draws",
     { shapes, annotations, showlegend: false, bargap: 0, margin: { l: 50, r: 16, t: 24, b: 48 },
       xaxis: { range: [lo - pad, hi + pad], exponentformat: "power" }, yaxis: { range: [0, top * (1.25 + 0.2 * ranges.length)] } }), CONFIG);
@@ -168,7 +168,7 @@ export function budgetSizes(rows, quantity, scale) {
   // relative in % for rates; absolute (units of the quantity) for A_DN, which can be ~0
   return rows.map((r) => {
     const size = r.Kind === "sampled" ? r.Sigma : Math.max(r.High - r.Central, r.Central - r.Low);
-    return quantity === "rate" ? 100 * size / Math.abs(r.Central) : size * scale;
+    return quantity !== "adn" ? 100 * size / Math.abs(r.Central) : size * scale;
   });
 }
 
@@ -187,7 +187,7 @@ export function budgetPlot(node, result) {
   }));
   const kinds = new Set(rows.map((r) => r.Kind)).size, legend = 18 * rows.length + 22 * kinds;
   node.style.height = `${260 + legend}px`;
-  const xTitle = quantity === "rate" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
+  const xTitle = quantity !== "adn" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
   return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
     { barmode: "overlay", margin: { l: 30, r: 16, t: 24, b: 56 + legend }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
       yaxis: { categoryorder: "array", categoryarray: [...letters].reverse() },

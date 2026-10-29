@@ -167,7 +167,7 @@ class Setup:
     detector: str = "water"
     channel: str = "es"
     xsec_model: str = "default"     # nuclear model of a CC channel (B4 variants)
-    es_model: str = "tree"          # "tree" or "snowglobes" (radiative corrections)
+    es_model: str = "bks"           # "bks" (radiative corrections, BKS 1995), "tree" or "snowglobes"
     period: str = "day"             # "day", "night" or "annual"
     # detector response, in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
     threshold: float = 0.0          # MeV
@@ -192,7 +192,7 @@ class Setup:
         return replace(self, **changes)
 
 
-QUANTITY_NAMES = ("rate", "adn")
+QUANTITY_NAMES = ("rate", "adn", "ratio")  # ratio: rate / the rate without oscillations
 PERIODS = ("day", "night", "annual")
 
 
@@ -221,7 +221,7 @@ def check(inputs, setup, quantity="rate"):
         raise ValueError(f"channel {setup.channel!r} is not available in {setup.detector}; "
                          f"choose one of: {', '.join(channels)}")
     if setup.channel == "es":
-        allowed("ES model", setup.es_model, ["tree", "snowglobes"])
+        allowed("ES model", setup.es_model, ES_MODELS)
     else:
         allowed(f"cross-section model of {setup.channel}", setup.xsec_model, inputs.xsec_models(setup.channel))
     within("the threshold (MeV)", setup.threshold, 0.0, OBSERVED_MAX)
@@ -244,7 +244,7 @@ def check(inputs, setup, quantity="rate"):
     if t is not None:
         if len(t.matrix) != len(t.x) - 1 or any(len(row) != len(t.y) - 1 for row in t.matrix):
             raise ValueError("the imported smearing matrix needs one row per true bin and one column per observed bin")
-        if t.true_axis == "neutrino" and setup.channel == "es":
+        if t.true_axis == "neutrino" and (setup.channel == "es" or setup.channel.startswith("nc_")):
             raise ValueError("a smearing matrix in neutrino energy applies to CC channels only")
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
@@ -270,6 +270,8 @@ def observed_edges(threshold=0.0):
 
 
 def observable(channel):
+    if channel.startswith("nc_"):
+        return "Neutron-capture gamma energy (MeV)"
     return "Electron kinetic energy T (MeV)" if channel == "es" else "Visible energy E_nu - Q (MeV)"
 
 
@@ -302,9 +304,16 @@ def _kernels(inputs, setup, component, edges):
             for flavour in ("nue", "numu"):
                 above = np.stack([es_above(energy, flavour, inputs["constants"], t) for t in edges], axis=1)
                 k = above[:, :-1] - above[:, 1:]  # sigma(E; T in bin), exact for the tree-level formula
-                if setup.es_model == "snowglobes":
+                if setup.es_model == "snowglobes":  # its tables start at 0.5 MeV: BKS below
                     e, ratio = inputs.es_ratio[flavour]
                     k = k * np.interp(energy, e, ratio, left=1.0, right=1.0)[:, None]
+                    below = energy < e[0]
+                    if below.any():
+                        b = above[below] * bks_ratio(inputs, flavour, energy[below], edges)
+                        k[below] = b[:, :-1] - b[:, 1:]
+                elif setup.es_model == "bks":
+                    above = above * bks_ratio(inputs, flavour, energy, edges)
+                    k = above[:, :-1] - above[:, 1:]
                 out.append(k)
             cache[key] = tuple(out)
         else:
@@ -312,6 +321,22 @@ def _kernels(inputs, setup, component, edges):
             s = np.interp(energy, e, sigma, left=0.0, right=0.0)  # zero outside the table
             cache[key] = np.where(energy < inputs["xsec_thresholds_MeV"].get(setup.channel, 0.0), 0.0, s)
     return cache[key]
+
+
+def bks_ratio(inputs, flavour, energy, edges):
+    """[E, edges] ratio of the radiatively corrected (BKS) to the tree-level sigma(E; T > t), interpolated
+    linearly in ln E and in t / T_max on the exported table (the web engine does the same)."""
+    table = inputs.data["es_bks"]
+    grid, fraction, ratio = np.log(table["energy"]), np.array(table["fraction"]), np.array(table[flavour])
+    me = inputs["constants"]["m_e_MeV"]
+    out = np.ones((len(energy), len(edges)))
+    for k, e in enumerate(energy):
+        u = np.asarray(edges) / (2 * e**2 / (me + 2 * e))
+        x = min(max(np.log(e), grid[0]), grid[-1])
+        i = min(int(np.searchsorted(grid, x, side="right")) - 1, len(grid) - 2)
+        w = (x - grid[i]) / (grid[i + 1] - grid[i])
+        out[k] = (1 - w) * np.interp(u, fraction, ratio[i]) + w * np.interp(u, fraction, ratio[i + 1])
+    return out
 
 
 def resolution(inputs, setup, energy):
@@ -410,6 +435,13 @@ def survival(inputs, probabilities, setup, osc, night=True):
 def _visible(inputs, setup, kind, energy, density, edges):
     """CC: the rate in each fine bin of visible energy E - Q (a continuum's density
     integrated over the bin, lines in the bin holding them; below the first edge: first bin)."""
+    fixed = inputs.data.get("visible_fixed_MeV", {}).get(setup.channel)
+    if fixed is not None:  # NC: every event deposits the same energy (the neutron-capture gamma)
+        total = float(np.sum(density)) if kind == "line" else float(np.sum(0.5 * (density[1:] + density[:-1])
+                                                                            * np.diff(energy)))
+        out = np.zeros(len(edges) - 1)
+        out[min(max(int(np.searchsorted(edges, fixed, side="right")) - 1, 0), len(out) - 1)] = total
+        return out
     shifted = edges + inputs["visible_offset_MeV"][setup.channel]
     shifted[0], shifted[-1] = -np.inf, np.inf
     if kind == "line":
@@ -435,6 +467,8 @@ def observed_rates(inputs, probabilities, setup, osc, night=True):
         def spectrum(pee):
             if pee is None:
                 return None
+            if is_nc(setup):
+                pee = np.ones_like(pee)  # all active flavours alike
             if setup.channel == "es":
                 q = scale * _quadrature(kind, energy, weight)
                 true = (q * pee) @ kernels[0] + (q * (1 - pee)) @ kernels[1]
@@ -487,6 +521,8 @@ def _fast(inputs, probabilities, setup, osc, night, spectra):
         def value(pee):
             if pee is None:
                 return None if spectra else np.nan
+            if is_nc(setup):
+                pee = np.ones_like(pee)  # all active flavours alike
             if setup.channel == "es":
                 w = prep["q"] * pee
                 if spectra:
@@ -499,6 +535,8 @@ def _fast(inputs, probabilities, setup, osc, night, spectra):
             return rebin(smeared * prep["acceptance"], prep["edges"], prep["display"])
 
         out[c] = {"day": value(peeses[0]), "night": value(peeses[1])}
+        if not spectra:  # without oscillations (every neutrino a nu_e): the denominator of "ratio"
+            out[c]["ref"] = value(np.ones_like(peeses[0]))
     return out
 
 
@@ -530,24 +568,30 @@ def totals(rates):
 
 
 def combine(per_component, components, multipliers=None):
-    """(day, night) summed over components, each scaled by its flux multiplier."""
+    """(day, night, ref) summed over components, each scaled by its flux multiplier;
+    ref, the rate without oscillations, when the totals have it (else NaN)."""
     m = np.ones(len(components)) if multipliers is None else multipliers
     day = sum(m[k] * per_component[c]["day"] for k, c in enumerate(components))
     night = sum(m[k] * per_component[c]["night"] for k, c in enumerate(components))
-    return day, night
+    ref = sum(m[k] * per_component[c].get("ref", np.nan) for k, c in enumerate(components))
+    return day, night, ref
 
 
-def quantity_value(quantity, period, day, night):
+def quantity_value(quantity, period, day, night, ref=np.nan):
     if quantity == "adn":
         return 2 * (night - day) / (night + day)
-    return {"day": day, "night": night, "annual": 0.5 * (day + night)}[period]
+    rate = {"day": day, "night": night, "annual": 0.5 * (day + night)}[period]
+    return rate / ref if quantity == "ratio" else rate
 
 
-def statistical_sigma(quantity, period, day, night, exposure):
+def statistical_sigma(quantity, period, day, night, exposure, ref=np.nan):
     """Poisson error for ``exposure`` kton-years, half of it by night
-    (annual average; no backgrounds)."""
+    (annual average; no backgrounds). The ratio's: the rate's, over the
+    no-oscillation rate (a prediction, without error)."""
     if not exposure:
         return None
+    if quantity == "ratio":
+        return statistical_sigma("rate", period, day, night, exposure) / ref
     if quantity == "adn":
         D, N = day * exposure / 2, night * exposure / 2
         S = D + N
@@ -555,6 +599,10 @@ def statistical_sigma(quantity, period, day, night, exposure):
     rate = quantity_value(quantity, period, day, night)
     live = exposure / 2 if period in ("day", "night") else exposure
     return float(np.sqrt(rate * live) / live)
+
+
+def is_nc(setup):
+    return setup.channel.startswith("nc_")
 
 
 def needs_night(quantity, period):
@@ -569,6 +617,8 @@ def rebin(values, fine, display):
 
 # ---------------------------------------------------------------- budget
 
+ES_MODELS = ("bks", "tree", "snowglobes")
+ES_RANGE = ("bks", "snowglobes")  # the radiatively corrected calculations; tree level is selectable, not a model
 RANGE_LABELS = {"xsec_model": "cross-section model", "es_model": "ES radiative corrections",
                 "earth_model": "Earth model", "solar_model": "solar model"}
 
@@ -578,7 +628,7 @@ def alternatives(inputs, setup, choice):
         incomplete = inputs.data.get("xsec_incomplete", {}).get(setup.channel, [])
         return [m for m in inputs.xsec_models(setup.channel) if m not in incomplete] if setup.channel != "es" else []
     if choice == "es_model":
-        return ["tree", "snowglobes"] if setup.channel == "es" else []
+        return list(ES_RANGE) if setup.channel == "es" else []
     if choice == "earth_model":
         return list(inputs["earth_models"])
     if choice == "solar_model":
@@ -611,8 +661,8 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
 
     rng, osc_draws, flux_draws = _draws(inputs, setup, params, n, seed)
     nominal = component_totals(inputs, probabilities, setup, oscillation(params), night)
-    day0, night0 = combine(nominal, comps)
-    central = quantity_value(quantity, setup.period, day0, night0)
+    day0, night0, ref0 = combine(nominal, comps)
+    central = quantity_value(quantity, setup.period, day0, night0, ref0)
 
     rows, samples = [], {}
 
@@ -629,10 +679,10 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
     total = np.array([quantity_value(quantity, setup.period, *combine(p, comps, flux_draws[i]
                                                                        if flux_draws is not None else None))
                       for i, p in enumerate(per_draw)])
-    if flux_draws is not None and not (quantity == "adn" and len(comps) == 1):  # one flux cancels in a ratio
+    if flux_draws is not None and not (quantity != "rate" and len(comps) == 1):  # one flux cancels in a ratio
         sampled(flux_label(setup), [quantity_value(quantity, setup.period, *combine(nominal, comps, m))
                                     for m in flux_draws])
-    stat = statistical_sigma(quantity, setup.period, day0, night0, setup.exposure)
+    stat = statistical_sigma(quantity, setup.period, day0, night0, setup.exposure, ref0)
     if stat is not None:
         sampled(f"statistics ({setup.exposure:g} kt yr)", central + stat * rng.standard_normal(n))
         total = total + stat * rng.standard_normal(n)

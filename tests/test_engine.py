@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault("SNUFISH_ROOT", str(ROOT))
 
 from snufish import engine  # noqa: E402
-from snufish.spec import pmns  # noqa: E402
+from snufish.spec import load_spec, pmns  # noqa: E402
 
 APP = ROOT / "build" / "app"
 DRIVER = ROOT / "contributions" / "nufast-earth" / "scripts" / "b3_driver"
@@ -45,7 +45,7 @@ def test_vacuum_rates_have_no_day_night_and_scale_with_flux(inputs):
     params = engine.parameters(inputs, "juno_2025")
     setup = engine.Setup(components=("Be7", "B8"), detector="argon", threshold=0.0)
     per = engine.totals(engine.observed_rates(inputs, Vacuum(), setup, engine.oscillation(params)))
-    day, night = engine.combine(per, ["Be7", "B8"])
+    day, night, _ = engine.combine(per, ["Be7", "B8"])
     assert night == pytest.approx(day, rel=1e-12)
     assert engine.quantity_value("adn", "day", day, night) == pytest.approx(0.0, abs=1e-12)
     doubled = engine.combine(per, ["Be7", "B8"], np.array([1.0, 2.0]))[0]
@@ -163,7 +163,7 @@ def true_energy_total(inputs, provider, setup, osc):
     dict(channel="cc_nue_o16", components=("B8", "hep")),
 ])
 def test_perfect_detector_reproduces_true_energy_rates(inputs, changes):
-    setup = engine.Setup(**changes)
+    setup = engine.Setup(es_model="tree", **changes)
     osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
     observed = sum(v["day"] for v in engine.totals(engine.observed_rates(inputs, Vacuum(), setup, osc, False)).values())
     assert observed == pytest.approx(true_energy_total(inputs, Vacuum(), setup, osc), rel=1e-9)
@@ -327,9 +327,66 @@ def test_against_published_experiment_predictions():
                              period="annual")
         per = engine.component_totals(inputs, tables, setup, osc)[component]
         rate = 0.5 * (per["day"] + per["night"]) * per_100t_day
-        # tree-level ES without radiative corrections below 0.5 MeV: ~3.5 % above Borexino's predictions
-        assert rate / published == pytest.approx(1.035, abs=0.015), component
+        assert rate / published == pytest.approx(1.0, abs=0.01), component  # with BKS radiative corrections
     osc = engine.oscillation(engine.parameters(inputs, "nufit60_global", custom={"dm2_21_eV2": 7.5e-5}))
     setup = engine.Setup(components=("B8", "hep"), b8_flux="sno_nc", detector="scintillator_lab", site="Jiangmen")
-    day, night = engine.combine(engine.component_totals(inputs, tables, setup, osc), ["B8", "hep"])
+    day, night, _ = engine.combine(engine.component_totals(inputs, tables, setup, osc), ["B8", "hep"])
     assert 0.5 * (day + night) / 365.25 == pytest.approx(4.36, rel=0.03)  # counts per day per kt, all energies
+
+
+def test_bks_radiative_corrections_against_the_paper():
+    """Total cross sections of BKS 1995 table VII (1e-46 cm^2) and the 0.384 MeV line's recoil spectrum (table II)."""
+    from snufish.reference import radiative
+
+    c = load_spec("B4_xsec")["constants"]
+    q = np.array([0.384, 0.862, 1.0, 2.0, 5.0, 10.0, 20.0])
+    for flavour, table in (("nue", [19.2, 57.9, 69.8, 159, 435, 896, 1820]), ("numu", [5.09, 12.8, 15.0, 31.1, 78.7, 158, 316])):
+        assert radiative.es_above(q, flavour, c, [0.0])[:, 0] / 1e-46 == pytest.approx(table, rel=6e-3)
+    T = np.array([0.0023, 0.1153, 0.2260])
+    for flavour, table in (("nue", [5.1591, 4.3232, 3.5812]), ("numu", [4.3716, 4.2830, 4.4966])):
+        p = radiative.es_differential(0.384, T, flavour, c) / radiative.es_above([0.384], flavour, c, [0.0])[0, 0]
+        assert p == pytest.approx(table, rel=3e-3)
+
+
+@pytest.mark.parametrize("threshold", [0.0, 0.25, 3.49])
+def test_bks_engine_matches_direct_integration(inputs, threshold):
+    """The engine's interpolated BKS kernels against the direct integral above threshold."""
+    from snufish.reference import radiative
+
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+    setup = engine.Setup(components=("Be7", "B8"), threshold=threshold)
+    totals = engine.totals(engine.observed_rates(inputs, Vacuum(), setup, osc, False))
+    me = inputs["constants"]["m_e_MeV"]
+    for c, (pee, _) in engine.survival(inputs, Vacuum(), setup, osc, night=False).items():
+        kind, energy, weight = inputs.components[c]
+        t_max = 2 * energy**2 / (me + 2 * energy)
+        s = [np.array([radiative.es_above([e], f, inputs["constants"], [min(threshold / t, 1.0)])[0, 0]
+                       for e, t in zip(energy, t_max)]) for f in ("nue", "numu")]
+        values = engine._targets(inputs, setup) * inputs.flux(setup.solar_model, c) * inputs["seconds_per_year"] \
+            * weight * (pee * s[0] + (1 - pee) * s[1])
+        direct = float(np.trapezoid(values, energy)) if kind == "continuum" else float(np.sum(values))
+        assert totals[c]["day"] == pytest.approx(direct, rel=1e-3), c
+
+
+@needs_tables
+def test_against_super_k_iv_and_sno():
+    """Super-K IV with its fig. 28 efficiency (arXiv:2312.12907): the energy-scale effect (table IV: 0.8 %) and the
+    65,443 extracted events; SNO salt phi_CC/phi_NC (nucl-ex/0502021); NC is flavour-blind."""
+    inputs, tables = engine.Inputs.load(APP / "inputs.json"), engine.TableProbabilities(APP)
+    curve = inputs["efficiency_curves"]["sk4_final"]
+    sk = engine.Setup(components=("B8", "hep"), b8_flux="sno_nc", threshold=3.49, resolution_poly=(-0.05525, 0.3162, 0.04572),
+                      energy_scale_error=0.0048, efficiency_table=engine.Table("sk4", tuple(curve["x"]), tuple(curve["y"])),
+                      period="annual")
+    params = engine.parameters(inputs, "solar_global_2024")
+    central = engine.quantity_value("rate", "annual", *engine.combine(
+        engine.component_totals(inputs, tables, sk, engine.oscillation(params)), ["B8", "hep"]))
+    (_, shift), = engine.detector_sigmas(inputs, tables, sk, params, "rate", central, True)
+    assert shift / central == pytest.approx(0.008, abs=0.0005)  # without the efficiency: 0.48 %
+    events = central * 22.5 * 2970 / 365.25
+    assert events == pytest.approx(65443, rel=0.03)  # the SNO NC flux alone is known to 3.8 %
+    params = engine.parameters(inputs, "nufit60_global")
+    sno = dict(components=("B8", "hep"), b8_flux="sno_nc", detector="heavy_water", site="SNOLAB", threshold=5.5, period="annual")
+    rows, _ = engine.budget(inputs, tables, engine.Setup(channel="cc_nue_d", **sno), params, "ratio", n=50)
+    assert rows[0]["Central"] == pytest.approx(0.340, abs=0.038)
+    rows, _ = engine.budget(inputs, tables, engine.Setup(channel="nc_d", **sno), params, "ratio", n=10)
+    assert rows[0]["Central"] == pytest.approx(1.0, abs=1e-12)

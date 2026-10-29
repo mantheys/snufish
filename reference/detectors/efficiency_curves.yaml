@@ -1,0 +1,11 @@
+# Detector efficiency curves read from published figures (not from tables: none is published as numbers).
+# Each is binned: `edges_MeV` (observed energy; ES: electron kinetic energy) and the efficiency of each bin.
+sk4_final:
+  label: Super-K IV final sample (fig. 28)
+  source: arXiv:2312.12907, fig. 28 ("Final sample", MC, 2970 days)
+  method: >
+    marker positions read from the figure's vector PostScript in the arXiv source (096.eps, ROOT 5.28): exact to the
+    figure's drawing precision, 0.08 % in efficiency; the axes calibrated on its tick marks (0 and 100 %, 4 and 18 MeV)
+  note: signal efficiency relative to 8B ES events triggered in the 22.5 kt fiducial volume, reconstructed recoil kinetic energy
+  edges_MeV: [3.49, 3.99, 4.49, 4.99, 5.49, 5.99, 6.49, 6.99, 7.49, 7.99, 8.49, 8.99, 9.49, 9.99, 10.49, 10.99, 11.49, 11.99, 12.49, 12.99, 13.49, 13.99, 14.49, 14.99, 15.49, 15.99, 16.49, 16.99, 17.49, 17.99, 18.49, 18.99, 19.49]
+  efficiency: [0.1121, 0.1571, 0.2889, 0.6759, 0.7029, 0.6759, 0.6890, 0.7095, 0.7995, 0.8028, 0.8036, 0.8061, 0.8077, 0.8101, 0.8118, 0.8118, 0.8380, 0.8380, 0.8380, 0.8380, 0.8363, 0.8363, 0.8355, 0.8355, 0.8339, 0.8331, 0.8322, 0.8314, 0.8306, 0.8282, 0.8273, 0.8290]

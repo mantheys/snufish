@@ -26,6 +26,7 @@
       <div class="seg" role="radiogroup" aria-label="Quantity">
         <label><input type="radio" name="quantity" value="rate" checked><span>Interaction rate</span></label>
         <label><input type="radio" name="quantity" value="adn"><span>Day-night asymmetry</span></label>
+        <label><input type="radio" name="quantity" value="ratio" title="The rate over the rate without oscillations: SNO's φ_CC/φ_NC for CC on deuterium"><span>Rate ÷ no oscillation</span></label>
       </div>
       <div class="seg" id="period-row" role="radiogroup" aria-label="Period">
         <label><input type="radio" name="period" value="day" checked><span>Day</span></label>
@@ -83,8 +84,9 @@
       <div class="field" id="es-row">
         <span class="field-label">ES cross section</span>
         <div class="seg" role="radiogroup" aria-label="ES cross section">
-          <label><input type="radio" name="es" value="tree" checked><span>Tree level</span></label>
-          <label><input type="radio" name="es" value="snowglobes"><span>Radiative corrections</span></label>
+          <label><input type="radio" name="es" value="bks" checked><span>Radiative (BKS)</span></label>
+          <label><input type="radio" name="es" value="tree"><span>Tree level</span></label>
+          <label><input type="radio" name="es" value="snowglobes"><span title="SNOwGLoBES's ES tables (from 0.5 MeV; BKS below)">SNOwGLoBES</span></label>
         </div>
       </div>
       <label id="xsec-row">Nuclear model <select id="xsec"></select></label>
@@ -98,7 +100,9 @@
         <option value="custom">Custom</option>
         <option value="sk4">Super-K IV (2970 days)</option>
         <option value="hyperk">Hyper-K, one tank (design)</option>
+        <option value="dune">DUNE far detector (public numbers)</option>
         <option value="sno">SNO phases I + II (CC on deuterium)</option>
+        <option value="sno_salt">SNO salt phase: φ_CC/φ_NC</option>
         <option value="borexino">Borexino Phase-II (1291.5 days)</option>
         <option value="juno">JUNO ⁸B (design study)</option>
       </select></label>

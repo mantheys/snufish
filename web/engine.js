@@ -11,7 +11,8 @@
 
 export const PARAMETERS = ["sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg", "dm2_21_eV2", "dm2_31_eV2"];
 export const DISPLAY = { pp: "pp", pep: "pep", hep: "hep", Be7: "7Be", B8: "8B", N13: "13N", O15: "15O", F17: "17F" };
-export const QUANTITIES = ["rate", "adn"];
+export const QUANTITIES = ["rate", "adn", "ratio"]; // ratio: rate / the rate without oscillations
+export const isNC = (setup) => setup.channel.startsWith("nc_");
 export const PERIODS = ["day", "night", "annual"];
 
 // ------------------------------------------------------------------ numerics
@@ -162,7 +163,7 @@ export function sampleFluxes(inputs, rng, solarModel, components, n, b8Flux = "m
 
 export const DEFAULT_SETUP = {
   solar_model: "b23_gs98", components: ["B8"], b8_flux: "model", earth_model: "prem_full", site: "Kamioka",
-  detector: "water", channel: "es", xsec_model: "default", es_model: "tree", period: "day",
+  detector: "water", channel: "es", xsec_model: "default", es_model: "bks", period: "day",
   // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
   threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,
   // Super-K style resolution [c0, c1, c2]: sigma = c0 + c1 sqrt(E) + c2 E, E the total electron energy for ES
@@ -198,7 +199,7 @@ export function check(inputs, setup, quantity = "rate") {
   allowed("detector", setup.detector, Object.keys(d.detectors));
   const channels = Object.keys(d.detectors[setup.detector].channels);
   if (!channels.includes(setup.channel)) throw new Error(`channel '${setup.channel}' is not available in ${setup.detector}; choose one of: ${channels.join(", ")}`);
-  if (setup.channel === "es") allowed("ES model", setup.es_model, ["tree", "snowglobes"]);
+  if (setup.channel === "es") allowed("ES model", setup.es_model, ES_MODELS);
   else allowed(`cross-section model of ${setup.channel}`, setup.xsec_model, inputs.xsecModels(setup.channel));
   within("the threshold (MeV)", setup.threshold, 0, OBSERVED_MAX);
   within("the resolution a (MeV^1/2)", setup.resolution_a, 0, 2);
@@ -218,7 +219,7 @@ export function check(inputs, setup, quantity = "rate") {
   if (t) {
     if (t.matrix.length !== t.x.length - 1 || t.matrix.some((row) => row.length !== t.y.length - 1))
       throw new Error("the imported smearing matrix needs one row per true bin and one column per observed bin");
-    if (t.true_axis === "neutrino" && setup.channel === "es") throw new Error("a smearing matrix in neutrino energy applies to CC channels only");
+    if (t.true_axis === "neutrino" && (setup.channel === "es" || isNC(setup))) throw new Error("a smearing matrix in neutrino energy applies to CC channels only");
   }
   allowed("site", setup.site, Object.keys(d.sites));
   allowed("Earth model", setup.earth_model, d.earth_models);
@@ -244,7 +245,8 @@ export function observedEdges(threshold = 0) {
   return [fine, display];
 }
 
-export const observable = (channel) => (channel === "es" ? "Electron kinetic energy T (MeV)" : "Visible energy E_nu - Q (MeV)");
+export const observable = (channel) => (channel.startsWith("nc_") ? "Neutron-capture gamma energy (MeV)"
+  : channel === "es" ? "Electron kinetic energy T (MeV)" : "Visible energy E_nu - Q (MeV)");
 
 export function erf(x) {
   // series for |x| < 3, continued fraction for erfc beyond: ~1e-15 relative
@@ -273,6 +275,17 @@ export function esAbove(E, flavour, c, tMin) {
   return 2 * G ** 2 * me / Math.PI * (primitive(tMax) - primitive(lo)) * hbarc2;
 }
 
+export function bksRatio(d, flavour, e, edges) {
+  // ratio of the radiatively corrected (BKS 1995) to the tree-level sigma(E; T > t), linear in ln E and t / T_max
+  const t = d.es_bks, grid = t.energy.map(Math.log), ratio = t[flavour], me = d.constants.m_e_MeV;
+  const x = Math.min(Math.max(Math.log(e), grid[0]), grid[grid.length - 1]);
+  let i = 0;
+  while (i + 1 < grid.length && grid[i + 1] <= x) i++;
+  i = Math.min(i, grid.length - 2);
+  const w = (x - grid[i]) / (grid[i + 1] - grid[i]), tMax = 2 * e ** 2 / (me + 2 * e);
+  return edges.map((edge) => { const u = edge / tMax; return (1 - w) * interp(u, t.fraction, ratio[i]) + w * interp(u, t.fraction, ratio[i + 1]); });
+}
+
 function quadrature(kind, energy, weight) {
   if (kind === "line") return weight;
   const q = energy.map(() => 0);
@@ -291,9 +304,14 @@ function kernels(inputs, setup, component, edges) {
     let value;
     if (setup.channel === "es") {
       value = ["nue", "numu"].map((fl) => energy.map((e) => {
-        const above = edges.map((t) => esAbove(e, fl, d.constants, t));
+        let above = edges.map((t) => esAbove(e, fl, d.constants, t));
+        if (setup.es_model === "bks") { const r = bksRatio(d, fl, e, edges); above = above.map((a, j) => a * r[j]); }
         let ratio = 1;
-        if (setup.es_model === "snowglobes") { const r = d.es_radiative_ratio[fl]; ratio = interp(e, r.energy, r.ratio, 1, 1); }
+        if (setup.es_model === "snowglobes") { // its tables start at 0.5 MeV: BKS below
+          const r = d.es_radiative_ratio[fl];
+          if (e < r.energy[0]) { const b = bksRatio(d, fl, e, edges); above = above.map((a, j) => a * b[j]); }
+          else ratio = interp(e, r.energy, r.ratio, 1, 1);
+        }
         return Float64Array.from({ length: edges.length - 1 }, (_, j) => (above[j] - above[j + 1]) * ratio);
       }));
     } else {
@@ -397,7 +415,18 @@ export function survival(inputs, probabilities, setup, osc, night = true) {
 
 function visible(inputs, setup, kind, energy, density, edges) {
   // CC: rate per fine bin of visible energy E - Q; below the first edge goes to the first bin
-  const nb = edges.length - 1, offset = inputs.data.visible_offset_MeV[setup.channel];
+  const nb = edges.length - 1, fixed = (inputs.data.visible_fixed_MeV || {})[setup.channel];
+  if (fixed !== undefined) { // NC: every event deposits the same energy (the neutron-capture gamma)
+    let total = 0;
+    if (kind === "line") density.forEach((v) => { total += v; });
+    else for (let i = 1; i < energy.length; i++) total += 0.5 * (density[i] + density[i - 1]) * (energy[i] - energy[i - 1]);
+    let j = 0;
+    while (j + 1 < nb && edges[j + 1] <= fixed) j++;
+    const out = new Float64Array(nb);
+    out[j] = total;
+    return out;
+  }
+  const offset = inputs.data.visible_offset_MeV[setup.channel];
   const shifted = edges.map((e, j) => (j === 0 ? -Infinity : j === nb ? Infinity : e + offset));
   const truth = new Float64Array(nb);
   if (kind === "line") {
@@ -422,6 +451,7 @@ export function observedRates(inputs, probabilities, setup, osc, night = true) {
     const scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds, k = kernels(inputs, setup, c, edges);
     const spectrum = (pee) => {
       if (pee === null) return null;
+      if (isNC(setup)) pee = pee.map(() => 1); // all active flavours alike
       let truth = new Float64Array(nb);
       if (setup.channel === "es") {
         const q = quadrature(kind, energy, weight);
@@ -494,6 +524,7 @@ function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
     const scale = inputs.data.seconds_per_year * targetsOf(inputs, setup) * inputs.flux(setup.solar_model, c, setup.b8_flux);
     const value = (pee) => {
       if (pee === null) return wantSpectra ? null : NaN;
+      if (isNC(setup)) pee = pee.map(() => 1); // all active flavours alike
       if (setup.channel === "es") {
         const w = prep.q.map((qi, i) => qi * pee[i]);
         if (!wantSpectra) return scale * (w.reduce((t, wi, i) => t + wi * prep.diffTotal[i], 0) + prep.baseTotal);
@@ -506,6 +537,7 @@ function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
       return Array.from(prep.observe(truth));
     };
     out[c] = { day: value(peeDay), night: value(peeNight) };
+    if (!wantSpectra) out[c].ref = value(peeDay.map(() => 1)); // without oscillations: the denominator of "ratio"
   }
   return out;
 }
@@ -518,19 +550,25 @@ export function totals(rates) {
 }
 
 export function combine(per, components, multipliers = null) {
-  let day = 0, night = 0;
-  components.forEach((c, k) => { const m = multipliers ? multipliers[k] : 1; day += m * per[c].day; night += m * per[c].night; });
-  return [day, night];
+  // [day, night, ref]: ref the rate without oscillations, when the totals have it (else NaN)
+  let day = 0, night = 0, ref = 0;
+  components.forEach((c, k) => {
+    const m = multipliers ? multipliers[k] : 1;
+    day += m * per[c].day; night += m * per[c].night; ref += m * (per[c].ref === undefined ? NaN : per[c].ref);
+  });
+  return [day, night, ref];
 }
 
-export function quantityValue(quantity, period, day, night) {
+export function quantityValue(quantity, period, day, night, ref = NaN) {
   if (quantity === "adn") return 2 * (night - day) / (night + day);
-  return { day, night, annual: 0.5 * (day + night) }[period];
+  const rate = { day, night, annual: 0.5 * (day + night) }[period];
+  return quantity === "ratio" ? rate / ref : rate;
 }
 
-export function statisticalSigma(quantity, period, day, night, exposure) {
-  // Poisson error for `exposure` kton-years, half of it by night (no backgrounds)
+export function statisticalSigma(quantity, period, day, night, exposure, ref = NaN) {
+  // Poisson error for `exposure` kton-years, half of it by night (no backgrounds); the ratio's: the rate's over ref
   if (!exposure) return null;
+  if (quantity === "ratio") return statisticalSigma("rate", period, day, night, exposure) / ref;
   if (quantity === "adn") {
     const D = day * exposure / 2, N = night * exposure / 2, S = D + N;
     return Math.sqrt((4 * D / S ** 2) ** 2 * N + (4 * N / S ** 2) ** 2 * D);
@@ -553,6 +591,8 @@ export function rebin(values, fine, display) {
 
 // ------------------------------------------------------------------ budget
 
+export const ES_MODELS = ["bks", "tree", "snowglobes"];
+export const ES_RANGE = ["bks", "snowglobes"]; // the radiatively corrected calculations; tree level is selectable, not a model
 export const RANGE_LABELS = { xsec_model: "cross-section model", es_model: "ES radiative corrections",
                               earth_model: "Earth model", solar_model: "solar model" };
 
@@ -561,7 +601,7 @@ export function alternatives(inputs, setup, choice) {
     const incomplete = (inputs.data.xsec_incomplete || {})[setup.channel] || [];
     return setup.channel !== "es" ? inputs.xsecModels(setup.channel).filter((m) => !incomplete.includes(m)) : [];
   }
-  if (choice === "es_model") return setup.channel === "es" ? ["tree", "snowglobes"] : [];
+  if (choice === "es_model") return setup.channel === "es" ? [...ES_RANGE] : [];
   if (choice === "earth_model") return [...inputs.data.earth_models];
   if (choice === "solar_model") return Object.keys(inputs.data.solar_models);
   throw new Error(choice);
@@ -635,8 +675,8 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
     quantityValue(quantity, s.period, ...combine(componentTotals(inputs, probabilities, s, osc, night), comps, m));
   const d = given || draws(inputs, setup, params, n, seed);
   const nominal = componentTotals(inputs, probabilities, setup, oscillation(params), night);
-  const [day0, night0] = combine(nominal, comps);
-  const central = quantityValue(quantity, setup.period, day0, night0);
+  const [day0, night0, ref0] = combine(nominal, comps);
+  const central = quantityValue(quantity, setup.period, day0, night0, ref0);
   const rows = [], samples = {};
   const sampled = (source, values) => {
     const sigma = std(values);
@@ -646,10 +686,10 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
   const perDraw = d.osc.map((o) => componentTotals(inputs, probabilities, setup, o, night));
   sampled("oscillation parameters", perDraw.map((p) => quantityValue(quantity, setup.period, ...combine(p, comps))));
   let total = perDraw.map((p, i) => quantityValue(quantity, setup.period, ...combine(p, comps, d.flux ? d.flux[i] : null)));
-  if (d.flux && !(quantity === "adn" && comps.length === 1)) // one flux cancels in a ratio
+  if (d.flux && !(quantity !== "rate" && comps.length === 1)) // one flux cancels in a ratio
     sampled(fluxLabel(setup), d.flux.map((m) => quantityValue(quantity, setup.period, ...combine(nominal, comps, m))));
   const queue = d.noise ? [...d.noise] : null, next = () => (queue ? queue.shift() : d.rng.normals(total.length));
-  const stat = statisticalSigma(quantity, setup.period, day0, night0, setup.exposure);
+  const stat = statisticalSigma(quantity, setup.period, day0, night0, setup.exposure, ref0);
   if (stat !== null) {
     sampled(`statistics (${+setup.exposure.toPrecision(6)} kt yr)`, next().map((z) => central + stat * z));
     const z = next();

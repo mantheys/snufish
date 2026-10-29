@@ -6,7 +6,7 @@ import { forStep, render as renderSources } from "./sources.js";
 const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O",
-                   cc_nue_d: "νe CC on deuterium" };
+                   cc_nue_d: "νe CC on deuterium", nc_d: "NC on deuterium (all flavours)" };
 const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
                     scintillator_lab: "Liquid scintillator: LAB (JUNO)", heavy_water: "Heavy water, D₂O (SNO)" };
 const XSEC = {
@@ -46,11 +46,21 @@ const PRESETS = {
   sno: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 3.5, "res-model": "quadrature",
          "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +((277.3 + 391.4) / DAYS).toFixed(4),
          "unc-scale": 0.41, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], quantity: "rate", period: "annual" },
+  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC
+  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "quadrature",
+              "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +(391.4 / DAYS).toFixed(4),
+              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
+  // DUNE far detector, public numbers only: 4 x 10 kt fiducial LAr, 5 MeV detected-energy threshold and ~20 % resolution
+  // (supernova-burst paper, arXiv:2008.06647); 100 kt yr as in Capozzi, Li, Zhu & Beacom (arXiv:1808.08232)
+  dune: { unit: "kt", detector: "argon", channel: "cc_nue_ar40", site: "SURF", threshold: 5.0, "res-model": "quadrature",
+          "res-a": 0, "res-b": 20, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 40, years: 2.5,
+          "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
   // Hyper-K design report (arXiv:1805.04163): 187 kt fiducial per tank, 4.5 MeV kinetic threshold, scale 0.5 %, resolution 0.6 %
   hyperk: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 4.5, "res-model": "sk4", "eff-model": "parametric",
             eff: 100, "eff-e50": 0, mass: 187, years: 10, "unc-scale": 0.5, "unc-res": 0.6, "unc-norm": 0, components: ["B8", "hep"],
             quantity: "rate", period: "annual" },
-  sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
+  sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", "eff-model": "curve:sk4_final",
+         eff: 100, "eff-e50": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual",
          mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
 };
 const PRESET_NOTES = {
@@ -59,21 +69,32 @@ const PRESET_NOTES = {
   custom: "",
   borexino: "Borexino Phase-II as published (arXiv:1707.09279): pseudocumene with 3.307 × 10³¹ electrons per 100 t, its "
           + "71.3 t fiducial mass over 1291.51 days, ~50 keV resolution at 1 MeV, and rates over all recoil energies. Choose pp, ⁷Be "
-          + "or pep alone to compare with its measurement. The cross section here has no radiative corrections below 0.5 MeV: "
-          + "with B16-GS98 it comes out 3.5 % above Borexino's own predictions for all three.",
+          + "or pep alone to compare with its measurement. With the BKS radiative corrections and B16-GS98 the rates come out "
+          + "within 0.6 % of Borexino's own predictions for all three (tree level: 3.5 % above).",
   juno: "JUNO ⁸B study (arXiv:2006.11760): LAB with 3.38 × 10³² electrons per kt, a 2 MeV recoil threshold, 3 %/√E resolution, "
       + "the SNO NC ⁸B flux, energy scale ±0.3 % and efficiency ±1 %. Not included: its energy-dependent fiducial volume, the 48 % "
       + "muon-veto dead time and the scintillator non-linearity. All energies, this reproduces its 4.36 counts per day per kt to 2 %.",
   sno: "SNO phases I and II (arXiv:1109.0763): νe CC on deuterium in 770 t of fiducial D₂O (r < 550 cm), T_eff > 3.5 MeV, "
      + "277.3 + 391.4 days live, energy scale ±0.41 %. Not included: SNO's resolution function (the paper gives only extra "
-     + "smearing terms) and its efficiencies. The CC cross section is SNOwGLoBES's table, which starts at 5 MeV.",
+     + "smearing terms) and its efficiencies. The CC cross section is Nakamura et al. 2002 down to its 1.44 MeV threshold. "
+     + "Switch the channel to NC on deuterium for the neutral-current rate (set its neutron efficiency).",
+  sno_salt: "SNO salt phase (nucl-ex/0502021): the CC rate on deuterium above T_eff = 5.5 MeV over the rate without oscillations, "
+          + "which is SNO's φ_CC/φ_NC (both fluxes inferred for an undistorted ⁸B spectrum). The total flux and the detector "
+          + "normalisation cancel; statistics are for 770 t and 391.4 live days without backgrounds or efficiencies. No "
+          + "resolution is applied (T_eff is smeared by ~ 0.4 √E in SNO), which moves the ratio by under 0.1 %.",
+  dune: "DUNE far detector from published numbers only: four 10 kt fiducial liquid-argon modules at SURF, νe CC on ⁴⁰Ar "
+      + "(MARLEY 2), a 5 MeV detected-energy threshold and a 20 % energy-independent resolution (DUNE's supernova-burst paper, "
+      + "arXiv:2008.06647: \"realistic energy resolution is closest to the 20 % level\"), and 100 kt·yr as in Capozzi et al. "
+      + "(arXiv:1808.08232), who assume 7 % (set b = 7). Visible energy here is Eν − 1.504 MeV (gammas included); Capozzi et al. "
+      + "count the electron alone. No efficiency, backgrounds or detector uncertainties: none is published for solar neutrinos.",
   hyperk: "Hyper-K, one tank (design report, arXiv:1805.04163): 187 kt fiducial, 4.5 MeV kinetic threshold, energy scale ±0.5 % "
         + "and resolution ±0.6 %, 10 years. Its resolution is not published as a function and is expected to be better than "
         + "Super-K's: Super-K IV's is used as a conservative stand-in. Kamioka's latitude is used (Tochibora is 0.12° south). "
         + "Efficiencies are not included: the report's 130 events a day above 4.5 MeV include them.",
   sk4: "Super-K IV as published (arXiv:2312.12907): resolution, threshold, fiducial mass, live time and detector uncertainties. "
-     + "Its selection efficiency is only published as a figure (fig. 28) and is not included (100 %). "
-     + "Without it, the energy-scale effect on the rate comes out ±0.5 % against Super-K's ±0.8 % (table IV).",
+     + "Its selection efficiency (fig. 28, final sample) is read from the figure's vector PostScript in the arXiv source. "
+     + "With it the energy-scale effect on the rate is ±0.76 % (Super-K: ±0.8 %, table IV; ±0.48 % without it) and the ⁸B + hep events in "
+     + "2970 days come out within 1.5 % of the 65,443 Super-K extracted, with the SNO NC flux.",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -160,10 +181,19 @@ function readSetup() {
     resolution_b: number("res-b") / 100, resolution_poly: $("res-model").value === "sk4" ? SK4_RESOLUTION : [],
     efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"), efficiency_width: number("eff-width", 0.5),
     smearing_table: $("res-model").value === "import" ? app.imports.smearing : null,
-    efficiency_table: $("eff-model").value === "import" ? app.imports.efficiency : null,
+    efficiency_table: efficiencyTable(),
     energy_scale_error: number("unc-scale") / 100, resolution_error: number("unc-res") / 100,
     normalisation_error: number("unc-norm") / 100, exposure: exposure(),
   });
+}
+
+function efficiencyTable() {
+  // the imported curve, or a published one ("curve:<name>" of inputs.efficiency_curves), or none
+  const v = $("eff-model").value;
+  if (v === "import") return app.imports.efficiency;
+  if (!v.startsWith("curve:")) return null;
+  const name = v.slice(6), c = app.inputs.data.efficiency_curves[name];
+  return { id: v, x: c.x, y: c.y, name: c.label, curve: name };
 }
 
 function sync() {
@@ -175,9 +205,9 @@ function sync() {
   $("es-row").hidden = !es;
   $("res-ab").hidden = $("res-model").value !== "quadrature";
   $("smear-import").hidden = $("res-model").value !== "import";
-  const effImport = $("eff-model").value === "import";
+  const effImport = $("eff-model").value === "import", effCurve = $("eff-model").value.startsWith("curve:");
   $("eff-import").hidden = !effImport;
-  $("eff-parametric").hidden = $("eff-parametric-hint").hidden = effImport;
+  $("eff-parametric").hidden = $("eff-parametric-hint").hidden = effImport || effCurve;
   if (app.imports.smearing) app.imports.smearing.true_axis = $("smear-neutrino").checked ? "neutrino" : "observed";
   $("preset-note").textContent = PRESET_NOTES[$("preset").value];
   $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
@@ -194,7 +224,8 @@ function sync() {
   $("xsec-row").hidden = models.length < 2;
   const comps = [...document.querySelectorAll('input[name="components"]:checked')].map((x) => x.value);
   $("b8-row").hidden = !comps.includes("B8");
-  $("period-row").hidden = $("unit-row").hidden = radio("quantity") !== "rate";
+  $("period-row").hidden = radio("quantity") === "adn";
+  $("unit-row").hidden = radio("quantity") !== "rate";
   const night = engine.needsNight(radio("quantity"), radio("period"));
   $("site").disabled = $("earth").disabled = !night;
   $("earth-note").textContent = night
@@ -278,6 +309,19 @@ function measuredBand(setup, quantity) {
     return { value: m.value / k, minus: Math.hypot(m.stat, m.sys[0]) / k, plus: Math.hypot(m.stat, m.sys[1]) / k,
              label: "Borexino ±1σ", source: "Borexino Phase-II, arXiv:1707.09279" };
   }
+  const sk = meas.sk4_events;
+  if (quantity === "rate" && sk && setup.detector === "water" && setup.channel === "es" && setup.period === "annual"
+      && Math.abs(setup.threshold - sk.threshold_MeV) < 0.01 && setup.efficiency_table?.curve === "sk4_final"
+      && c.includes("B8") && c.every((x) => x === "B8" || x === "hep")) {
+    const exposure = sk.fiducial_kt * sk.days / DAYS; // kt yr
+    return { value: sk.events / exposure, minus: Math.hypot(sk.stat[0], sk.syst) / exposure, plus: Math.hypot(sk.stat[1], sk.syst) / exposure,
+             label: "Super-K IV ±1σ", source: `Super-K IV, ${sk.events.toLocaleString("en-US")} events in 2970 days, arXiv:2312.12907` };
+  }
+  const sno = meas.sno_cc_nc;
+  if (quantity === "ratio" && sno && setup.channel === "cc_nue_d" && c.includes("B8") && Math.abs(setup.threshold - sno.threshold_MeV) < 0.01) {
+    return { value: sno.value, minus: Math.hypot(sno.stat, sno.syst[0]), plus: Math.hypot(sno.stat, sno.syst[1]),
+             label: "SNO salt ±1σ", source: `SNO salt phase φ_CC/φ_NC, ${sno.source}` };
+  }
   return null;
 }
 
@@ -297,8 +341,9 @@ function describe(setup, quantity) {
   const response = [];
   if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E_vis"} > ${setup.threshold} MeV`);
   if (setup.resolution_a > 0 || setup.resolution_b > 0 || setup.resolution_poly.length || setup.smearing_table) response.push("smeared");
-  if (setup.efficiency < 1 || setup.efficiency_e50 > 0) response.push("efficiency");
+  if (setup.efficiency < 1 || setup.efficiency_e50 > 0 || setup.efficiency_table) response.push("efficiency");
   const what = CHANNELS[setup.channel] + (response.length ? `, ${response.join(", ")}` : "");
+  if (quantity === "ratio") return `${setup.period[0].toUpperCase()}${setup.period.slice(1)} rate ÷ rate without oscillations · ${comps} · ${what}`;
   return quantity === "adn" ? `Day-night asymmetry 2(N−D)/(N+D) · ${comps} · ${what} · ${setup.site}`
                             : `${setup.period[0].toUpperCase()}${setup.period.slice(1)} rate · ${comps} · ${what}`;
 }
@@ -340,9 +385,10 @@ async function compute() {
   const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
   const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
   const ms = performance.now() - t0;
-  const [scale, unit] = quantity === "adn" ? [100, "%"] : UNITS[$("unit").value];
+  const [scale, unit] = { adn: [100, "%"], ratio: [1, "of the unoscillated rate"] }[quantity] || UNITS[$("unit").value];
+  const [spectrumScale, spectrumUnit] = quantity === "ratio" ? UNITS.kt : [scale, unit]; // the ratio's spectrum: the rate's
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
-  app.result = { setup, quantity, rows, samples, spectra, scale, unit, live, set: $("set").value, ms, flux };
+  app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux };
   render();
   setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
@@ -417,7 +463,7 @@ function render() {
   const { setup, quantity, rows, scale, unit, live } = r;
   const total = rows.find((x) => x.Source === "total sampled"), central = total.Central;
   const sampled = rows.filter((x) => x.Kind === "sampled" && x.Source !== "total sampled").map((x) => x.Source);
-  const ranges = rows.filter((x) => x.Kind === "model range").map((x) => quantity === "rate"
+  const ranges = rows.filter((x) => x.Kind === "model range").map((x) => quantity !== "adn"
     ? `${x.Source}: ${fmt(x.Low * scale)} to ${fmt(x.High * scale)} (${signed(100 * (x.Low / central - 1))} % / ${signed(100 * (x.High / central - 1))} %)`
     : `${x.Source}: ${(x.Low * scale).toFixed(3)} to ${(x.High * scale).toFixed(3)} %`);
   const events = live && quantity === "rate"
@@ -623,6 +669,8 @@ async function init() {
   }
   app.tables = new engine.TableProbabilities(loadTable);
   buildControls();
+  for (const [name, c] of Object.entries(app.inputs.data.efficiency_curves || {})) // published curves, before "Imported curve"
+    $("eff-model").insertBefore(new Option(`Published: ${c.label}`, `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));
   sync();
   applyPreset($("preset").value); // the opening example, unless the link carries a setup
   sync();

@@ -26,6 +26,7 @@ import yaml
 from .exposure import cell_weights
 from .fluxes import components
 from .paths import build_dir, repo_root
+from .reference.radiative import ratio_table
 from .reference.sun import adiabatic_fractions
 from .scan import _with_oscillation, day_fractions, night_grid, night_probabilities, site_latitude
 from .solar import COMPONENTS, models, production_weights
@@ -35,10 +36,12 @@ from .spec import load_spec
 # Super-Kamiokande applies: 5.25e6 cm^-2 s^-1 +- 3.81% (arXiv:2312.12907, fig. 42).
 B8_MEASURED = {"flux": 5.25e6, "error": 0.0381, "source": "SNO NC, as applied in arXiv:2312.12907"}
 # Below its table nu_e-40Ar CC is zero: the 40K* threshold.
-XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504}
+XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504, "cc_nue_d": 1.442, "nc_d": 2.224}
 # Visible energy of a CC interaction, E_nu - Q (the electron plus the de-excitation gammas, no losses):
 # Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV.
 VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42, "cc_nue_d": 1.442}  # d: d(nu_e, e-)pp threshold
+# NC: the energy is the neutron's capture gamma, whatever the neutrino's: 6.25 MeV on the deuteron (pure D2O)
+VISIBLE_FIXED = {"nc_d": 6.25}
 # Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
 XSEC_INCOMPLETE = {"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]}
 MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"
@@ -50,7 +53,8 @@ APP_DETECTORS = {
     "heavy_water": {
         "description": "D2O (SNO, 99.92 % isotopic purity, arXiv:1109.0763), M = 20.03 g/mol: per kt "
                        "2 x 10^9 / 20.03 x N_A = 6.014 x 10^31 deuterons and 3.007 x 10^32 electrons",
-        "targets": {"electron": 3.007e32, "deuteron": 6.014e31}, "channels": {"es": "electron", "cc_nue_d": "deuteron"}},
+        "targets": {"electron": 3.007e32, "deuteron": 6.014e31},
+        "channels": {"es": "electron", "cc_nue_d": "deuteron", "nc_d": "deuteron"}},
     "scintillator_lab": {
         "description": "linear alkylbenzene (JUNO): 3.38 x 10^32 electrons per kt, arXiv:2006.11760",
         "targets": {"electron": 3.38e32}, "channels": {"es": "electron"}},
@@ -116,13 +120,18 @@ def collect_inputs():
             entries.append({"name": name, "level_MeV": row.Level, "kind": row.Kind, "strength": row.Strength,
                             "error": row.Error})
         levels = {"cc_nue_ar40": {MARLEY_DEFAULT: entries}}
+    # deuteron: Nakamura et al. 2002 down to threshold (SNOwGLoBES has the same table from 5 MeV), and NC
+    nakamura = _yaml("reference/xsec/nakamura2002.yaml")
+    for channel in ("cc_nue_d", "nc_d"):
+        xsec.setdefault(channel, {})["default"] = {"energy": nakamura["energy_MeV"], "sigma": nakamura[channel]}
     ratio = {}
     for flavour in ("nue", "numu"):
         rows = {r.Tool: r for r in sigma[(sigma.Channel == f"es_{flavour}") & (sigma.Variant == "default")].itertuples()}
         sg, ref = rows["snowglobes"], rows["snufish-reference"]
         assert np.allclose(sg.Energy, ref.Energy)
-        ratio[flavour] = {"energy": np.asarray(sg.Energy).tolist(),
-                          "ratio": np.nan_to_num(np.asarray(sg.Sigma) / np.asarray(ref.Sigma), nan=1.0).tolist()}
+        r = np.asarray(sg.Sigma) / np.asarray(ref.Sigma)
+        keep = np.isfinite(r)  # where SNOwGLoBES has a table (from 0.5 MeV); the engines use BKS below
+        ratio[flavour] = {"energy": np.asarray(sg.Energy)[keep].tolist(), "ratio": r[keep].tolist()}
     return {
         "component_order": list(COMPONENTS),
         "components": comps,
@@ -134,14 +143,30 @@ def collect_inputs():
         "xsec": xsec,
         "xsec_thresholds_MeV": XSEC_THRESHOLDS,
         "visible_offset_MeV": VISIBLE_OFFSET,
+        "visible_fixed_MeV": VISIBLE_FIXED,
         "xsec_incomplete": XSEC_INCOMPLETE,
         "xsec_levels": levels,
         "es_radiative_ratio": ratio,
+        "es_bks": ratio_table(load_spec("B4_xsec")["constants"]),
         "earth_models": list(b3["earth_models"]),
         "sites": b3["sites"],
         "parameter_sets": _yaml("reference/oscillation/parameter_sets.yaml"),
         "measurements": _yaml("reference/measurements/solar.yaml"),
+        "efficiency_curves": efficiency_curves(),
     }
+
+
+def efficiency_curves():
+    """{name: dict(label, source, note, x, y)}: the published (binned) efficiency curves as
+    step tables for the engine's linear interpolation, each bin flat from its low edge to 1 keV
+    below its high edge."""
+    out = {}
+    for name, c in _yaml("reference/detectors/efficiency_curves.yaml").items():
+        edges, eff = c["edges_MeV"], c["efficiency"]
+        x = [v for lo, hi in zip(edges[:-1], edges[1:]) for v in (lo, round(hi - 1e-3, 6))]
+        out[name] = dict(label=c["label"], source=c["source"], note=c["note"], method=c["method"].strip(),
+                         x=x, y=[v for v in eff for _ in (0, 1)])
+    return out
 
 
 class ExactProbabilities:

@@ -38,3 +38,26 @@ borexino_rates:
   predicted_b16_gs98: {pp: 131.1, Be7: 47.9, pep: 2.74}   # Borexino's own prediction, same table
   exposure: {fiducial_t: 71.3, days: 1291.51}
   measured_source: Borexino Phase-II, arXiv:1707.09279, table II (Nature 562, 505 (2018))
+
+sno_cc_nc:
+  description: >
+    SNO salt phase (391 live days), energy-unconstrained fit: the ratio of the CC to the NC 8B flux, i.e. the CC rate
+    above the threshold over the CC rate without oscillations for the measured total flux.
+  value: 0.340
+  stat: 0.023
+  syst: [0.031, 0.029]      # minus, plus; the paper notes the errors on the ratios are not Gaussian
+  threshold_MeV: 5.5        # T_eff, the effective electron kinetic energy; fiducial R < 550 cm
+  channel: cc_nue_d
+  source: arXiv:nucl-ex/0502021, sec. XI
+
+sk4_events:
+  description: >
+    Super-K IV, 2970 days: solar neutrino (8B + hep) ES events extracted in 3.49-19.49 MeV recoil kinetic energy, in the
+    22.5 kt fiducial volume, after its selection (fig. 28 efficiency).
+  events: 65443
+  stat: [388, 390]          # minus, plus
+  syst: 925
+  fiducial_kt: 22.5
+  days: 2970
+  threshold_MeV: 3.49
+  source: arXiv:2312.12907, sec. V B
