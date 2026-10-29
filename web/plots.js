@@ -58,7 +58,7 @@ function stairs(edges, values) {
   return { x, y };
 }
 
-function bandTraces(c, edges, low, high) {
+function bandTraces(c, edges, low, high, name = "sampled 68 %") {
   // one closed outline per run of bins with a band (a fill must not bridge empty bins)
   const traces = [];
   let b = 0;
@@ -70,7 +70,7 @@ function bandTraces(c, edges, low, high) {
     for (let k = start; k < b; k++) { x.push(edges[k], edges[k + 1]); y.push(high[k], high[k]); }
     for (let k = b - 1; k >= start; k--) { x.push(edges[k + 1], edges[k]); y.push(low[k], low[k]); }
     traces.push({ x, y, mode: "lines", fill: "toself", line: { width: 0 }, fillcolor: alpha(c.sampled, 0.45),
-                  name: "sampled 68 %", legendgroup: "band", showlegend: traces.length === 0, hoverinfo: "skip" });
+                  name, legendgroup: "band", showlegend: traces.length === 0, hoverinfo: "skip" });
   }
   return traces;
 }
@@ -129,7 +129,7 @@ export function spectrumPlot(node, result) {
   const k = result.spectrumScale ?? result.scale, floor = Math.max(...total.slice(1)) * 1e-6;
   const clip = (v, b) => (b > 0 && v > floor ? v * k : null);
   traces.push(...bandTraces(c, edges, low.map((v, b) => (b > 0 && total[b] > floor ? Math.max(v, floor) * k : null)),
-                            high.map((v, b) => (b > 0 && total[b] > floor ? v * k : null))));
+                            high.map((v, b) => (b > 0 && total[b] > floor ? v * k : null)), live ? "sampled 68 % ⊕ statistics" : undefined));
   // one line per component, no summed line: the band is the sampled spread of their sum. A monoenergetic
   // component is dashed, and its recoil edge (ES) or peak (CC) marked and labelled with the neutrino energy
   const marks = result.lines || [], isLine = new Set(marks.map((m) => m.component));
@@ -145,19 +145,19 @@ export function spectrumPlot(node, result) {
   marks.forEach((m) => {
     shapes.push({ type: "line", xref: "x", yref: "paper", x0: m.x, x1: m.x, y0: 0, y1: 1,
                   line: { color: c.component[m.component], width: 1, dash: "dot" } });
-    if (!m.labelled) return;
+    if (!m.labelled) return; // labelled just inside the top of the frame, right of its marker
     raised = Math.log10(m.x) - previous < 0.3 ? !raised : false;
     previous = Math.log10(m.x);
-    annotations.push({ x: Math.log10(m.x), xref: "x", yref: "paper", y: 1, yanchor: "bottom", yshift: raised ? 13 : 0, showarrow: false,
+    annotations.push({ x: Math.log10(m.x), xref: "x", yref: "paper", xanchor: "left", xshift: 2, bgcolor: c.surface, y: 1, yanchor: "top", yshift: raised ? -15 : -2, showarrow: false,
       text: DISPLAY[m.component], font: { size: 11, color: c.component[m.component] },
       hovertext: `${DISPLAY[m.component]} line, ${m.energy} MeV: ${m.edge ? `recoil edge at T = ${m.x.toFixed(3)} MeV` : `peak at ${m.x.toFixed(2)} MeV`}` });
   });
-  const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
+  const title = `Interactions per energy bin (${setup.period})`; // one line, as the other cards' titles: equal plot heights
   htmlLegend(node, traces.filter((t) => t.showlegend !== false).map((t) => (t.fill
     ? { label: t.name, colour: t.fillcolor, fill: true } : { label: t.name, colour: t.line.color, dash: t.line.dash === "dash" })));
   return Plotly.react(node, traces, layout(c, node, title, spectra.observable, `Interactions ${result.spectrumUnit ?? result.unit}, per bin`,
     { xaxis: energyAxis(edges, total, floor, node.clientWidth < 420), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified", showlegend: false,
-      shapes, annotations, margin: { l: 60, r: 16, t: marks.some((m) => m.labelled) ? 52 : 24, b: 48 } }), CONFIG);
+      shapes, annotations }), CONFIG); // labels inside the frame: the same margins, so the same plot height, as the other cards
 }
 
 export function distributionPlot(node, result, measured) {
@@ -219,7 +219,6 @@ export function budgetPlot(node, result) {
   htmlLegend(node, rows.map((r, i) => ({ label: `<b>${letters[i]}</b> ${r.Source.replace(/ \(.*\)$/, "")}`, title: `${r.Source} (${r.Kind})`,
                                          colour: r.Kind === "sampled" ? c.sampled : c.range, fill: true })),
              `${fill(c.sampled)}sampled 1σ${ranges ? ` ${fill(c.range)}model range (largest deviation)` : ""}`);
-  node.style.height = `${Math.max(220, 90 + 24 * rows.length)}px`;
   const xTitle = quantity !== "adn" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
   return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
     { barmode: "overlay", showlegend: false, margin: { l: 30, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },

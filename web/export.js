@@ -85,7 +85,8 @@ export async function plotipusProject(result, description, link) {
   } };
 }
 
-export async function downloadResult(result, description, link, rendered = []) {
+export async function downloadResult(result, description, link, rendered = [], save = null) {
+  // save(blob, filename): a host's own save (the claude.ai downloads capability), else a download link
   const [{ zipSync }, { files }] = await Promise.all([import(ZIP), plotipusProject(result, description, link)]);
   for (const { name, bytes } of rendered) files[`figures/plotipus/${name}`] = bytes;
   for (const [name, id] of [["spectrum", "plot-spectrum"], ["distribution", "plot-distribution"], ["budget", "plot-budget"]]) {
@@ -93,6 +94,7 @@ export async function downloadResult(result, description, link, rendered = []) {
     files[`figures/${name}.png`] = Uint8Array.from(atob(url.split(",")[1]), (ch) => ch.charCodeAt(0));
   }
   const blob = new Blob([zipSync(files)], { type: "application/zip" });
+  if (save) return save(blob, "snufish_result.zip");
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "snufish_result.zip" });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);

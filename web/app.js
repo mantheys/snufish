@@ -672,6 +672,10 @@ function setupImport(kind, fileId, infoId, parse) {
 }
 
 function download(name, text) {
+  if (app.downloads) { // hosted: the host's save dialog
+    app.downloads.save({ filename: name, data: text }).catch((error) => { if (error?.code !== "declined") status(`Download failed: ${error.message}`, true); });
+    return;
+  }
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: name });
   document.body.append(a); a.click(); a.remove();
 }
@@ -797,16 +801,25 @@ async function init() {
     status("Preparing the download…");
     try {
       const { downloadResult } = await import("./export.js");
-      await downloadResult(app.result, describe(app.result.setup, app.result.quantity), location.href, app.rendered);
+      const save = app.downloads && ((blob, filename) => app.downloads.save({ filename, data: blob }));
+      await downloadResult(app.result, describe(app.result.setup, app.result.quantity), location.href, app.rendered, save);
       status("Downloaded: Parquet data, plotipus commands (plotipus run app) and the figures.");
-    } catch (error) { status(`Download failed: ${error.message}`, true); }
+    } catch (error) {
+      if (error?.code === "declined") status("Download cancelled.");
+      else if (["unavailable", "not_granted", "capability_disabled", "capability_removed"].includes(error?.code)) {
+        $("download").hidden = true; status("Downloads are not available in this view.", true);
+      } else status(`Download failed: ${error.message}`, true);
+    }
     $("download").disabled = false;
   });
   if (HOSTED) {
+    // downloads go through the host's save dialog (the downloads capability), shown once the host offers it
     for (const id of ["download", "share", "smear-template", "eff-template"]) $(id).hidden = true;
+    window.claude?.use?.("downloads").then((downloads) => { if (downloads) { app.downloads = downloads; for (const id of ["download", "smear-template", "eff-template"]) $(id).hidden = false; } })
+      .catch(() => {});
     const note = document.createElement("p");
     note.className = "hint";
-    note.textContent = "In this hosted view the page cannot download files, and the setup is not kept in the link. Run the site locally for those (python web/build.py, then python -m http.server -d build/site).";
+    note.textContent = "In this hosted view the setup is not kept in the link: for shareable links, run the site locally (python web/build.py, then python -m http.server -d build/site).";
     $("download").closest(".actions").after(note);
   }
   $("render").addEventListener("click", renderPlotipus);
