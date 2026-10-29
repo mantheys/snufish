@@ -5,6 +5,7 @@ import { forStep, render as renderSources } from "./sources.js";
 import { CHECKS, PAPER_SETS } from "./checks.js";
 
 const DATA = "data/";
+const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted build carries its own copy (build.py)
 const N_DRAWS = 400, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O",
                    cc_nue_d: "νe CC on deuterium", nc_d: "NC on deuterium (all flavours)" };
@@ -393,6 +394,21 @@ function describe(setup, quantity) {
                             : `${setup.period[0].toUpperCase()}${setup.period.slice(1)} rate · ${comps} · ${what}`;
 }
 
+function lineMarks(setup) {
+  // where a monoenergetic component shows in the observed spectrum: ES, its Compton-like recoil edge
+  // T_max = 2E²/(m + 2E); CC, its peak at E_ν − Q; NC (a fixed gamma energy) none. Only a component's main line
+  // is labelled (not the 384 keV ⁷Be one, 10 %).
+  const d = app.inputs.data, me = d.constants.m_e_MeV, q = d.visible_offset_MeV[setup.channel];
+  if (engine.isNC(setup)) return [];
+  return setup.components.flatMap((c) => {
+    const { kind, energy, weight } = app.inputs.components[c];
+    if (kind !== "line") return [];
+    return energy.map((E, i) => ({ component: c, energy: E, labelled: weight[i] >= 0.5,
+                                   x: setup.channel === "es" ? 2 * E * E / (me + 2 * E) : E - q, edge: setup.channel === "es" }))
+      .filter((m) => m.x > 0 && m.x >= setup.threshold);
+  }).sort((a, b) => a.x - b.x);
+}
+
 function schedule() {
   clearTimeout(app.timer);
   app.timer = setTimeout(run, 120);
@@ -434,7 +450,8 @@ async function compute() {
   const [spectrumScale, spectrumUnit] = quantity === "ratio" ? UNITS.kt : [scale, unit]; // the ratio's spectrum: the rate's
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
   const check = CHECKS.find((c) => c.id === $("check").value) || null;
-  app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check };
+  app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check,
+                 lines: lineMarks(setup) };
   render();
   setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
@@ -570,12 +587,14 @@ async function renderPlotipus() {
       app.worker.onmessage = ({ data }) => app.onWorker?.(data);
     }
     const wheel = new URL(`py/${(await (await fetch("py/manifest.json")).json()).plotipus}`, location.href).href;
+    const encoded = HOSTED ? await (await fetch("encoded.json")).json() : null; // base64 wheels and zips (build.py)
     const { plotipusProject } = await import("./export.js");
     const { files, commands } = await plotipusProject(result, describe(result.setup, result.quantity), location.href);
     const t0 = performance.now();
     const answer = await new Promise((resolve) => {
       app.onWorker = (msg) => { if (msg.type === "progress") { if (id === app.renderId) say(msg.text); } else if (msg.id === id) resolve(msg); };
-      app.worker.postMessage({ id, wheel, files, commands, theme: isDark() ? "dark" : "light" });
+      app.worker.postMessage({ id, wheel, base: HOSTED ? new URL("pyodide/", location.href).href : PYODIDE, files, commands,
+                               encoded, site: location.href, theme: isDark() ? "dark" : "light" });
     });
     if (id !== app.renderId) return; // a newer result is being drawn
     if (answer.type === "error") throw new Error(answer.text);
@@ -784,11 +803,10 @@ async function init() {
     $("download").disabled = false;
   });
   if (HOSTED) {
-    for (const id of ["render", "download", "share", "smear-template", "eff-template"]) $(id).hidden = true;
+    for (const id of ["download", "share", "smear-template", "eff-template"]) $(id).hidden = true;
     const note = document.createElement("p");
     note.className = "hint";
-    note.textContent = "In this hosted view the page cannot download files or draw plotipus figures, and the setup is not "
-      + "kept in the link. Run the site locally for those (python web/build.py, then python -m http.server -d build/site).";
+    note.textContent = "In this hosted view the page cannot download files, and the setup is not kept in the link. Run the site locally for those (python web/build.py, then python -m http.server -d build/site).";
     $("download").closest(".actions").after(note);
   }
   $("render").addEventListener("click", renderPlotipus);

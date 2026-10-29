@@ -40,12 +40,13 @@ const CONFIG = { responsive: true, displaylogo: false, displayModeBar: "hover",
                  modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d", "zoomIn2d", "zoomOut2d"] };
 const ENERGY_TICKS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
 
-function energyAxis(edges, values, floor) {
-  // log axis over the bins with interactions, labelled 1-2-5
+function energyAxis(edges, values, floor, narrow = false) {
+  // log axis over the bins with interactions, labelled 1-2-5 (decades only on a narrow plot, where they would rotate)
   const used = values.map((v, b) => (v > floor ? b : -1)).filter((b) => b >= 0);
   const lo = Math.max(edges[used.length ? used[0] : 0], 0.01), hi = edges[used.length ? used[used.length - 1] + 1 : edges.length - 1];
   const pad = 0.04 * Math.log10(hi / lo);
-  return { type: "log", range: [Math.log10(lo) - pad, Math.log10(hi) + pad], tickvals: ENERGY_TICKS, ticktext: ENERGY_TICKS.map(String) };
+  const ticks = narrow ? ENERGY_TICKS.filter((t) => [1, 2, 5].includes(t / 10 ** Math.floor(Math.log10(t) + 1e-9)) && (Math.log10(hi / lo) < 1.5 || Number.isInteger(Math.round(1e6 * Math.log10(t)) / 1e6))) : ENERGY_TICKS;
+  return { type: "log", range: [Math.log10(lo) - pad, Math.log10(hi) + pad], tickvals: ticks, ticktext: ticks.map(String) };
 }
 function stairs(edges, values) {
   // explicit steps: two points per bin, a gap (null) for empty bins
@@ -74,6 +75,18 @@ function bandTraces(c, edges, low, high) {
   return traces;
 }
 
+function htmlLegend(node, items, key = "") {
+  // a legend in HTML under the plot, one row that wraps at the card's edge (a Plotly legend gives every entry the
+  // width of the longest, and does not move the axis title out of its way). items: {label, colour, dash, fill}
+  let legend = node.nextElementSibling;
+  if (!legend?.classList.contains("plot-legend")) { legend = document.createElement("div"); legend.className = "plot-legend"; node.after(legend); }
+  const swatch = ({ colour, dash, fill }) => (fill ? `<i style="background:${colour}"></i>`
+    : `<svg width="22" height="8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" stroke="${colour}" stroke-width="2.4"${dash ? ' stroke-dasharray="5 3"' : ""}/></svg>`);
+  legend.innerHTML = (key ? `<span class="key">${key}</span>` : "")
+    + items.map((x) => `<span${x.title ? ` title="${x.title}"` : ""}>${swatch(x)}${x.label}</span>`).join("");
+  return swatch;
+}
+
 export function pickPeriod(period, day, night) {
   if (period === "day") return day;
   if (period === "night") return night;
@@ -96,8 +109,10 @@ export function spectrumPlot(node, result) {
     traces.push(...bandTraces(c, edges, low, high));
     traces.push({ ...stairs(edges, a), mode: "lines", name: "central",
                   line: { color: c.text, width: 2 }, hovertemplate: "%{y:.3f} %<extra>A_DN</extra>" });
+    htmlLegend(node, traces.filter((t) => t.showlegend !== false).map((t) => (t.fill
+      ? { label: t.name, colour: t.fillcolor, fill: true } : { label: t.name, colour: t.line.color })));
     return Plotly.react(node, traces, layout(c, node, "Day-night asymmetry per energy bin", spectra.observable, "A_DN (%)",
-      { xaxis: energyAxis(edges, spectra.day, 1e-9 * Math.max(...spectra.day)), hovermode: "x unified",
+      { showlegend: false, xaxis: energyAxis(edges, spectra.day, 1e-9 * Math.max(...spectra.day), node.clientWidth < 420), hovermode: "x unified",
         shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 0, y1: 0, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
   }
   const total = pickPeriod(setup.period, spectra.day, spectra.night);
@@ -115,15 +130,34 @@ export function spectrumPlot(node, result) {
   const clip = (v, b) => (b > 0 && v > floor ? v * k : null);
   traces.push(...bandTraces(c, edges, low.map((v, b) => (b > 0 && total[b] > floor ? Math.max(v, floor) * k : null)),
                             high.map((v, b) => (b > 0 && total[b] > floor ? v * k : null))));
-  // one line per component, no summed line: the band is the sampled spread of their sum
+  // one line per component, no summed line: the band is the sampled spread of their sum. A monoenergetic
+  // component is dashed, and its recoil edge (ES) or peak (CC) marked and labelled with the neutrino energy
+  const marks = result.lines || [], isLine = new Set(marks.map((m) => m.component));
   for (const comp of setup.components) {
     const values = pickPeriod(setup.period, spectra.components[comp].day, spectra.components[comp].night);
-    traces.push({ ...stairs(edges, values.map(clip)), mode: "lines", name: DISPLAY[comp],
-                  line: { color: c.component[comp], width: 2.4 }, hovertemplate: "%{y:.4g}<extra>" + DISPLAY[comp] + "</extra>" });
+    const name = isLine.has(comp) ? `${DISPLAY[comp]} (line)` : DISPLAY[comp];
+    traces.push({ ...stairs(edges, values.map(clip)), mode: "lines", name,
+                  line: { color: c.component[comp], width: 2.4, dash: isLine.has(comp) ? "dash" : "solid" },
+                  hovertemplate: "%{y:.4g}<extra>" + DISPLAY[comp] + "</extra>" });
   }
+  const shapes = [], annotations = [];
+  let previous = -Infinity, raised = false; // labels closer than 0.3 decades alternate between two heights
+  marks.forEach((m) => {
+    shapes.push({ type: "line", xref: "x", yref: "paper", x0: m.x, x1: m.x, y0: 0, y1: 1,
+                  line: { color: c.component[m.component], width: 1, dash: "dot" } });
+    if (!m.labelled) return;
+    raised = Math.log10(m.x) - previous < 0.3 ? !raised : false;
+    previous = Math.log10(m.x);
+    annotations.push({ x: Math.log10(m.x), xref: "x", yref: "paper", y: 1, yanchor: "bottom", yshift: raised ? 13 : 0, showarrow: false,
+      text: DISPLAY[m.component], font: { size: 11, color: c.component[m.component] },
+      hovertext: `${DISPLAY[m.component]} line, ${m.energy} MeV: ${m.edge ? `recoil edge at T = ${m.x.toFixed(3)} MeV` : `peak at ${m.x.toFixed(2)} MeV`}` });
+  });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
+  htmlLegend(node, traces.filter((t) => t.showlegend !== false).map((t) => (t.fill
+    ? { label: t.name, colour: t.fillcolor, fill: true } : { label: t.name, colour: t.line.color, dash: t.line.dash === "dash" })));
   return Plotly.react(node, traces, layout(c, node, title, spectra.observable, `Interactions ${result.spectrumUnit ?? result.unit}, per bin`,
-    { xaxis: energyAxis(edges, total, floor), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified" }), CONFIG);
+    { xaxis: energyAxis(edges, total, floor, node.clientWidth < 420), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified", showlegend: false,
+      shapes, annotations, margin: { l: 60, r: 16, t: marks.some((m) => m.labelled) ? 52 : 24, b: 48 } }), CONFIG);
 }
 
 export function distributionPlot(node, result, measured) {
@@ -181,16 +215,13 @@ export function budgetPlot(node, result) {
     cliponaxis: false, textfont: { color: c.secondary, size: 11 }, width: 0.7,
     hovertemplate: `${r.Source}: %{x:.3g}<extra>${r.Kind}</extra>`,
   }));
-  // a horizontal legend under the axis in two columns (one on a phone), filled row by row; the axis title names
-  // the two colours. Plotly reserves no room for a legend in the container: the card grows by its rows
-  const columns = node.clientWidth >= 400 ? 2 : 1, legend = 20 * Math.ceil(rows.length / columns) + 8;
-  node.style.height = `${250 + legend}px`;
-  const ranges = rows.some((r) => r.Kind !== "sampled");
-  const key = `<span style="color:${c.sampled}">■</span> sampled 1σ` + (ranges ? `    <span style="color:${c.range}">■</span> model range (largest deviation)` : "");
+  const ranges = rows.some((r) => r.Kind !== "sampled"), fill = (colour) => `<i style="background:${colour}"></i>`;
+  htmlLegend(node, rows.map((r, i) => ({ label: `<b>${letters[i]}</b> ${r.Source.replace(/ \(.*\)$/, "")}`, title: `${r.Source} (${r.Kind})`,
+                                         colour: r.Kind === "sampled" ? c.sampled : c.range, fill: true })),
+             `${fill(c.sampled)}sampled 1σ${ranges ? ` ${fill(c.range)}model range (largest deviation)` : ""}`);
+  node.style.height = `${Math.max(220, 90 + 24 * rows.length)}px`;
   const xTitle = quantity !== "adn" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
-  return Plotly.react(node, traces, layout(c, node, "Uncertainties", `${xTitle}<br><span style="font-size:11px;color:${c.secondary}">${key}</span>`, "",
-    { barmode: "overlay", margin: { l: 30, r: 16, t: 24, b: 56 + legend }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
-      yaxis: { categoryorder: "array", categoryarray: [...letters].reverse(), tickmode: "array", tickvals: letters, ticktext: letters },
-      legend: { orientation: "h", yref: "container", y: 0, yanchor: "bottom", x: 0, xanchor: "left", entrywidthmode: "fraction", entrywidth: 1 / columns - 0.01,
-                font: { size: 11, color: c.text } } }), CONFIG);
+  return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
+    { barmode: "overlay", showlegend: false, margin: { l: 30, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
+      yaxis: { categoryorder: "array", categoryarray: [...letters].reverse(), tickmode: "array", tickvals: letters, ticktext: letters } }), CONFIG);
 }

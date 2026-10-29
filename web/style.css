@@ -108,6 +108,13 @@ select:disabled { opacity: 0.45; }
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-width: 0; }
 .trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
 .plot { width: 100%; height: 360px; }
+.plot-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 4px 8px 10px; font: 11px/1.4 "DejaVu Sans", Verdana, sans-serif; color: var(--plot-ink); }
+.plot-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.plot-legend b { font-weight: 600; }
+.plot-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.plot-legend .key { flex-basis: 100%; color: var(--plot-ticklabel); gap: 4px; }
+.plot-legend .key i { margin-left: 8px; }
+.plot-legend .key i:first-child { margin-left: 0; }
 .plot-title { margin: 2px 4px 0; font: 600 0.9rem/1.3 "DejaVu Sans", Verdana, sans-serif; text-align: center; color: var(--plot-ink); }
 
 .headline { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: grid; gap: 10px; }
