@@ -7,7 +7,8 @@ const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O" };
 const DETECTORS = { argon: "Liquid argon", water: "Water" };
-const XSEC = { default: "SNOwGLoBES default", ar40_klmv: "KLMV", ar40_marley: "MARLEY", ar40_marley1: "MARLEY (v1)" };
+const XSEC = { default: "SNOwGLoBES default", ar40_klmv: "KLMV", ar40_marley: "MARLEY, B(GT) from (p,n)",
+               ar40_marley1: "MARLEY, B(GT) from ⁴⁰Ti decay" };
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];

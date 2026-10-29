@@ -34,7 +34,9 @@ export const SOURCES = {
   es_tree: S("ES at tree level in the Standard Model, sin²θ_W = 0.23857 (PDG 2024, MS-bar at Q² → 0)"),
   es_radiative: S("ES radiative corrections: Bahcall, Kamionkowski & Sirlin 1995", "astro-ph/9502003"),
   snowglobes: S("SNOwGLoBES cross-section tables", null, "https://github.com/SNOwGLoBES/snowglobes"),
-  marley: S("MARLEY (νₑ CC on ⁴⁰Ar)", "arXiv:2101.11867"),
+  marley: S("MARLEY (νₑ CC on ⁴⁰Ar), as tabulated by SNOwGLoBES in 2018 (zero below 5 MeV)", "arXiv:2101.11867"),
+  bgt_pn: S("B(GT) from ⁴⁰Ar(p,n): Bhattacharya et al., Phys. Rev. C 80, 055501 (2009)", "10.1103/PhysRevC.80.055501"),
+  bgt_ti: S("B(GT) from ⁴⁰Ti β decay (SNOwGLoBES does not say which of the two 1998 measurements)"),
   klmv: S("KLMV: Kolbe, Langanke, Martínez-Pinedo & Vogel (νₑ CC on ⁴⁰Ar), as tabulated in SNOwGLoBES"),
   plotipus: S("plotipus (figures)", null, "https://github.com/mantheys/plotipus"),
   pyodide: S("Pyodide (Python in the browser, for plotipus figures)", null, "https://pyodide.org"),
@@ -83,7 +85,7 @@ export function forStep(step, setup, quantity, inputs, setName) {
   if (step === 4) {
     if (setup.channel === "es") return setup.es_model === "snowglobes" ? [SOURCES.es_radiative, SOURCES.snowglobes] : [SOURCES.es_tree];
     const out = [SOURCES.snowglobes];
-    if (setup.xsec_model.includes("marley")) out.push(SOURCES.marley);
+    if (setup.xsec_model.includes("marley")) out.push(SOURCES.marley, setup.xsec_model === "ar40_marley" ? SOURCES.bgt_pn : SOURCES.bgt_ti);
     if (setup.xsec_model.includes("klmv")) out.push(SOURCES.klmv);
     return out;
   }

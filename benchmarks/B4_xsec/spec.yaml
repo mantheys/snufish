@@ -35,15 +35,19 @@ variants:
   ar40_klmv:
     required: false
     quantities: [cc_nue_ar40]
-    description: Kolbe, Langanke, Martinez-Pinedo, Vogel (2003) shell-model + RPA.
+    description: KLMV (Kolbe, Langanke, Martinez-Pinedo, Vogel), as tabulated by SNOwGLoBES (xs_nue_Ar40_klmv.dat).
   ar40_marley:
     required: false
     quantities: [cc_nue_ar40]
-    description: MARLEY (Gardiner 2021) allowed-approximation model.
+    description: >-
+      MARLEY (arXiv:2101.11867, allowed approximation) with B(GT) from 40Ar(p,n), Bhattacharya et al.,
+      PRC 80, 055501 (2009); SNOwGLoBES xs_nue_Ar40_marley.dat (= its marley2), zero below 5 MeV.
   ar40_marley1:
     required: false
     quantities: [cc_nue_ar40]
-    description: Earlier MARLEY calculation (as shipped by SNOwGLoBES).
+    description: >-
+      MARLEY with B(GT) from 40Ti beta decay (SNOwGLoBES commit 072d2bd, 2018: "marley1 is based on 40Ti
+      measurements"); SNOwGLoBES xs_nue_Ar40_marley1.dat, zero below 5 MeV.
 
 constants:
   G_F_GeV-2: 1.1663788e-5       # PDG 2024
