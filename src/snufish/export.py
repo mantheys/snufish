@@ -42,6 +42,15 @@ VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42}
 # Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
 XSEC_INCOMPLETE = {"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]}
 MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"
+# Liquid-scintillator targets of the web page (ES only), with the electron densities their experiments quote.
+APP_DETECTORS = {
+    "scintillator_pc": {
+        "description": "pseudocumene + PPO (Borexino): (3.307 +- 0.003) x 10^31 electrons per 100 t, arXiv:1707.09279",
+        "targets": {"electron": 3.307e32}, "channels": {"es": "electron"}},
+    "scintillator_lab": {
+        "description": "linear alkylbenzene (JUNO): 3.38 x 10^32 electrons per kt, arXiv:2006.11760",
+        "targets": {"electron": 3.38e32}, "channels": {"es": "electron"}},
+}
 
 S12_GRID = (0.24, 0.38, 0.01)
 DM21_GRID = (3.0, 11.0, 0.2)   # 1e-5 eV^2; 0.1 is no closer to the exact solvers
@@ -116,7 +125,7 @@ def collect_inputs():
         "solar_models": solar,
         "b8_measured": B8_MEASURED,
         "constants": load_spec("B4_xsec")["constants"],
-        "detectors": b5["detectors"],
+        "detectors": {**b5["detectors"], **APP_DETECTORS},
         "seconds_per_year": b5["exposure"]["seconds_per_year"],
         "xsec": xsec,
         "xsec_thresholds_MeV": XSEC_THRESHOLDS,

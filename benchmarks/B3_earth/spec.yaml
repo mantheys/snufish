@@ -41,7 +41,7 @@ sites:
   LNGS:    {latitude_deg: 42.45,  source: "hep-ph/9702343, fig. 3 (Borexino)"}
   SURF:    {latitude_deg: 44.356, source: "arXiv:1707.02322, table 1 (DUNE far detector)"}
   SNOLAB:  {latitude_deg: 46.47,  source: "hep-ph/9702343, fig. 3 (SNO, SNO+)"}
-  Jiangmen: {latitude_deg: 22.12, source: "approximate JUNO site latitude, to confirm against a JUNO publication"}
+  Jiangmen: {latitude_deg: 22.12, source: "JUNO site; 22 deg N in arXiv:2006.11760 (sec. 2.1), 22.12 to the hundredth not yet checked"}
 
 # NuFIT 6.0, normal ordering, as used in NuFast-Earth's validation
 # (src/examples/Validation.cpp @ 327586d, "nu-fit 6"). P_ie depends only on

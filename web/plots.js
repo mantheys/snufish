@@ -110,9 +110,11 @@ export function spectrumPlot(node, result) {
     low = total.map((t, b) => t - err[b]); high = total.map((t, b) => t + err[b]);
   }
   // computed per kt yr; shown in the chosen unit (k per kt yr); log axis: empty bins hidden
-  const k = result.scale, floor = Math.max(...total) * 1e-6, clip = (v) => (v > floor ? v * k : null);
-  traces.push(...bandTraces(c, edges, low.map((v, b) => (total[b] > floor ? Math.max(v, floor) * k : null)),
-                            high.map((v, b) => (total[b] > floor ? v * k : null))));
+  // the first bin (0 to 0.01 MeV, linear among log bins, also holding what smears below 0) is not drawn
+  const k = result.scale, floor = Math.max(...total.slice(1)) * 1e-6;
+  const clip = (v, b) => (b > 0 && v > floor ? v * k : null);
+  traces.push(...bandTraces(c, edges, low.map((v, b) => (b > 0 && total[b] > floor ? Math.max(v, floor) * k : null)),
+                            high.map((v, b) => (b > 0 && total[b] > floor ? v * k : null))));
   if (setup.components.length > 1) {
     for (const comp of setup.components) {
       const values = pickPeriod(setup.period, spectra.components[comp].day, spectra.components[comp].night);
@@ -131,7 +133,7 @@ export function distributionPlot(node, result, measured) {
   const c = colours(), { rows, samples, scale, unit, quantity } = result;
   const values = samples["total sampled"].map((v) => v * scale), central = rows[0].Central * scale;
   const ranges = rows.filter((r) => r.Kind === "model range");
-  const marks = measured ? [(measured[0] - measured[1]) * scale, (measured[0] + measured[1]) * scale] : [];
+  const marks = measured ? [(measured.value - measured.minus) * scale, (measured.value + measured.plus) * scale] : [];
   const lo = Math.min(...values, ...ranges.map((r) => r.Low * scale), ...marks);
   const hi = Math.max(...values, ...ranges.map((r) => r.High * scale), ...marks);
   const nb = 25, width = (Math.max(...values) - Math.min(...values)) / nb || 1, start = Math.min(...values);
@@ -147,8 +149,8 @@ export function distributionPlot(node, result, measured) {
                        font: { size: 11, color: c.secondary } });
   });
   if (measured) {
-    const [m, e, label] = measured;
-    shapes.push({ type: "rect", x0: (m - e) * scale, x1: (m + e) * scale, y0: 0, y1: top * 1.05, line: { width: 0 },
+    const { value: m, minus, plus, label } = measured;
+    shapes.push({ type: "rect", x0: (m - minus) * scale, x1: (m + plus) * scale, y0: 0, y1: top * 1.05, line: { width: 0 },
                   fillcolor: alpha(c.measured, 0.2), layer: "below" });
     annotations.push({ x: m * scale, y: top * 0.5, text: label, showarrow: false, font: { size: 11, color: c.measured } });
   }

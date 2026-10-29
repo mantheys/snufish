@@ -314,3 +314,22 @@ def test_incomplete_tables_stay_out_of_the_model_range(inputs):
     data = dict(inputs.data, xsec_incomplete={"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]})
     options = engine.alternatives(engine.Inputs(data), engine.Setup(detector="argon", channel="cc_nue_ar40"), "xsec_model")
     assert "ar40_marley" not in options and "ar40_klmv" in options
+
+
+@needs_tables
+def test_against_published_experiment_predictions():
+    """Borexino's B16-GS98 predictions (arXiv:1707.09279, table II) and JUNO's 8B rate (arXiv:2006.11760)."""
+    inputs, tables = engine.Inputs.load(APP / "inputs.json"), engine.TableProbabilities(APP)
+    per_100t_day = 0.1 * 86400 / inputs["seconds_per_year"]
+    osc = engine.oscillation(engine.parameters(inputs, "nufit60_global"))
+    for component, published in (("pp", 131.1), ("Be7", 47.9), ("pep", 2.74)):
+        setup = engine.Setup(solar_model="b16_gs98", components=(component,), detector="scintillator_pc", site="LNGS",
+                             period="annual")
+        per = engine.component_totals(inputs, tables, setup, osc)[component]
+        rate = 0.5 * (per["day"] + per["night"]) * per_100t_day
+        # tree-level ES without radiative corrections below 0.5 MeV: ~3.5 % above Borexino's predictions
+        assert rate / published == pytest.approx(1.035, abs=0.015), component
+    osc = engine.oscillation(engine.parameters(inputs, "nufit60_global", custom={"dm2_21_eV2": 7.5e-5}))
+    setup = engine.Setup(components=("B8", "hep"), b8_flux="sno_nc", detector="scintillator_lab", site="Jiangmen")
+    day, night = engine.combine(engine.component_totals(inputs, tables, setup, osc), ["B8", "hep"])
+    assert 0.5 * (day + night) / 365.25 == pytest.approx(4.36, rel=0.03)  # counts per day per kt, all energies

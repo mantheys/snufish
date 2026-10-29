@@ -6,7 +6,8 @@ import { forStep, render as renderSources } from "./sources.js";
 const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O" };
-const DETECTORS = { argon: "Liquid argon", water: "Water" };
+const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
+                    scintillator_lab: "Liquid scintillator: LAB (JUNO)" };
 const XSEC = {
   ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
   ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
@@ -20,7 +21,9 @@ const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first 
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
-const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"] }; // x per kt yr
+const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
+const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
+                ktday: [1 / DAYS, "per kt·day"], cpd100t: [0.1 / DAYS, "per 100 t·day"] };
 const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
 // Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
 // (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
@@ -30,6 +33,14 @@ const PRESETS = {
   thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
            "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
            components: ORDER, quantity: "rate", period: "annual", unit: "g" },
+  // Borexino Phase-II (arXiv:1707.09279): interaction rates over all recoil energies, in counts per day per 100 t
+  borexino: { unit: "cpd100t", detector: "scintillator_pc", channel: "es", site: "LNGS", threshold: 0, "res-model": "quadrature",
+              "res-a": 0.05, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.0713, years: +(1291.51 / DAYS).toFixed(4),
+              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["Be7"], quantity: "rate", period: "annual" },
+  // JUNO 8B (arXiv:2006.11760): 2 MeV recoil threshold, 3 %/sqrt(E), SNO NC 8B flux, energy scale 0.3 %, efficiency 1 %
+  juno: { unit: "ktday", detector: "scintillator_lab", channel: "es", site: "Jiangmen", threshold: 2.0, "res-model": "quadrature",
+          "res-a": 0.03, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "",
+          "unc-scale": 0.3, "unc-res": 0, "unc-norm": 1, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
   sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
          mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
 };
@@ -37,6 +48,13 @@ const PRESET_NOTES = {
   thumb: `A thumb, as ${THUMB_GRAMS} g of water: every solar flux component, elastic scattering on its electrons, `
        + "no threshold and a perfect detector, averaged over day and night. Change any setting to start from it.",
   custom: "",
+  borexino: "Borexino Phase-II as published (arXiv:1707.09279): pseudocumene with 3.307 × 10³¹ electrons per 100 t, its "
+          + "71.3 t fiducial mass over 1291.51 days, ~50 keV resolution at 1 MeV, and rates over all recoil energies. Choose pp, ⁷Be "
+          + "or pep alone to compare with its measurement. The cross section here has no radiative corrections below 0.5 MeV: "
+          + "with B16-GS98 it comes out 3.5 % above Borexino's own predictions for all three.",
+  juno: "JUNO ⁸B study (arXiv:2006.11760): LAB with 3.38 × 10³² electrons per kt, a 2 MeV recoil threshold, 3 %/√E resolution, "
+      + "the SNO NC ⁸B flux, energy scale ±0.3 % and efficiency ±1 %. Not included: its energy-dependent fiducial volume, the 48 % "
+      + "muon-veto dead time and the scintillator non-linearity. All energies, this reproduces its 4.36 counts per day per kt to 2 %.",
   sk4: "Super-K IV as published (arXiv:2312.12907): resolution, threshold, fiducial mass, live time and detector uncertainties. "
      + "Its selection efficiency is only published as a figure (fig. 28) and is not included (100 %). "
      + "Without it, the energy-scale effect on the rate comes out ±0.5 % against Super-K's ±0.8 % (table IV).",
@@ -231,11 +249,31 @@ function fmt(value, error) {
 const signed = (v) => (v === 0 ? "±0" : `${v > 0 ? "+" : "−"}${Math.abs(v) < 0.1 ? Math.abs(v).toPrecision(2) : Math.abs(v).toFixed(1)}`);
 
 function measuredBand(setup, quantity) {
+  // a published measurement of what is computed, in the engine's units (per kt yr, or a fraction), or null
+  const meas = app.inputs.data.measurements;
   if (quantity === "adn" && setup.channel === "es" && setup.site === "Kamioka" && Math.abs(setup.threshold - 3.49) < 0.01) {
-    const m = app.inputs.data.measurements.sk_day_night;
-    return [-m.value, Math.hypot(m.stat, m.syst), "Super-K ±1σ"];
+    const m = meas.sk_day_night, e = Math.hypot(m.stat, m.syst);
+    return { value: -m.value, minus: e, plus: e, label: "Super-K ±1σ", source: "Super-K, arXiv:2312.12907" };
+  }
+  const borexino = meas.borexino_rates?.measured, c = setup.components;
+  if (quantity === "rate" && borexino && setup.detector === "scintillator_pc" && setup.channel === "es" && setup.threshold === 0
+      && c.length === 1 && borexino[c[0]]) {
+    const m = borexino[c[0]], k = UNITS.cpd100t[0]; // cpd/100 t -> per kt yr
+    return { value: m.value / k, minus: Math.hypot(m.stat, m.sys[0]) / k, plus: Math.hypot(m.stat, m.sys[1]) / k,
+             label: "Borexino ±1σ", source: "Borexino Phase-II, arXiv:1707.09279" };
   }
   return null;
+}
+
+function measuredLine(r) {
+  const m = measuredBand(r.setup, r.quantity);
+  if (!m) return "";
+  const central = r.rows[0].Central, pull = (central - m.value) / (central > m.value ? m.minus : m.plus);
+  const [v, lo, hi] = [m.value, m.minus, m.plus].map((x) => x * r.scale);
+  const decimals = Math.max(0, 1 - Math.floor(Math.log10(Math.min(lo, hi)))); // both errors to two significant figures
+  const shown = Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? `${fmt(v)} −${fmt(lo)} +${fmt(hi)}` : `${v.toFixed(decimals)} −${lo.toFixed(decimals)} +${hi.toFixed(decimals)}`;
+  return `<div class="sub thumb-line">Measured (${m.source}): ${shown} ${r.unit};
+    the prediction is ${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it (measurement error only).</div>`;
 }
 
 function describe(setup, quantity) {
@@ -311,7 +349,7 @@ function renderFlux() {
   const per = r.setup.components.length > 1
     ? `<div class="sub">${r.setup.components.map((c) => `${engine.DISPLAY[c]} ${fmt(f.components[c][0])}`).join(" · ")}</div>` : "";
   let compare = "";
-  if (r.quantity === "rate") {
+  if (r.quantity === "rate" && DENSITY[r.setup.detector]) {
     const side = (1e9 / DENSITY[r.setup.detector]) ** (1 / 3), crossing = f.total * side ** 2 * d.seconds_per_year;
     const rate = r.rows[0].Central;
     compare = `<div><h4>Flux against rate</h4><p>A 1 kt ${r.setup.detector === "water" ? "water" : "liquid-argon"} cube
@@ -373,7 +411,7 @@ function render() {
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
-    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}`;
+    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}${measuredLine(r)}`;
   renderFlux();
   spectrumPlot($("plot-spectrum"), r);
   distributionPlot($("plot-distribution"), r, measuredBand(setup, quantity));
@@ -544,7 +582,7 @@ function applyPreset(name) {
   for (const [id, v] of Object.entries(values)) {
     if (["detector", "channel"].includes(id)) continue;
     if (id === "components") document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = v.includes(x.value); });
-    else if (id === "quantity" || id === "period") setRadio(id, v);
+    else if (id === "quantity" || id === "period" || id === "b8") setRadio(id, v);
     else $(id).value = v;
   }
 }
