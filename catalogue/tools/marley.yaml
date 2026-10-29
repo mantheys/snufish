@@ -8,8 +8,12 @@ documentation: https://www.marleygen.org
 reference: arXiv:2101.11867   # with Gardiner, Phys. Rev. C 103, 044604 (2021)
 maintainers: null
 benchmarks: [B4_xsec]
-status: wrapper ready     # contributions/marley/scripts/run_b4.py (marley xsec on a built checkout)
+status: verified          # B4: contributions/marley/B4_xsec/2.0.0 from contributions/marley/scripts/run_b4.py
 notes: >
   Version 2.0.0 (31 July 2026, Zenodo 10.5281/zenodo.21880925). Its discrete reaction files carry the
   measured B(GT) uncertainties (added 18 July 2026); the wrapper turns them into one shifted cross-section
   table per level (bgt_levels.parquet), so the B(GT) uncertainty of a rate is propagated exactly.
+  Check against SNOwGLoBES's 2018 MARLEY table (xs_nue_Ar40_marley.dat, B(GT) of Bhattacharya 2009): MARLEY 2
+  running its v1 model gives 46 % more at 10 MeV; without the g_A^2 = 1.26^2 factor its reaction file applies
+  to the measured GT strengths, 6-9 % more at 8-15 MeV and 23 % at 6 MeV. The SNOwGLoBES table appears to
+  predate that factor; the rest of the difference is not explained by the files.

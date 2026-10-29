@@ -63,13 +63,17 @@ def xsec(marley, checkout, reactions, work, energies):
     config = {"reactions": reactions, "target": {"nuclides": [1000180400], "atom_fractions": [1.0]},
               "source": {"type": "mono", "neutrino": "ve", "energy": 10.0},
               "xsec": {"KEmin": 0.0, "KEmax": kemax, "steps": steps, "pdg": 12}}
-    cfg, out = work / "config.js", work / "xsec.txt"
+    run = len(list(work.glob("config_*.js"))) + 1
+    cfg, out = work / f"config_{run}.js", work / f"xsec_{run}.txt"
     cfg.write_text(json.dumps(config, indent=1))
+    out.unlink(missing_ok=True)  # MARLEY asks before overwriting a file, and without a terminal keeps the old one
     # what MARLEY's setup_marley.sh sets: the data search root and its shared library
     env = dict(os.environ, MARLEY=str(checkout),
                LD_LIBRARY_PATH=f"{checkout / 'build' / 'lib'}:{os.environ.get('LD_LIBRARY_PATH', '')}")
     subprocess.run([str(marley), "xsec", "-o", str(out), str(cfg)], cwd=checkout, env=env, check=True,
                    capture_output=True)
+    if not out.exists() or out.stat().st_mtime < cfg.stat().st_mtime:
+        raise RuntimeError(f"marley xsec wrote no new table for {reactions}")
     table = np.loadtxt(out)
     return np.interp(energies, table[:, 0], table[:, 1]) * 1e-42  # file: 1e-42 cm^2 / atom
 

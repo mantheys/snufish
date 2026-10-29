@@ -1,0 +1,29 @@
+tool: marley
+tool_version: 2.0.0
+tool_commit: 435f083
+benchmark: B4_xsec
+benchmark_version: 0.1.0
+contributor: SNUfish maintainers (wrapper)
+date: '2026-10-29'
+command: python contributions/marley/scripts/run_b4.py --marley <built MARLEY checkout>
+settings:
+  reactions:
+    ar40_marley2_bhattacharya2009:
+    - ve40ArCC_HF-CRPA.react
+    - ve40ArCC_Bhattacharya2009-Discrete.react
+    ar40_marley2_liu1998:
+    - ve40ArCC_HF-CRPA.react
+    - ve40ArCC_Liu1998-Discrete.react
+    ar40_marley2_bhattacharya1998:
+    - ve40ArCC_HF-CRPA.react
+    - ve40ArCC_Bhattacharya1998-Discrete.react
+    ar40_marley1_bhattacharya2009:
+    - v1/ve40ArCC_Bhattacharya2009.react
+  xsec: marley xsec, KE 0 to 20 MeV on the B4 step, 1e-42 cm^2/atom converted to cm^2
+  default: ar40_marley2_bhattacharya2009
+  bgt_levels: 'bgt_levels.parquet: the default variant with each measured level of
+    ve40ArCC_Bhattacharya2009-Discrete.react raised by its 1 sigma (one row per level)'
+license: CC-BY-4.0
+notes: 'MARLEY 2.0.0: HF-CRPA for the continuum, measured B(GT) for bound levels (see
+  its reaction files for references). Cite Gardiner, PRC 103, 044604 (2021) and CPC
+  (arXiv:2101.11867).'
