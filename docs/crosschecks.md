@@ -6,6 +6,9 @@ Two kinds of number are compared: **predictions** (the paper's own calculation: 
 and **measurements** (SNUfish's prediction for them, which should agree within the quoted error).
 Day-night asymmetries are in the paper's convention, (D − N)/((D + N)/2).
 
+In the calculator, **Reproduce a published number** (above step 0) sets every step to one of these and shows the
+paper's number next to SNUfish's (all but the BKS cross sections, SNO's φ_CC/φ_ES and P_ee, which are not page quantities).
+
 ## Predictions: reproduced
 
 | Source | Quantity | Published | SNUfish | Δ |

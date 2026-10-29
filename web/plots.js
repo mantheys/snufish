@@ -115,15 +115,12 @@ export function spectrumPlot(node, result) {
   const clip = (v, b) => (b > 0 && v > floor ? v * k : null);
   traces.push(...bandTraces(c, edges, low.map((v, b) => (b > 0 && total[b] > floor ? Math.max(v, floor) * k : null)),
                             high.map((v, b) => (b > 0 && total[b] > floor ? v * k : null))));
-  if (setup.components.length > 1) {
-    for (const comp of setup.components) {
-      const values = pickPeriod(setup.period, spectra.components[comp].day, spectra.components[comp].night);
-      traces.push({ ...stairs(edges, values.map(clip)), mode: "lines", name: DISPLAY[comp],
-                    line: { color: c.component[comp], width: 2.4 }, hovertemplate: "%{y:.4g}<extra>" + DISPLAY[comp] + "</extra>" });
-    }
+  // one line per component, no summed line: the band is the sampled spread of their sum
+  for (const comp of setup.components) {
+    const values = pickPeriod(setup.period, spectra.components[comp].day, spectra.components[comp].night);
+    traces.push({ ...stairs(edges, values.map(clip)), mode: "lines", name: DISPLAY[comp],
+                  line: { color: c.component[comp], width: 2.4 }, hovertemplate: "%{y:.4g}<extra>" + DISPLAY[comp] + "</extra>" });
   }
-  traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.4 },
-                hovertemplate: "%{y:.4g}<extra>total</extra>" });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
   return Plotly.react(node, traces, layout(c, node, title, spectra.observable, `Interactions ${result.spectrumUnit ?? result.unit}, per bin`,
     { xaxis: energyAxis(edges, total, floor), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified" }), CONFIG);
@@ -179,18 +176,21 @@ export function budgetPlot(node, result) {
   const sizes = budgetSizes(rows, quantity, scale), letters = rows.map((_, i) => String.fromCharCode(65 + i));
   const fmt = (v) => (v >= 10 ? v.toFixed(1) : v >= 1 ? v.toFixed(2) : v.toPrecision(2));
   const traces = rows.map((r, i) => ({
-    type: "bar", orientation: "h", y: [letters[i]], x: [sizes[i]], name: `${letters[i]} · ${r.Source}`,
-    legendgroup: r.Kind, legendgrouptitle: { text: r.Kind === "sampled" ? "sampled 1σ" : "model range (largest deviation)" },
+    type: "bar", orientation: "h", y: [letters[i]], x: [sizes[i]], name: `${letters[i]} · ${r.Source.replace(/ \(.*\)$/, "")}`, // details in the hover
     marker: { color: r.Kind === "sampled" ? c.sampled : c.range }, text: [fmt(sizes[i])], textposition: "outside",
     cliponaxis: false, textfont: { color: c.secondary, size: 11 }, width: 0.7,
     hovertemplate: `${r.Source}: %{x:.3g}<extra>${r.Kind}</extra>`,
   }));
-  const kinds = new Set(rows.map((r) => r.Kind)).size, legend = 18 * rows.length + 22 * kinds;
-  node.style.height = `${260 + legend}px`;
+  // a horizontal legend under the axis in two columns (one on a phone), filled row by row; the axis title names
+  // the two colours. Plotly reserves no room for a legend in the container: the card grows by its rows
+  const columns = node.clientWidth >= 400 ? 2 : 1, legend = 20 * Math.ceil(rows.length / columns) + 8;
+  node.style.height = `${250 + legend}px`;
+  const ranges = rows.some((r) => r.Kind !== "sampled");
+  const key = `<span style="color:${c.sampled}">■</span> sampled 1σ` + (ranges ? `    <span style="color:${c.range}">■</span> model range (largest deviation)` : "");
   const xTitle = quantity !== "adn" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
-  return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
+  return Plotly.react(node, traces, layout(c, node, "Uncertainties", `${xTitle}<br><span style="font-size:11px;color:${c.secondary}">${key}</span>`, "",
     { barmode: "overlay", margin: { l: 30, r: 16, t: 24, b: 56 + legend }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
-      yaxis: { categoryorder: "array", categoryarray: [...letters].reverse() },
-      legend: { orientation: "v", yref: "container", y: 0, yanchor: "bottom", x: 0, xanchor: "left",
-                font: { size: 11, color: c.text }, grouptitlefont: { size: 11, color: c.secondary }, tracegroupgap: 6 } }), CONFIG);
+      yaxis: { categoryorder: "array", categoryarray: [...letters].reverse(), tickmode: "array", tickvals: letters, ticktext: letters },
+      legend: { orientation: "h", yref: "container", y: 0, yanchor: "bottom", x: 0, xanchor: "left", entrywidthmode: "fraction", entrywidth: 1 / columns - 0.01,
+                font: { size: 11, color: c.text } } }), CONFIG);
 }

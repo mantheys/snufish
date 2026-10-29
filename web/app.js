@@ -2,6 +2,7 @@
 import * as engine from "./engine.js";
 import { budgetPlot, distributionPlot, spectrumPlot } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
+import { CHECKS, PAPER_SETS } from "./checks.js";
 
 const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
@@ -20,7 +21,7 @@ const XSEC = {
 };
 const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first available is selected by default
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
-const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
+const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
 const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
@@ -131,6 +132,15 @@ function fillSelect(select, entries, value) {
 
 function buildControls() {
   const d = app.inputs.data;
+  Object.assign(d.parameter_sets.sets, PAPER_SETS); // the papers' own values, for the published checks
+  const groups = {};
+  for (const c of CHECKS) (groups[c.group] ||= []).push(c);
+  $("check").replaceChildren(option("", "None: set the steps by hand", true), ...Object.entries(groups).map(([name, list]) => {
+    const group = document.createElement("optgroup");
+    group.label = name;
+    list.forEach((c) => group.append(option(c.id, c.label)));
+    return group;
+  }));
   const set = $("set");
   for (const [kind, label] of Object.entries(KINDS)) {
     const group = document.createElement("optgroup");
@@ -234,7 +244,10 @@ function sync() {
   const p = d.parameter_sets.sets[$("set").value], dm = p.dm2_21_eV2, s = p.sin2_theta12;
   $("set-info").innerHTML = `Δm²₂₁ = ${(dm.value * 1e5).toFixed(2)} <span title="1σ">(−${(dm.error[0] * 1e5).toFixed(2)} +${(dm.error[1] * 1e5).toFixed(2)})</span> × 10⁻⁵ eV²<br>
     sin²θ₁₂ = ${s.value.toFixed(4)} (−${s.error[0].toFixed(4)} +${s.error[1].toFixed(4)})<br>
-    θ₁₃, θ₂₃, δ, Δm²₃₁: NuFIT 6.0 · ${p.source}`;
+    ${p.sin2_theta13 ? `sin²θ₁₃ = ${p.sin2_theta13.value}; θ₂₃, δ, Δm²₃₁` : "θ₁₃, θ₂₃, δ, Δm²₃₁"}: NuFIT 6.0 · ${p.source}`;
+  const check = CHECKS.find((c) => c.id === $("check").value);
+  $("check-note").textContent = check ? `${check.source}.${check.note ? ` ${check.note}` : ""} Change any setting to leave the check.`
+    : "Sets every step to a paper's inputs and shows its number next to SNUfish's.";
 }
 
 // ------------------------------------------------------------------ URL state
@@ -242,7 +255,7 @@ function sync() {
 const KEYS = { set: "set", solar: "solar", site: "site", earth: "earth", detector: "target", channel: "channel",
                xsec: "xsec", preset: "preset", threshold: "threshold", "res-model": "resolution", "res-a": "a", "res-b": "b",
                eff: "eff", "eff-e50": "e50", "eff-width": "width", mass: "mass", years: "years", "unc-scale": "dscale",
-               "unc-res": "dres", "unc-norm": "dnorm", "eff-model": "efficiency", unit: "unit" };
+               "unc-res": "dres", "unc-norm": "dnorm", "eff-model": "efficiency", unit: "unit", check: "check" };
 const RADIOS = { b8: "b8", es: "es", quantity: "q", period: "period" };
 
 function saveHash() {
@@ -266,6 +279,7 @@ function loadHash() {
     const chosen = p.get("components").split(",");
     document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = chosen.includes(x.value); });
   }
+  if (p.get("check")) applyCheck(p.get("check")); // a published check sets everything (and its energy window)
 }
 
 // ------------------------------------------------------------------ computing
@@ -327,13 +341,44 @@ function measuredBand(setup, quantity) {
 
 function measuredLine(r) {
   const m = measuredBand(r.setup, r.quantity);
-  if (!m) return "";
+  if (!m || r.check?.published.measured) return "";
   const central = r.rows[0].Central, pull = (central - m.value) / (central > m.value ? m.minus : m.plus);
   const [v, lo, hi] = [m.value, m.minus, m.plus].map((x) => x * r.scale);
   const decimals = Math.max(0, 1 - Math.floor(Math.log10(Math.min(lo, hi)))); // both errors to two significant figures
   const shown = Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? `${fmt(v)} −${fmt(lo)} +${fmt(hi)}` : `${v.toFixed(decimals)} −${lo.toFixed(decimals)} +${hi.toFixed(decimals)}`;
   return `<div class="sub thumb-line">Measured (${m.source}): ${shown} ${r.unit};
     the prediction is ${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it (measurement error only).</div>`;
+}
+
+function checkBand(r) {
+  // the selected check's measurement, in the engine's units (per kt yr, or a fraction), for the histogram
+  const p = r.check?.published;
+  if (!p?.measured) return null;
+  const k = { rate: () => 1 / UNITS[p.unit][0], events: () => 1 / r.setup.exposure, ratio: () => 1 }[p.kind]();
+  return { value: p.value * k, minus: p.minus * k, plus: p.plus * k, label: `${r.check.group} ±1σ` };
+}
+
+function publishedLine(r) {
+  // the selected published check: the paper's number next to this one (a measurement with its pull)
+  const c = r.check;
+  if (!c) return "";
+  const p = c.published, central = r.rows[0].Central;
+  let ours, shown, unit = "";
+  if (p.kind === "rate") { ours = central * UNITS[p.unit][0]; unit = ` ${UNITS[p.unit][1]}`; }
+  else if (p.kind === "events") { ours = central * r.setup.exposure; unit = " events"; }
+  else if (p.kind === "ratio") ours = central;
+  else ours = -central; // A_DN in the papers' (D - N)/mean
+  const minus = (text) => text.replace("-", "−");
+  const digits = (v, n = 4) => (p.kind === "events" ? Math.round(v).toLocaleString("en-US")
+    : p.kind === "adn" ? minus(`${(100 * v).toFixed(2)} %`) : minus(Number(v.toPrecision(n)).toString()));
+  const diff = p.kind === "adn" ? `${signed(100 * (ours - p.value))} points, ${signed(100 * (ours / p.value - 1))} %` : `${signed(100 * (ours / p.value - 1))} %`;
+  if (p.measured) {
+    const pull = (ours - p.value) / (ours > p.value ? p.plus : p.minus);
+    shown = `Measured: <b>${digits(p.value)}</b> −${digits(p.minus, 2)} +${digits(p.plus, 2)}${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff}), `
+          + `${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it`;
+  } else shown = `Published: <b>${digits(p.value)}</b>${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff})`;
+  const convention = p.kind === "adn" ? " A_DN here in the paper's convention (D − N)/mean, the opposite sign of the headline's." : "";
+  return `<div class="sub check-line"><b>${c.group}: ${c.label}</b> (${c.source}). ${shown}.${convention}</div>`;
 }
 
 function describe(setup, quantity) {
@@ -388,7 +433,8 @@ async function compute() {
   const [scale, unit] = { adn: [100, "%"], ratio: [1, "of the unoscillated rate"] }[quantity] || UNITS[$("unit").value];
   const [spectrumScale, spectrumUnit] = quantity === "ratio" ? UNITS.kt : [scale, unit]; // the ratio's spectrum: the rate's
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
-  app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux };
+  const check = CHECKS.find((c) => c.id === $("check").value) || null;
+  app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check };
   render();
   setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
@@ -473,10 +519,10 @@ function render() {
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
-    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}${measuredLine(r)}`;
+    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}${publishedLine(r)}${measuredLine(r)}`;
   renderFlux();
   spectrumPlot($("plot-spectrum"), r);
-  distributionPlot($("plot-distribution"), r, measuredBand(setup, quantity));
+  distributionPlot($("plot-distribution"), r, checkBand(r) || measuredBand(setup, quantity));
   budgetPlot($("plot-budget"), r);
   const cell = (v) => (Number.isFinite(v) ? fmt(v * scale) : "–");
   $("table").innerHTML = `<table><thead><tr><th>Source</th><th>Kind</th><th class="num">σ or range</th><th class="num">Relative</th></tr></thead><tbody>${
@@ -638,15 +684,42 @@ function templates() {
 }
 
 function applyPreset(name) {
-  const values = PRESETS[name];
+  applyValues(PRESETS[name]);
+}
+
+function applyValues(values) {
   if (!values) return;
   for (const id of ["detector", "channel"]) if (id in values) { $(id).value = values[id]; sync(); }
   for (const [id, v] of Object.entries(values)) {
     if (["detector", "channel"].includes(id)) continue;
     if (id === "components") document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = v.includes(x.value); });
-    else if (id === "quantity" || id === "period" || id === "b8") setRadio(id, v);
+    else if (id === "quantity" || id === "period" || id === "b8" || id === "es") setRadio(id, v);
     else $(id).value = v;
   }
+}
+
+// every field a check may leave untouched, at its default: a check sets the whole page
+const CHECK_BASE = { set: "nufit60_global", solar: "b23_gs98", b8: "model", es: "bks", earth: "prem_full", "res-model": "quadrature",
+                     "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, "eff-width": 0.5, mass: "", years: "",
+                     "unc-scale": 0, "unc-res": 0, "unc-norm": 0, quantity: "rate", period: "annual", unit: "kt" };
+const STEP5 = ["threshold", "res-model", "res-a", "res-b", "eff-model", "eff", "eff-e50", "eff-width", "mass", "years", "unc-scale", "unc-res", "unc-norm"];
+
+function applyCheck(id) {
+  const c = CHECKS.find((x) => x.id === id);
+  if (!c) return;
+  const { preset, ...values } = c.values;
+  applyValues(CHECK_BASE);
+  $("preset").value = preset;
+  applyPreset(preset);
+  applyValues(values);
+  if (c.window) { // an energy window: the efficiency as a step from its low to its high edge
+    const [lo, hi] = c.window;
+    app.imports.efficiency = { id: `window:${lo}-${hi}`, x: [lo, hi - 1e-3, hi], y: [1, 1, 0], name: `${lo}–${hi} MeV window`,
+                               summary: `${lo}–${hi} MeV, from the published check` };
+    $("eff-model").value = "import";
+    $("eff-info").textContent = `Energy window ${lo}–${hi} MeV (set by the published check).`;
+  }
+  if (c.window || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
 }
 
 function refreshSources() {
@@ -681,7 +754,10 @@ async function init() {
       if (app.result && app.result.quantity === "rate") [app.result.scale, app.result.unit] = UNITS[e.target.value];
       saveHash(); render(); return;
     }
+    if (e.target.id === "check") applyCheck(e.target.value);
+    else if (e.target.closest(".step")) $("check").value = ""; // edited by hand: no longer the published setup
     if (e.target.id === "preset") applyPreset(e.target.value);
+    else if (e.target.id === "check") { /* set above */ }
     else if (e.target.closest('.step[data-step="5"]') || ($("preset").value === "thumb" && e.target.closest('.step[data-step="0"], .step[data-step="2"], .step[data-step="4"]')))
       $("preset").value = "custom"; // edited by hand: no longer the preset
     sync(); refreshSources(); schedule();
@@ -692,7 +768,7 @@ async function init() {
     button.setAttribute("aria-expanded", String(open));
     refreshSources();
   }));
-  $("controls").addEventListener("input", (e) => { if (e.target.type === "number") { sync(); schedule(); } });
+  $("controls").addEventListener("input", (e) => { if (e.target.type === "number") { $("check").value = ""; sync(); schedule(); } });
   $("share").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(location.href); status("Link copied."); }
     catch { status(`Link: ${location.href}`); }

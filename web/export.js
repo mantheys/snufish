@@ -31,7 +31,8 @@ function spectrumColumns(result) {
 function commands(result) {
   const adn = result.quantity === "adn", column = adn ? "Asymmetry" : result.setup.period.replace(/^./, (x) => x.toUpperCase());
   const spectrum = `line --no_error --datafile AppSpectrum -x Energy -y ${column} --hue Component --plot_type step --logx `
-    + (adn ? "--select Component -s total --labely 'A_DN (%)' " : "--logy --labely 'Interactions / (kt yr) per bin' ")
+    + (adn ? "--select Component -s total --labely 'A_DN (%)' "  // rates: the components alone, as on the page
+           : `--select Component -s ${result.setup.components.map((c) => DISPLAY[c]).join(" ")} --logy --labely 'Interactions / (kt yr) per bin' `)
     + `--labelx '${result.spectra.observable}' --output_suffix spectrum`;
   const size = adn ? "Uncertainty (%)" : "Relative uncertainty (%)";
   return [
