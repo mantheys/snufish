@@ -109,9 +109,10 @@ export function spectrumPlot(node, result) {
     const err = total.map((t, b) => Math.hypot(half[b], Math.sqrt(Math.max(t, 0) / live)));
     low = total.map((t, b) => t - err[b]); high = total.map((t, b) => t + err[b]);
   }
-  const floor = Math.max(...total) * 1e-6, clip = (v) => (v > floor ? v : null); // log axis: hide empty bins
-  traces.push(...bandTraces(c, edges, low.map((v, b) => (total[b] > floor ? Math.max(v, floor) : null)),
-                            high.map((v, b) => (total[b] > floor ? v : null))));
+  // computed per kt yr; shown in the chosen unit (k per kt yr); log axis: empty bins hidden
+  const k = result.scale, floor = Math.max(...total) * 1e-6, clip = (v) => (v > floor ? v * k : null);
+  traces.push(...bandTraces(c, edges, low.map((v, b) => (total[b] > floor ? Math.max(v, floor) * k : null)),
+                            high.map((v, b) => (total[b] > floor ? v * k : null))));
   if (setup.components.length > 1) {
     for (const comp of setup.components) {
       const values = pickPeriod(setup.period, spectra.components[comp].day, spectra.components[comp].night);
@@ -122,7 +123,7 @@ export function spectrumPlot(node, result) {
   traces.push({ ...stairs(edges, total.map(clip)), mode: "lines", name: "total", line: { color: c.text, width: 2.4 },
                 hovertemplate: "%{y:.4g}<extra>total</extra>" });
   const title = `Interactions per energy bin (${setup.period})` + (live ? ", band with statistics" : "");
-  return Plotly.react(node, traces, layout(c, node, title, spectra.observable, "Interactions / (kt·yr) per bin",
+  return Plotly.react(node, traces, layout(c, node, title, spectra.observable, `Interactions ${result.unit}, per bin`,
     { xaxis: energyAxis(edges, total, floor), yaxis: { type: "log", dtick: 1, exponentformat: "power" }, hovermode: "x unified" }), CONFIG);
 }
 
@@ -158,7 +159,7 @@ export function distributionPlot(node, result, measured) {
   const name = quantity === "adn" ? "A_DN" : "Rate";
   return Plotly.react(node, [trace], layout(c, node, quantity === "adn" ? "Sampled A_DN and model ranges" : "Sampled rates and model ranges", `${name} (${unit})`, "Draws",
     { shapes, annotations, showlegend: false, bargap: 0, margin: { l: 50, r: 16, t: 24, b: 48 },
-      xaxis: { range: [lo - pad, hi + pad] }, yaxis: { range: [0, top * (1.25 + 0.2 * ranges.length)] } }), CONFIG);
+      xaxis: { range: [lo - pad, hi + pad], exponentformat: "power" }, yaxis: { range: [0, top * (1.25 + 0.2 * ranges.length)] } }), CONFIG);
 }
 
 export function budgetSizes(rows, quantity, scale) {

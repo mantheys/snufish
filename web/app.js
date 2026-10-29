@@ -20,6 +20,7 @@ const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first 
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
+const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"] }; // x per kt yr
 const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
 // Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
 // (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
@@ -28,8 +29,8 @@ const PRESETS = {
   // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector
   thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
            "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
-           components: ORDER, quantity: "rate", period: "annual" },
-  sk4: { detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
+           components: ORDER, quantity: "rate", period: "annual", unit: "g" },
+  sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
          mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
 };
 const PRESET_NOTES = {
@@ -159,7 +160,7 @@ function sync() {
   $("xsec-row").hidden = models.length < 2;
   const comps = [...document.querySelectorAll('input[name="components"]:checked')].map((x) => x.value);
   $("b8-row").hidden = !comps.includes("B8");
-  $("period-row").hidden = radio("quantity") !== "rate";
+  $("period-row").hidden = $("unit-row").hidden = radio("quantity") !== "rate";
   const night = engine.needsNight(radio("quantity"), radio("period"));
   $("site").disabled = $("earth").disabled = !night;
   $("earth-note").textContent = night
@@ -176,7 +177,7 @@ function sync() {
 const KEYS = { set: "set", solar: "solar", site: "site", earth: "earth", detector: "target", channel: "channel",
                xsec: "xsec", preset: "preset", threshold: "threshold", "res-model": "resolution", "res-a": "a", "res-b": "b",
                eff: "eff", "eff-e50": "e50", "eff-width": "width", mass: "mass", years: "years", "unc-scale": "dscale",
-               "unc-res": "dres", "unc-norm": "dnorm", "eff-model": "efficiency" };
+               "unc-res": "dres", "unc-norm": "dnorm", "eff-model": "efficiency", unit: "unit" };
 const RADIOS = { b8: "b8", es: "es", quantity: "q", period: "period" };
 
 function saveHash() {
@@ -215,8 +216,9 @@ const grouped = (v, decimals) => v.toLocaleString("en-US", { minimumFractionDigi
 
 function fmt(value, error) {
   // a value alone to 3-4 significant figures; with an error, both to the error's two significant figures;
-  // from 1e5 on, in scientific notation with a common power of ten
-  const big = Math.abs(value) >= 1e5, e = big ? Math.floor(Math.log10(Math.abs(value))) : 0, k = 10 ** e;
+  // from 1e5 on and below 1e-2, in scientific notation with a common power of ten
+  const big = Math.abs(value) >= 1e5 || (value !== 0 && Math.abs(value) < 1e-2);
+  const e = big ? Math.floor(Math.log10(Math.abs(value))) : 0, k = 10 ** e;
   if (!(error > 0) || !Number.isFinite(error)) {
     if (big) return `${(value / k).toFixed(2)} × ${power(e)}`;
     return value.toLocaleString("en-US", { maximumSignificantDigits: Math.abs(value) >= 1000 ? 4 : 3 });
@@ -284,7 +286,7 @@ async function compute() {
   const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
   const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
   const ms = performance.now() - t0;
-  const [scale, unit] = quantity === "adn" ? [100, "%"] : [1, "per kt·yr"];
+  const [scale, unit] = quantity === "adn" ? [100, "%"] : UNITS[$("unit").value];
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
   app.result = { setup, quantity, rows, samples, spectra, scale, unit, live, set: $("set").value, ms, flux };
   render();
@@ -362,7 +364,7 @@ function render() {
   const total = rows.find((x) => x.Source === "total sampled"), central = total.Central;
   const sampled = rows.filter((x) => x.Kind === "sampled" && x.Source !== "total sampled").map((x) => x.Source);
   const ranges = rows.filter((x) => x.Kind === "model range").map((x) => quantity === "rate"
-    ? `${x.Source}: ${fmt(x.Low)} to ${fmt(x.High)} (${signed(100 * (x.Low / central - 1))} % / ${signed(100 * (x.High / central - 1))} %)`
+    ? `${x.Source}: ${fmt(x.Low * scale)} to ${fmt(x.High * scale)} (${signed(100 * (x.Low / central - 1))} % / ${signed(100 * (x.High / central - 1))} %)`
     : `${x.Source}: ${(x.Low * scale).toFixed(3)} to ${(x.High * scale).toFixed(3)} %`);
   const events = live && quantity === "rate"
     ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
@@ -573,6 +575,10 @@ async function init() {
   loadHash();
   sync();
   $("controls").addEventListener("change", (e) => {
+    if (e.target.id === "unit") {
+      if (app.result && app.result.quantity === "rate") [app.result.scale, app.result.unit] = UNITS[e.target.value];
+      saveHash(); render(); return;
+    }
     if (e.target.id === "preset") applyPreset(e.target.value);
     else if (e.target.closest('.step[data-step="5"]') || ($("preset").value === "thumb" && e.target.closest('.step[data-step="0"], .step[data-step="2"], .step[data-step="4"]')))
       $("preset").value = "custom"; // edited by hand: no longer the preset
