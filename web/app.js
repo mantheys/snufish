@@ -12,6 +12,19 @@ const XSEC = { default: "SNOwGLoBES default", ar40_klmv: "KLMV", ar40_marley: "M
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
+// Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
+// (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
+const SK4_RESOLUTION = [-0.05525, 0.3162, 0.04572];
+const PRESETS = {
+  sk4: { detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", eff: 100, "eff-e50": 0,
+         mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
+};
+const PRESET_NOTES = {
+  custom: "",
+  sk4: "Super-K IV as published (arXiv:2312.12907): resolution, threshold, fiducial mass, live time and detector uncertainties. "
+     + "Its selection efficiency is only published as a figure (fig. 28) and is not included (100 %). "
+     + "Without it, the energy-scale effect on the rate comes out ±0.5 % against Super-K's ±0.8 % (table IV).",
+};
 
 const $ = (id) => document.getElementById(id);
 const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
@@ -86,8 +99,10 @@ function readSetup() {
     b8_flux: radio("b8"), site: $("site").value, earth_model: $("earth").value, detector: $("detector").value,
     channel: $("channel").value, xsec_model: $("xsec").value || "default", es_model: radio("es"),
     period: radio("period"), threshold: number("threshold"), resolution_a: number("res-a"),
-    resolution_b: number("res-b") / 100, efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"),
-    efficiency_width: number("eff-width", 0.5), exposure: exposure(),
+    resolution_b: number("res-b") / 100, resolution_poly: $("res-model").value === "sk4" ? SK4_RESOLUTION : [],
+    efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"), efficiency_width: number("eff-width", 0.5),
+    energy_scale_error: number("unc-scale") / 100, resolution_error: number("unc-res") / 100,
+    normalisation_error: number("unc-norm") / 100, exposure: exposure(),
   });
 }
 
@@ -98,6 +113,8 @@ function sync() {
   fillSelect($("channel"), channels.map((c) => [c, CHANNELS[c] || c]), $("channel").value);
   const es = $("channel").value === "es";
   $("es-row").hidden = !es;
+  $("res-ab").hidden = $("res-model").value !== "quadrature";
+  $("preset-note").textContent = PRESET_NOTES[$("preset").value];
   $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
   const q = d.visible_offset_MeV[$("channel").value];
   $("observable-note").textContent = es
@@ -126,8 +143,9 @@ function sync() {
 // ------------------------------------------------------------------ URL state
 
 const KEYS = { set: "set", solar: "solar", site: "site", earth: "earth", detector: "target", channel: "channel",
-               xsec: "xsec", threshold: "threshold", "res-a": "a", "res-b": "b", eff: "eff", "eff-e50": "e50",
-               "eff-width": "width", mass: "mass", years: "years" };
+               xsec: "xsec", preset: "preset", threshold: "threshold", "res-model": "resolution", "res-a": "a", "res-b": "b",
+               eff: "eff", "eff-e50": "e50", "eff-width": "width", mass: "mass", years: "years", "unc-scale": "dscale",
+               "unc-res": "dres", "unc-norm": "dnorm" };
 const RADIOS = { b8: "b8", es: "es", quantity: "q", period: "period" };
 
 function saveHash() {
@@ -229,11 +247,13 @@ async function compute() {
   app.tables.clamped = 0;
   const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange });
   const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
+  const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
   const ms = performance.now() - t0;
   const [scale, unit] = quantity === "adn" ? [100, "%"] : [1, "per kt·yr"];
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
-  app.result = { setup, quantity, rows, samples, spectra, scale, unit, live, set: $("set").value, ms };
+  app.result = { setup, quantity, rows, samples, spectra, scale, unit, live, set: $("set").value, ms, flux };
   render();
+  setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
   const notes = [];
   if (app.tables.clamped) notes.push(`${app.tables.clamped} sampled points fell outside the tables and were moved to their edge.`);
@@ -243,6 +263,54 @@ async function compute() {
     notes.push("This solar model publishes no flux uncertainties: no flux error is sampled.");
   status(notes.join(" ")); // the timing goes in the result box (render)
   $("download").disabled = $("share").disabled = $("render").disabled = false;
+}
+
+// Target densities (g/cm^3), for the cross-section area of a 1 kt cube: water; liquid argon at its boiling point.
+const DENSITY = { water: 1.0, argon: 1.3954 };
+const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
+
+function renderFlux() {
+  const r = app.result, f = r.flux, d = app.inputs.data, card = $("flux");
+  const names = r.setup.components.map((c) => engine.DISPLAY[c]).join(", ");
+  const per = r.setup.components.length > 1
+    ? `<div class="sub">${r.setup.components.map((c) => `${engine.DISPLAY[c]} ${fmt(f.components[c][0])}`).join(" · ")}</div>` : "";
+  let compare = "";
+  if (r.quantity === "rate") {
+    const side = (1e9 / DENSITY[r.setup.detector]) ** (1 / 3), crossing = f.total * side ** 2 * d.seconds_per_year;
+    const rate = r.rows[0].Central;
+    compare = `<div><h4>Flux against rate</h4><p>A 1 kt ${r.setup.detector === "water" ? "water" : "liquid-argon"} cube
+      (${(side / 100).toFixed(1)} m side) is crossed by <b>${fmt(crossing)}</b> of these neutrinos a year;
+      <b>${fmt(rate)}</b> are counted (${r.setup.period}, this channel and detector): one in <b>${fmt(crossing / rate)}</b>.</p></div>`;
+  }
+  card.innerHTML = `<div><h4>Flux at Earth</h4><div class="big">${fmt(f.total)} <small>cm⁻² s⁻¹</small></div>
+      <div class="sub">${names} (${d.solar_models[r.setup.solar_model].label}); νₑ by day ${(100 * f.nue_day).toFixed(1)} %</div>${per}</div>
+    ${compare}<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>`;
+  card.hidden = false;
+  if (app.thumb && app.thumb.key === thumbKey()) showThumb();
+}
+
+const thumbKey = () => `${$("set").value}|${$("solar").value}`;
+
+async function thumb() {
+  // every solar neutrino through a thumbnail, and how often they scatter in a thumb: all components, ES on the
+  // electrons of water, no threshold, by day, central parameters of the chosen set and solar model
+  const key = thumbKey();
+  if (!app.inputs || (app.thumb && app.thumb.key === key)) { if (app.thumb) showThumb(); return; }
+  const setup = engine.makeSetup({ solar_model: $("solar").value, components: ORDER, detector: "water", channel: "es" });
+  const osc = engine.oscillation(engine.parameters(app.inputs, $("set").value));
+  await app.tables.ensure([`day_${setup.solar_model}`]);
+  const per = engine.componentTotals(app.inputs, app.tables, setup, osc, false);
+  const rate = engine.combine(per, ORDER)[0]; // per kt yr
+  app.thumb = { key, flux: engine.fluxSummary(app.inputs, app.tables, setup, osc).total, perYear: rate * THUMB_GRAMS * 1e-9 };
+  showThumb();
+}
+
+function showThumb() {
+  const t = app.thumb, node = $("thumb");
+  if (!node) return;
+  node.innerHTML = `<h4>Your thumb against the Sun</h4><p>A thumbnail (≈ 1 cm²) held up to the Sun is crossed by
+    <b>${fmt(t.flux)}</b> solar neutrinos every second (all components). Of all of them, the ≈ ${THUMB_GRAMS} g of water
+    in a thumb sees one scatter on an electron about once every <b>${fmt(1 / t.perYear)}</b> years.</p>`;
 }
 
 function render() {
@@ -255,13 +323,14 @@ function render() {
     ? `${x.Source}: ${fmt(x.Low)} to ${fmt(x.High)} (${signed(100 * (x.Low / central - 1))} % / ${signed(100 * (x.High / central - 1))} %)`
     : `${x.Source}: ${(x.Low * scale).toFixed(3)} to ${(x.High * scale).toFixed(3)} %`);
   const events = live && quantity === "rate"
-    ? `<div class="sub">Expected interactions in ${setup.exposure} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
+    ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
     <div class="what"><span>${describe(setup, quantity)} · ${app.inputs.data.parameter_sets.sets[r.set].label}</span>
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
     <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>`;
+  renderFlux();
   spectrumPlot($("plot-spectrum"), r);
   distributionPlot($("plot-distribution"), r, measuredBand(setup, quantity));
   budgetPlot($("plot-budget"), r);
@@ -338,13 +407,20 @@ async function renderPlotipus() {
   }
 }
 
+function applyPreset(name) {
+  const values = PRESETS[name];
+  if (!values) return;
+  for (const id of ["detector", "channel"]) if (id in values) { $(id).value = values[id]; sync(); }
+  for (const [id, v] of Object.entries(values)) if (!["detector", "channel"].includes(id)) $(id).value = v;
+}
+
 function refreshSources() {
   // the open info boxes follow the current selection
   if (!app.inputs) return;
   const setup = readSetup(), quantity = radio("quantity");
   document.querySelectorAll(".step").forEach((step) => {
     const box = step.querySelector(".sources-box");
-    if (!box.hidden) box.innerHTML = renderSources(forStep(Number(step.dataset.step), setup, quantity, app.inputs, $("set").value));
+    if (!box.hidden) box.innerHTML = renderSources(forStep(Number(step.dataset.step), setup, quantity, app.inputs, $("set").value, $("preset").value));
   });
 }
 
@@ -361,7 +437,11 @@ async function init() {
   sync();
   loadHash();
   sync();
-  $("controls").addEventListener("change", () => { sync(); refreshSources(); schedule(); });
+  $("controls").addEventListener("change", (e) => {
+    if (e.target.id === "preset") applyPreset(e.target.value);
+    else if (e.target.closest('.step[data-step="5"]')) $("preset").value = "custom"; // edited by hand: no longer the preset
+    sync(); refreshSources(); schedule();
+  });
   document.querySelectorAll("button.info").forEach((button) => button.addEventListener("click", () => {
     const box = button.closest(".step").querySelector(".sources-box"), open = box.hidden;
     box.hidden = !open;

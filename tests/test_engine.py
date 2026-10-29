@@ -177,7 +177,7 @@ def test_resolution_efficiency_and_threshold(inputs):
         return engine.totals(engine.observed_rates(inputs, Vacuum(), setup, osc, False))["B8"]["day"]
 
     perfect = rate()
-    assert rate(resolution_a=0.2, resolution_b=0.05) == pytest.approx(perfect, rel=1e-3)  # smearing keeps events
+    assert rate(resolution_a=0.2, resolution_b=0.05) == pytest.approx(perfect, rel=1e-9)  # smearing keeps events
     assert rate(efficiency=0.8) == pytest.approx(0.8 * perfect, rel=1e-12)
     assert rate(efficiency_e50=5.0, efficiency_width=0.5) < rate(efficiency_e50=2.0, efficiency_width=0.5) < perfect
     assert rate(threshold=8.0) < rate(threshold=5.0) < perfect
@@ -213,3 +213,37 @@ def test_fast_paths_match_the_reference(inputs, changes):
         for p in ("day", "night"):
             assert fast[c][p] == pytest.approx(r[p].sum(), rel=1e-10)
             assert spectra[c][p] == pytest.approx(engine.rebin(r[p], fine, display), rel=1e-9, abs=1e-12 * r[p].sum())
+
+
+SK_IV = dict(threshold=3.49, resolution_poly=(-0.05525, 0.3162, 0.04572))  # arXiv:2312.12907, eq. 9
+
+
+def test_energy_scale_and_super_k_resolution(inputs):
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+
+    def rate(**changes):
+        return engine.totals(engine.observed_rates(inputs, Vacuum(), engine.Setup(**changes), osc, False))["B8"]["day"]
+
+    base = rate(threshold=3.49)
+    # a higher energy scale moves events up across the threshold; the shift is small and smooth
+    up, down = rate(threshold=3.49, energy_scale=1.005), rate(threshold=3.49, energy_scale=0.995)
+    assert down < base < up and (up - down) / base == pytest.approx(0.0096, abs=0.002)  # ~1 % per 1 % of scale
+    assert rate(threshold=0.0, energy_scale=1.02) == pytest.approx(rate(threshold=0.0), rel=1e-6)  # no threshold: no change
+    sk = rate(**SK_IV)
+    sigma = engine.resolution(inputs, engine.Setup(**SK_IV), np.array([3.49, 10.0 - 0.511]))
+    assert sigma == pytest.approx([-0.05525 + 0.3162 * 2 + 0.04572 * 4.001, -0.05525 + 0.3162 * 10 ** 0.5 + 0.4572], rel=1e-3)
+    # Super-K's sigma grows with energy (0.76 MeV at the threshold, 0.4 MeV at 1 MeV): more events spread down
+    # across the threshold than up, though the recoil spectrum falls; the rate above it drops by ~1.5 %
+    assert sk == pytest.approx(0.985 * base, rel=0.005)
+    assert rate(resolution_poly=SK_IV["resolution_poly"]) == pytest.approx(rate(), rel=1e-9)  # smearing keeps every event
+
+
+def test_detector_uncertainties_in_the_budget(inputs):
+    params = engine.parameters(inputs, "juno_2025")
+    setup = engine.Setup(**SK_IV, energy_scale_error=0.0048, resolution_error=0.03, normalisation_error=0.011)
+    rows, _ = engine.budget(inputs, Vacuum(), setup, params, "rate", n=300, ranges=())
+    sigma = {r["Source"]: r["Relative"] for r in rows}
+    assert sigma["detector normalisation (±1.1 %)"] == pytest.approx(0.011, rel=0.15)
+    assert 0 < sigma["energy scale (±0.48 %)"] < 0.02 and 0 < sigma["energy resolution (±3 %)"] < 0.02
+    rows, _ = engine.budget(inputs, Vacuum(), setup, params, "adn", n=50, ranges=())
+    assert not any("normalisation" in r["Source"] for r in rows)  # cancels in the asymmetry

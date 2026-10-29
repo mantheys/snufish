@@ -167,3 +167,11 @@ ul.plain { margin: 0; padding-left: 18px; color: var(--text-secondary); font-siz
 ul.plain li { margin: 4px 0; }
 .credits-title { margin: 8px 0 0; font-size: 1.15rem; }
 .credits ul.sources { font-size: 0.85rem; }
+
+.flux { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 24px; padding: 12px 16px; }
+.flux h4 { margin: 0 0 4px; font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
+.flux p { margin: 0; font-size: 0.88rem; color: var(--text-secondary); }
+.flux b { color: var(--text-primary); }
+.flux .big { font-size: 1.5rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.flux .big small, .flux .sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+.flux .sub { margin-top: 2px; }

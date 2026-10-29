@@ -34,7 +34,9 @@ const nan = (v) => (v === null ? NaN : v);
 
 for (const c of fixtures.cases) {
   const setup = engine.makeSetup(c.setup), params = c.params;
-  const given = { osc: c.draws.osc, flux: c.draws.flux, statNoise: c.draws.stat_noise };
+  const given = { osc: c.draws.osc, flux: c.draws.flux, noise: c.draws.noise };
+  const f = engine.fluxSummary(inputs, tables, setup, engine.oscillation(params));
+  close(f.total, c.flux.total, `${c.name} flux`); close(f.nue_day, c.flux.nue_day, `${c.name} nue fraction`);
   const { rows } = engine.budget(inputs, tables, setup, params, c.quantity, { solarRange: c.solar_range, given });
   if (rows.length !== c.rows.length) { failures++; console.log(`  ${c.name}: ${rows.length} rows vs ${c.rows.length}`); }
   rows.forEach((r, i) => {

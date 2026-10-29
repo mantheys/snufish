@@ -155,6 +155,13 @@ class Setup:
     efficiency: float = 1.0         # plateau
     efficiency_e50: float = 0.0     # MeV where the efficiency reaches half its plateau (0: flat)
     efficiency_width: float = 0.5   # MeV, width of the logistic turn-on
+    resolution_poly: tuple = ()     # (c0, c1, c2): sigma = c0 + c1 sqrt(E) + c2 E in place of a, b, with E the
+                                    # total electron energy for ES (T + m_e), as Super-K publishes it
+    energy_scale: float = 1.0       # observed energy = scale x true (for the energy-scale uncertainty)
+    resolution_scale: float = 1.0   # sigma multiplied by this (for the resolution uncertainty)
+    energy_scale_error: float = 0.0     # detector uncertainties (fractions, 1 sigma), sampled in the budget:
+    resolution_error: float = 0.0       # on the energy scale, on sigma,
+    normalisation_error: float = 0.0    # and on the rate (efficiencies, fiducial volume, cuts...)
     exposure: float = None          # kton-years, for the statistical uncertainty
     profile_model: str = None       # solar model of the day fractions, if not solar_model
 
@@ -200,6 +207,13 @@ def check(inputs, setup, quantity="rate"):
     within("the efficiency", setup.efficiency, 0.0, 1.0)
     within("the efficiency turn-on (MeV)", setup.efficiency_e50, 0.0, OBSERVED_MAX)
     within("the turn-on width (MeV)", setup.efficiency_width, 1e-3, 10.0)
+    if len(setup.resolution_poly) not in (0, 3):
+        raise ValueError("resolution_poly takes three coefficients (c0, c1, c2)")
+    within("the energy scale", setup.energy_scale, 0.5, 1.5)
+    within("the resolution scale", setup.resolution_scale, 0.0, 3.0)
+    within("the energy-scale uncertainty", setup.energy_scale_error, 0.0, 0.2)
+    within("the resolution uncertainty", setup.resolution_error, 0.0, 1.0)
+    within("the normalisation uncertainty", setup.normalisation_error, 0.0, 1.0)
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
     if setup.exposure is not None and setup.exposure <= 0:
@@ -268,21 +282,47 @@ def _kernels(inputs, setup, component, edges):
     return cache[key]
 
 
+def resolution(inputs, setup, energy):
+    """sigma (MeV) at observed energies: sqrt((a sqrt(E))^2 + (b E)^2), or Super-K's
+    c0 + c1 sqrt(E) + c2 E in total electron energy (ES); times resolution_scale."""
+    energy = np.asarray(energy, dtype=float)
+    if setup.resolution_poly:
+        c0, c1, c2 = setup.resolution_poly
+        total = energy + (inputs["constants"]["m_e_MeV"] if setup.channel == "es" else 0.0)
+        sigma = np.maximum(c0 + c1 * np.sqrt(total) + c2 * total, 0.0)
+    else:
+        sigma = np.hypot(setup.resolution_a * np.sqrt(energy), setup.resolution_b * energy)
+    return setup.resolution_scale * sigma
+
+
+def _response_key(setup):
+    return (setup.channel == "es", setup.threshold, setup.resolution_a, setup.resolution_b, tuple(setup.resolution_poly),
+            setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width)
+
+
 def _response(inputs, setup, edges):
-    """(matrix [true bin, observed bin], acceptance per observed bin): Gaussian
-    resolution, efficiency and threshold. Identity and ones for a perfect detector."""
-    key = (setup.threshold, setup.resolution_a, setup.resolution_b, setup.efficiency, setup.efficiency_e50,
-           setup.efficiency_width)
+    """(matrix [true bin, observed bin], acceptance per observed bin): energy scale,
+    Gaussian resolution, efficiency and threshold. Identity and ones for a perfect detector."""
+    key = _response_key(setup)
     cache = inputs.__dict__.setdefault("_responses", {})
     if key not in cache:
         centres = 0.5 * (edges[1:] + edges[:-1])
-        sigma = np.hypot(setup.resolution_a * np.sqrt(centres), setup.resolution_b * centres)
+        sigma = resolution(inputs, setup, centres)
+        scale = setup.energy_scale
         matrix = np.eye(len(centres))
+        if scale != 1.0:  # without resolution: each bin's content spread uniformly over its scaled width
+            low, high = scale * edges[:-1], scale * edges[1:]
+            overlap = np.clip(np.minimum(high[:, None], edges[None, 1:]) - np.maximum(low[:, None], edges[None, :-1]), 0, None)
+            matrix = overlap / (high - low)[:, None]
+            matrix[:, -1] += 1 - matrix.sum(axis=1)  # scaled beyond the last edge: kept in the last bin
         smeared = sigma > 0
         if np.any(smeared):
             cdf = np.vectorize(lambda z: 0.5 * (1 + erf(z / np.sqrt(2))))
-            z = (edges[None, :] - centres[smeared, None]) / sigma[smeared, None]
-            matrix[smeared] = np.diff(cdf(z), axis=1)  # what falls below 0 or above the last edge is lost
+            z = (edges[None, :] - scale * centres[smeared, None]) / sigma[smeared, None]
+            rows = np.diff(cdf(z), axis=1)
+            rows[:, 0] += cdf(z[:, 0])         # smeared below 0: the first bin (below any threshold)
+            rows[:, -1] += 1 - cdf(z[:, -1])   # above the last edge: the last bin
+            matrix[smeared] = rows
         acceptance = np.full(len(centres), setup.efficiency)
         if setup.efficiency_e50 > 0:
             acceptance = acceptance / (1 + np.exp(-(centres - setup.efficiency_e50) / setup.efficiency_width))
@@ -353,13 +393,12 @@ def _prepared(inputs, setup, component):
     costs one short product per component: for each true bin, the accepted
     fraction g = R a; ES also the kernels times g (totals) and times R, a and the
     display re-binning (spectra)."""
-    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold,
-           setup.resolution_a, setup.resolution_b, setup.efficiency, setup.efficiency_e50, setup.efficiency_width)
+    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model) + _response_key(setup)
     cache = inputs.__dict__.setdefault("_prepared", {})
     if key not in cache:
         edges, display = observed_edges(setup.threshold)
         matrix, acceptance = _response(inputs, setup, edges)
-        identity = np.array_equal(matrix, np.eye(len(matrix)))
+        identity = bool(np.array_equal(matrix, np.eye(len(matrix))))
 
         def observe(rows):  # true bins (last axis) -> accepted, display-binned observed bins
             smeared = rows if identity else rows @ matrix
@@ -413,6 +452,17 @@ def component_totals(inputs, probabilities, setup, osc, night=True):
 def component_spectra(inputs, probabilities, setup, osc, night=True):
     """{component: {"day", "night"}} per display bin of observed energy (= observed_rates re-binned)."""
     return _fast(inputs, probabilities, setup, osc, night, spectra=True)
+
+
+def flux_summary(inputs, probabilities, setup, osc):
+    """Flux at Earth of the selected components (cm^-2 s^-1) and the flux-weighted
+    nu_e fraction by day: dict(total, nue_day, components={c: (flux, mean P_ee by day)})."""
+    out = {}
+    for c, (pee, _) in survival(inputs, probabilities, setup, osc, night=False).items():
+        kind, energy, weight = inputs.components[c]
+        out[c] = (inputs.flux(setup.solar_model, c, setup.b8_flux), float(_quadrature(kind, energy, weight) @ pee))
+    total = sum(f for f, _ in out.values())
+    return dict(total=total, nue_day=sum(f * p for f, p in out.values()) / total, components=out)
 
 
 def totals(rates):
@@ -527,6 +577,10 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
     if stat is not None:
         sampled(f"statistics ({setup.exposure:g} kt yr)", central + stat * rng.standard_normal(n))
         total = total + stat * rng.standard_normal(n)
+    for source, sigma in detector_sigmas(inputs, probabilities, setup, params, quantity, central, night):
+        z = rng.standard_normal(n)  # one Gaussian draw per source: its row and its share of the total
+        sampled(source, central + sigma * z)
+        total = total + sigma * z
     sampled("total sampled", total)
 
     for choice in ranges:
@@ -545,6 +599,32 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         rows.append(dict(Source=label, Kind="model range", Central=central, Sigma=np.nan,
                          Relative=_relative(max(high - central, central - low), central), Low=low, High=high))
     return rows, samples
+
+
+DETECTOR_SOURCES = ("energy_scale_error", "resolution_error", "normalisation_error")
+
+
+def detector_sigmas(inputs, probabilities, setup, params, quantity, central, night):
+    """[(source, sigma)] of the detector uncertainties that are set: the quantity at
+    the energy scale (or resolution) shifted by +-1 sigma, half the difference; the
+    normalisation scales a rate (and cancels in A_DN)."""
+    def value(s):
+        per = component_totals(inputs, probabilities, s, oscillation(params), night)
+        return quantity_value(quantity, s.period, *combine(per, list(s.components)))
+
+    out = []
+    if setup.energy_scale_error > 0:
+        e = setup.energy_scale_error
+        up, down = (value(setup.replace(energy_scale=setup.energy_scale * (1 + k * e))) for k in (1, -1))
+        out.append((f"energy scale (±{100 * e:g} %)", abs(up - down) / 2))
+    if setup.resolution_error > 0:
+        r = setup.resolution_error
+        up, down = (value(setup.replace(resolution_scale=setup.resolution_scale * (1 + k * r))) for k in (1, -1))
+        out.append((f"energy resolution (±{100 * r:g} %)", abs(up - down) / 2))
+    if setup.normalisation_error > 0 and quantity == "rate":
+        out.append((f"detector normalisation (±{100 * setup.normalisation_error:g} %)",
+                    abs(central) * setup.normalisation_error))
+    return out
 
 
 def _relative(error, central):

@@ -85,12 +85,20 @@
     <section class="step" data-step="5">
       <h2><span>5</span> Detector <button type="button" class="info" data-step="5" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
+      <label>Preset <select id="preset">
+        <option value="custom">Custom</option>
+        <option value="sk4">Super-K IV (2970 days)</option>
+      </select></label>
+      <p id="preset-note" class="hint"></p>
       <p id="observable-note" class="hint"></p>
       <label><span id="threshold-label">Threshold (MeV)</span>
         <input id="threshold" type="number" min="0" max="25" step="0.01" value="3.49"></label>
       <div class="field">
-        <span class="field-label">Energy resolution σ = √((a√E)² + (bE)²)</span>
-        <div class="row">
+        <label>Energy resolution <select id="res-model">
+          <option value="quadrature">σ = √((a√E)² + (bE)²)</option>
+          <option value="sk4">Super-K IV: σ = −0.05525 + 0.3162√E + 0.04572E (E: total energy, MeV)</option>
+        </select></label>
+        <div class="row" id="res-ab">
           <label>a (MeV<sup>½</sup>) <input id="res-a" type="number" min="0" max="2" step="0.01" value="0"></label>
           <label>b (%) <input id="res-b" type="number" min="0" max="100" step="0.1" value="0"></label>
         </div>
@@ -112,12 +120,21 @@
         </div>
         <p id="exposure-note" class="hint"></p>
       </div>
+      <div class="field">
+        <span class="field-label">Detector uncertainties (1σ, sampled)</span>
+        <div class="row three">
+          <label>energy scale (%) <input id="unc-scale" type="number" min="0" max="20" step="0.01" value="0"></label>
+          <label>resolution (%) <input id="unc-res" type="number" min="0" max="100" step="0.1" value="0"></label>
+          <label>rate (%) <input id="unc-norm" type="number" min="0" max="100" step="0.1" value="0" title="efficiencies, fiducial volume, cuts…"></label>
+        </div>
+      </div>
     </section>
   </form>
 
   <main class="results">
     <div id="status" class="status" role="status" aria-live="polite">Loading the inputs…</div>
     <section id="headline" class="headline"></section>
+    <section id="flux" class="card flux" hidden></section>
     <div class="trio"><!-- the same order as the plotipus figures: spectrum, sampled values, uncertainties -->
       <section class="card"><h3 class="plot-title"></h3><div id="plot-spectrum" class="plot"></div></section>
       <section class="card"><h3 class="plot-title"></h3><div id="plot-distribution" class="plot"></div></section>

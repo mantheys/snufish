@@ -170,17 +170,24 @@ export function budgetSizes(rows, quantity, scale) {
 }
 
 export function budgetPlot(node, result) {
+  // one bar per source, labelled A, B, C… on the axis and named in a legend grouped by kind (long names would
+  // squeeze the plot); the card grows with the number of sources so the legend never covers the axis
   const c = colours(), { rows, quantity, scale, unit } = result;
-  const sizes = budgetSizes(rows, quantity, scale), order = rows.map((_, i) => i).reverse();
+  const sizes = budgetSizes(rows, quantity, scale), letters = rows.map((_, i) => String.fromCharCode(65 + i));
   const fmt = (v) => (v >= 10 ? v.toFixed(1) : v >= 1 ? v.toFixed(2) : v.toPrecision(2));
-  const traces = [["sampled", "sampled 1σ", c.sampled], ["model range", "model range (largest deviation)", c.range]].map(([kind, name, colour]) => {
-    const pick = order.filter((i) => rows[i].Kind === kind);
-    return { type: "bar", orientation: "h", name, y: pick.map((i) => rows[i].Source), x: pick.map((i) => sizes[i]),
-             marker: { color: colour }, text: pick.map((i) => fmt(sizes[i])), textposition: "outside", cliponaxis: false,
-             textfont: { color: c.secondary, size: 11 }, hovertemplate: `%{y}: %{x:.3g}<extra>${name}</extra>` };
-  });
+  const traces = rows.map((r, i) => ({
+    type: "bar", orientation: "h", y: [letters[i]], x: [sizes[i]], name: `${letters[i]} · ${r.Source}`,
+    legendgroup: r.Kind, legendgrouptitle: { text: r.Kind === "sampled" ? "sampled 1σ" : "model range (largest deviation)" },
+    marker: { color: r.Kind === "sampled" ? c.sampled : c.range }, text: [fmt(sizes[i])], textposition: "outside",
+    cliponaxis: false, textfont: { color: c.secondary, size: 11 }, width: 0.7,
+    hovertemplate: `${r.Source}: %{x:.3g}<extra>${r.Kind}</extra>`,
+  }));
+  const kinds = new Set(rows.map((r) => r.Kind)).size, legend = 18 * rows.length + 22 * kinds;
+  node.style.height = `${260 + legend}px`;
   const xTitle = quantity === "rate" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
   return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
-    { barmode: "overlay", margin: { l: 10, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
-      yaxis: { categoryorder: "array", categoryarray: order.map((i) => rows[i].Source) } }), CONFIG);
+    { barmode: "overlay", margin: { l: 30, r: 16, t: 24, b: 56 + legend }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },
+      yaxis: { categoryorder: "array", categoryarray: [...letters].reverse() },
+      legend: { orientation: "v", yref: "container", y: 0, yanchor: "bottom", x: 0, xanchor: "left",
+                font: { size: 11, color: c.text }, grouptitlefont: { size: 11, color: c.secondary }, tracegroupgap: 6 } }), CONFIG);
 }

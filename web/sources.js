@@ -53,7 +53,7 @@ export function render(sources) {
   }).join("")}</ul>`;
 }
 
-export function forStep(step, setup, quantity, inputs, setName) {
+export function forStep(step, setup, quantity, inputs, setName, preset = "custom") {
   // the sources behind what is selected in one step of the calculator
   const d = inputs.data;
   if (step === 0) {
@@ -89,7 +89,15 @@ export function forStep(step, setup, quantity, inputs, setName) {
     if (setup.xsec_model.includes("klmv")) out.push(SOURCES.klmv);
     return out;
   }
-  return [S("Generic detector response: Gaussian resolution σ = √((a√E)² + (bE)²), a logistic efficiency turn-on and a hard threshold, all in observed energy (ES: electron kinetic energy; CC: E_ν − Q). Statistics: Poisson, no backgrounds.")];
+  const sk = "arXiv:2312.12907";
+  const out = [];
+  if (preset === "sk4" || setup.resolution_poly.length)
+    out.push(S("Super-K IV energy resolution: eq. 9", sk));
+  if (preset === "sk4")
+    out.push(S("Super-K IV threshold 3.49 MeV and other rate systematics ±1.1 %: table IV", sk),
+             S("Super-K IV energy scale ±0.48 %: table II; resolution ±3 %: sec. IV A 3", sk),
+             S("Super-K IV 22.5 kt fiducial volume (fig. 28) and 2970 days live time (sec. V A 1)", sk));
+  return [...out, S("Generic detector response: Gaussian resolution σ = √((a√E)² + (bE)²), a logistic efficiency turn-on and a hard threshold, all in observed energy (ES: electron kinetic energy; CC: E_ν − Q). Statistics: Poisson, no backgrounds.")];
 }
 
 // The home page's credits, grouped

@@ -164,6 +164,10 @@ export const DEFAULT_SETUP = {
   detector: "water", channel: "es", xsec_model: "default", es_model: "tree", period: "day",
   // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
   threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,
+  // Super-K style resolution [c0, c1, c2]: sigma = c0 + c1 sqrt(E) + c2 E, E the total electron energy for ES
+  resolution_poly: [], energy_scale: 1.0, resolution_scale: 1.0,
+  // detector uncertainties (fractions, 1 sigma), sampled in the budget: energy scale, sigma, rate normalisation
+  energy_scale_error: 0.0, resolution_error: 0.0, normalisation_error: 0.0,
   exposure: null, profile_model: null,
 };
 
@@ -197,6 +201,12 @@ export function check(inputs, setup, quantity = "rate") {
   within("the efficiency", setup.efficiency, 0, 1);
   within("the efficiency turn-on (MeV)", setup.efficiency_e50, 0, OBSERVED_MAX);
   within("the turn-on width (MeV)", setup.efficiency_width, 1e-3, 10);
+  if (![0, 3].includes(setup.resolution_poly.length)) throw new Error("resolution_poly takes three coefficients (c0, c1, c2)");
+  within("the energy scale", setup.energy_scale, 0.5, 1.5);
+  within("the resolution scale", setup.resolution_scale, 0, 3);
+  within("the energy-scale uncertainty", setup.energy_scale_error, 0, 0.2);
+  within("the resolution uncertainty", setup.resolution_error, 0, 1);
+  within("the normalisation uncertainty", setup.normalisation_error, 0, 1);
   allowed("site", setup.site, Object.keys(d.sites));
   allowed("Earth model", setup.earth_model, d.earth_models);
   if (setup.exposure !== null && !(setup.exposure > 0)) throw new Error("the exposure must be > 0 (or none)");
@@ -282,17 +292,42 @@ function kernels(inputs, setup, component, edges) {
   return inputs.kernelCache.get(key);
 }
 
+export function resolution(inputs, setup, energy) {
+  // sigma (MeV) at an observed energy: sqrt((a sqrt(E))^2 + (b E)^2), or Super-K's c0 + c1 sqrt(E) + c2 E in
+  // total electron energy (ES); times resolution_scale
+  let sigma;
+  if (setup.resolution_poly.length) {
+    const [c0, c1, c2] = setup.resolution_poly, total = energy + (setup.channel === "es" ? inputs.data.constants.m_e_MeV : 0);
+    sigma = Math.max(c0 + c1 * Math.sqrt(total) + c2 * total, 0);
+  } else sigma = Math.hypot(setup.resolution_a * Math.sqrt(energy), setup.resolution_b * energy);
+  return setup.resolution_scale * sigma;
+}
+
+const responseKey = (setup) => [setup.channel === "es", setup.threshold, setup.resolution_a, setup.resolution_b, setup.resolution_poly.join(","),
+  setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+
 function response(inputs, setup, edges) {
-  // [rows of the resolution matrix (null: identity), acceptance per observed bin]
-  const key = [setup.threshold, setup.resolution_a, setup.resolution_b, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+  // [rows of the response matrix (null: identity), acceptance per observed bin]: energy scale, resolution,
+  // efficiency, threshold; events smeared below 0 or above the last edge stay in the first or last bin
+  const key = responseKey(setup);
   inputs.responseCache ||= new Map();
   if (!inputs.responseCache.has(key)) {
     const n = edges.length - 1, centres = Array.from({ length: n }, (_, j) => 0.5 * (edges[j] + edges[j + 1]));
-    const rows = centres.map((c) => {
-      const sigma = Math.hypot(setup.resolution_a * Math.sqrt(c), setup.resolution_b * c);
-      if (!(sigma > 0)) return null;
-      const cdf = edges.map((e) => 0.5 * (1 + erf((e - c) / sigma / Math.SQRT2)));
-      return Float64Array.from({ length: n }, (_, j) => cdf[j + 1] - cdf[j]);
+    const scale = setup.energy_scale, cdfOf = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
+    const rows = centres.map((c, j) => {
+      const sigma = resolution(inputs, setup, c);
+      if (sigma > 0) {
+        const cdf = edges.map((e) => cdfOf((e - scale * c) / sigma));
+        const row = Float64Array.from({ length: n }, (_, m) => cdf[m + 1] - cdf[m]);
+        row[0] += cdf[0]; row[n - 1] += 1 - cdf[n];
+        return row;
+      }
+      if (scale === 1) return null;
+      const low = scale * edges[j], high = scale * edges[j + 1], row = new Float64Array(n); // spread over the scaled width
+      let kept = 0;
+      for (let m = 0; m < n; m++) { const o = Math.max(0, Math.min(high, edges[m + 1]) - Math.max(low, edges[m])) / (high - low); row[m] = o; kept += o; }
+      row[n - 1] += 1 - kept;
+      return row;
     });
     const acceptance = centres.map((c, j) => {
       let a = setup.efficiency;
@@ -382,8 +417,7 @@ const rebinIndex = (fine, display) => Array.from({ length: fine.length - 1 }, (_
 function prepared(inputs, setup, component) {
   // cached products of the kernels with the response: per true bin the accepted fraction g = R a;
   // ES also the kernels times g (totals) and times R, a and the display re-binning (spectra)
-  const key = [component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold, setup.resolution_a,
-               setup.resolution_b, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+  const key = [component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, responseKey(setup)].join("|");
   inputs.preparedCache ||= new Map();
   if (!inputs.preparedCache.has(key)) {
     const [edges, display] = observedEdges(setup.threshold), [rows, acceptance] = response(inputs, setup, edges);
@@ -498,6 +532,38 @@ export function fluxLabel(setup) {
   return "solar fluxes" + (measured ? " (8B from SNO NC)" : "");
 }
 
+export function detectorSigmas(inputs, probabilities, setup, params, quantity, central, night) {
+  // [[source, sigma]] of the detector uncertainties that are set: the quantity at the energy scale (or
+  // resolution) shifted by +-1 sigma, half the difference; the normalisation scales a rate (cancels in A_DN)
+  const value = (s) => quantityValue(quantity, s.period, ...combine(componentTotals(inputs, probabilities, s, oscillation(params), night), s.components));
+  const pct = (x) => `${+(100 * x).toPrecision(6)}`;
+  const out = [];
+  if (setup.energy_scale_error > 0) {
+    const e = setup.energy_scale_error;
+    const [up, down] = [1, -1].map((k) => value({ ...setup, energy_scale: setup.energy_scale * (1 + k * e) }));
+    out.push([`energy scale (±${pct(e)} %)`, Math.abs(up - down) / 2]);
+  }
+  if (setup.resolution_error > 0) {
+    const r = setup.resolution_error;
+    const [up, down] = [1, -1].map((k) => value({ ...setup, resolution_scale: setup.resolution_scale * (1 + k * r) }));
+    out.push([`energy resolution (±${pct(r)} %)`, Math.abs(up - down) / 2]);
+  }
+  if (setup.normalisation_error > 0 && quantity === "rate")
+    out.push([`detector normalisation (±${pct(setup.normalisation_error)} %)`, Math.abs(central) * setup.normalisation_error]);
+  return out;
+}
+
+export function fluxSummary(inputs, probabilities, setup, osc) {
+  // flux at Earth of the selected components (cm^-2 s^-1) and the flux-weighted nu_e fraction by day
+  const components = {};
+  for (const [c, [pee]] of Object.entries(survival(inputs, probabilities, setup, osc, false))) {
+    const { kind, energy, weight } = inputs.components[c], q = quadrature(kind, energy, weight);
+    components[c] = [inputs.flux(setup.solar_model, c, setup.b8_flux), q.reduce((t, w, i) => t + w * pee[i], 0)];
+  }
+  const total = Object.values(components).reduce((t, [f]) => t + f, 0);
+  return { total, nue_day: Object.values(components).reduce((t, [f, p]) => t + f * p, 0) / total, components };
+}
+
 const relative = (error, central) => (central !== 0 ? error / Math.abs(central) : NaN);
 
 export function draws(inputs, setup, params, n, seed) {
@@ -530,11 +596,17 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
   let total = perDraw.map((p, i) => quantityValue(quantity, setup.period, ...combine(p, comps, d.flux ? d.flux[i] : null)));
   if (d.flux && !(quantity === "adn" && comps.length === 1)) // one flux cancels in a ratio
     sampled(fluxLabel(setup), d.flux.map((m) => quantityValue(quantity, setup.period, ...combine(nominal, comps, m))));
+  const queue = d.noise ? [...d.noise] : null, next = () => (queue ? queue.shift() : d.rng.normals(total.length));
   const stat = statisticalSigma(quantity, setup.period, day0, night0, setup.exposure);
   if (stat !== null) {
-    const noise = d.statNoise || [d.rng.normals(total.length), d.rng.normals(total.length)];
-    sampled(`statistics (${setup.exposure} kt yr)`, noise[0].map((z) => central + stat * z));
-    total = total.map((t, i) => t + stat * noise[1][i]);
+    sampled(`statistics (${+setup.exposure.toPrecision(6)} kt yr)`, next().map((z) => central + stat * z));
+    const z = next();
+    total = total.map((t, i) => t + stat * z[i]);
+  }
+  for (const [source, sigma] of detectorSigmas(inputs, probabilities, setup, params, quantity, central, night)) {
+    const z = next(); // one Gaussian draw per source: its row and its share of the total
+    sampled(source, z.map((x) => central + sigma * x));
+    total = total.map((t, i) => t + sigma * z[i]);
   }
   sampled("total sampled", total);
   for (const choice of ranges) {
