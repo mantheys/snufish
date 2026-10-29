@@ -281,3 +281,36 @@ def test_imported_response(inputs):
     assert rate(**cc, smearing_table=shifted) == pytest.approx(rate(**cc), rel=1e-9)
     with pytest.raises(ValueError, match="CC channels only"):
         engine.check(inputs, engine.Setup(smearing_table=shifted))
+
+
+
+def with_levels(inputs, shifts):
+    """A copy of the inputs with synthetic B(GT)-shifted tables of the default argon CC model."""
+    data = dict(inputs.data, xsec={k: dict(v) for k, v in inputs.data["xsec"].items()})
+    base = data["xsec"]["cc_nue_ar40"]["default"]
+    entries = []
+    for n, factor in enumerate(shifts, 1):
+        name = f"default#bgt{n}"
+        data["xsec"]["cc_nue_ar40"][name] = {"energy": base["energy"], "sigma": [factor * v for v in base["sigma"]]}
+        entries.append({"name": name})
+    data["xsec_levels"] = {"cc_nue_ar40": {"default": entries}}
+    return engine.Inputs(data)
+
+
+def test_measured_strengths_propagate_in_quadrature(inputs):
+    shifted = with_levels(inputs, [1.01, 1.02])  # two "levels" raising sigma by 1 % and 2 %
+    assert "default#bgt1" not in shifted.xsec_models("cc_nue_ar40")
+    params = engine.parameters(inputs, "juno_2025")
+    setup = engine.Setup(detector="argon", channel="cc_nue_ar40")
+    central = engine.budget(shifted, Vacuum(), setup, params, "rate", n=20, ranges=())[0][0]["Central"]
+    [(source, sigma)] = engine.level_sigmas(shifted, Vacuum(), setup, params, "rate", central, False)
+    assert source == "measured B(GT) (2 levels)" and sigma / central == pytest.approx(np.hypot(0.01, 0.02), rel=1e-9)
+    rows, _ = engine.budget(shifted, Vacuum(), setup, params, "rate", n=20, ranges=())
+    assert any(r["Source"] == source for r in rows)  # sampled in the budget
+    assert "measured B(GT)" not in str(engine.budget(inputs, Vacuum(), setup, params, "rate", n=5, ranges=())[0])
+
+
+def test_incomplete_tables_stay_out_of_the_model_range(inputs):
+    data = dict(inputs.data, xsec_incomplete={"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]})
+    options = engine.alternatives(engine.Inputs(data), engine.Setup(detector="argon", channel="cc_nue_ar40"), "xsec_model")
+    assert "ar40_marley" not in options and "ar40_klmv" in options

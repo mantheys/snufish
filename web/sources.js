@@ -37,6 +37,11 @@ export const SOURCES = {
   marley: S("MARLEY (νₑ CC on ⁴⁰Ar), as tabulated by SNOwGLoBES in 2018 (zero below 5 MeV)", "arXiv:2101.11867"),
   bgt_pn: S("B(GT) from ⁴⁰Ar(p,n): Bhattacharya et al., Phys. Rev. C 80, 055501 (2009)", "10.1103/PhysRevC.80.055501"),
   bgt_ti: S("B(GT) from ⁴⁰Ti β decay (SNOwGLoBES does not say which of the two 1998 measurements)"),
+  marley2: S("MARLEY 2.0.0 (31 July 2026): HF-CRPA for the continuum, measured B(GT) for bound levels", "10.5281/zenodo.21880925"),
+  marley_prc: S("MARLEY's ⁴⁰Ar model: Gardiner, Phys. Rev. C 103, 044604 (2021)", "10.1103/PhysRevC.103.044604"),
+  bgt_liu: S("B(GT) from ⁴⁰Ti β decay: Liu et al., Phys. Rev. C 58, 2677 (1998)", "10.1103/PhysRevC.58.2677"),
+  bgt_b1998: S("B(GT) from ⁴⁰Ti β decay: Bhattacharya et al., Phys. Rev. C 58, 3677 (1998)", "10.1103/PhysRevC.58.3677"),
+  marley_code: S("MARLEY code", null, "https://github.com/MARLEY-MC/marley"),
   klmv: S("KLMV: Kolbe, Langanke, Martínez-Pinedo & Vogel (νₑ CC on ⁴⁰Ar), as tabulated in SNOwGLoBES"),
   plotipus: S("plotipus (figures)", null, "https://github.com/mantheys/plotipus"),
   pyodide: S("Pyodide (Python in the browser, for plotipus figures)", null, "https://pyodide.org"),
@@ -85,7 +90,14 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   if (step === 4) {
     if (setup.channel === "es") return setup.es_model === "snowglobes" ? [SOURCES.es_radiative, SOURCES.snowglobes] : [SOURCES.es_tree];
     const out = [SOURCES.snowglobes];
-    if (setup.xsec_model.includes("marley")) out.push(SOURCES.marley, setup.xsec_model === "ar40_marley" ? SOURCES.bgt_pn : SOURCES.bgt_ti);
+    const m = setup.xsec_model;
+    if (m === "ar40_marley" || m === "ar40_marley1") out.push(SOURCES.marley, m === "ar40_marley" ? SOURCES.bgt_pn : SOURCES.bgt_ti);
+    if (m.startsWith("ar40_marley2_") || m === "ar40_marley1_bhattacharya2009") {
+      out.splice(0, out.length, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley, SOURCES.marley_code);
+      out.push(m.endsWith("liu1998") ? SOURCES.bgt_liu : m.endsWith("bhattacharya1998") ? SOURCES.bgt_b1998 : SOURCES.bgt_pn);
+      if ((d.xsec_levels?.[setup.channel] || {})[m]) out.push(S(`Measured B(GT) uncertainties of ${d.xsec_levels[setup.channel][m].length} levels, propagated (MARLEY's reaction file)`));
+    }
+    if (setup.channel === "cc_nue_ar40") out.push(S("Model range: the selectable models except the two zero below 5 MeV"));
     if (setup.xsec_model.includes("klmv")) out.push(SOURCES.klmv);
     return out;
   }
@@ -107,7 +119,8 @@ export const CREDITS = [
   ["Measurements and fits", [SOURCES.sk_solar, SOURCES.juno, SOURCES.kamland, SOURCES.nufit]],
   ["Solar models and spectra", [SOURCES.b16, SOURCES.bs05, SOURCES.b23, SOURCES.b23_papers, SOURCES.shape_pp_hep, SOURCES.shape_b8, SOURCES.shape_cno]],
   ["Earth", [SOURCES.prem, SOURCES.nufast, SOURCES.exposure, SOURCES.surf]],
-  ["Cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.snowglobes, SOURCES.marley, SOURCES.klmv]],
-  ["Tools", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.peanuts, SOURCES.plotipus]],
+  ["Cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
+                      SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.klmv]],
+  ["Tools", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus]],
   ["Software in this page", [SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
 ];

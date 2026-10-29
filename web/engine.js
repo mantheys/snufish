@@ -101,7 +101,8 @@ export class Inputs {
     if (component === "B8" && b8Flux === "sno_nc") return this.data.b8_measured.flux;
     return this.data.solar_models[solarModel].fluxes[component];
   }
-  xsecModels(channel) { return Object.keys(this.data.xsec[channel] || { default: null }); }
+  // selectable models of a channel ("#" marks internal tables, e.g. B(GT)-shifted ones)
+  xsecModels(channel) { return Object.keys(this.data.xsec[channel] || { default: null }).filter((m) => !m.includes("#")); }
 }
 
 // ------------------------------------------------------------------ parameters
@@ -556,7 +557,10 @@ export const RANGE_LABELS = { xsec_model: "cross-section model", es_model: "ES r
                               earth_model: "Earth model", solar_model: "solar model" };
 
 export function alternatives(inputs, setup, choice) {
-  if (choice === "xsec_model") return setup.channel !== "es" ? inputs.xsecModels(setup.channel) : [];
+  if (choice === "xsec_model") { // without the tables that are incomplete (zero below 5 MeV)
+    const incomplete = (inputs.data.xsec_incomplete || {})[setup.channel] || [];
+    return setup.channel !== "es" ? inputs.xsecModels(setup.channel).filter((m) => !incomplete.includes(m)) : [];
+  }
   if (choice === "es_model") return setup.channel === "es" ? ["tree", "snowglobes"] : [];
   if (choice === "earth_model") return [...inputs.data.earth_models];
   if (choice === "solar_model") return Object.keys(inputs.data.solar_models);
@@ -588,6 +592,17 @@ export function detectorSigmas(inputs, probabilities, setup, params, quantity, c
   if (setup.normalisation_error > 0 && quantity === "rate")
     out.push([`detector normalisation (±${pct(setup.normalisation_error)} %)`, Math.abs(central) * setup.normalisation_error]);
   return out;
+}
+
+export function levelSigmas(inputs, probabilities, setup, params, quantity, central, night) {
+  // measured nuclear strengths: one table per level with its B(GT) raised by 1 sigma (sigma is linear in each),
+  // levels independent: sigma^2 = sum of the squared shifts of the quantity
+  if (setup.channel === "es") return [];
+  const levels = ((inputs.data.xsec_levels || {})[setup.channel] || {})[setup.xsec_model];
+  if (!levels || !levels.length) return [];
+  const value = (s) => quantityValue(quantity, s.period, ...combine(componentTotals(inputs, probabilities, s, oscillation(params), night), s.components));
+  const variance = levels.reduce((t, level) => t + (value({ ...setup, xsec_model: level.name }) - central) ** 2, 0);
+  return [[`measured B(GT) (${levels.length} levels)`, Math.sqrt(variance)]];
 }
 
 export function fluxSummary(inputs, probabilities, setup, osc) {
@@ -640,7 +655,8 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
     const z = next();
     total = total.map((t, i) => t + stat * z[i]);
   }
-  for (const [source, sigma] of detectorSigmas(inputs, probabilities, setup, params, quantity, central, night)) {
+  for (const [source, sigma] of [...detectorSigmas(inputs, probabilities, setup, params, quantity, central, night),
+                                 ...levelSigmas(inputs, probabilities, setup, params, quantity, central, night)]) {
     const z = next(); // one Gaussian draw per source: its row and its share of the total
     sampled(source, z.map((x) => central + sigma * x));
     total = total.map((t, i) => t + sigma * z[i]);

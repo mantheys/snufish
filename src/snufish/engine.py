@@ -74,7 +74,8 @@ class Inputs:
         return self.data["solar_models"][solar_model]["fluxes"][component]
 
     def xsec_models(self, channel):
-        return list(self.xsec.get(channel, {"default": None}))
+        """Selectable models of a channel ("#" marks internal tables, e.g. B(GT)-shifted ones)."""
+        return [m for m in self.xsec.get(channel, {"default": None}) if "#" not in m]
 
 
 # ---------------------------------------------------------------- parameters
@@ -573,8 +574,9 @@ RANGE_LABELS = {"xsec_model": "cross-section model", "es_model": "ES radiative c
 
 
 def alternatives(inputs, setup, choice):
-    if choice == "xsec_model":
-        return inputs.xsec_models(setup.channel) if setup.channel != "es" else []
+    if choice == "xsec_model":  # without the tables that are incomplete (zero below 5 MeV)
+        incomplete = inputs.data.get("xsec_incomplete", {}).get(setup.channel, [])
+        return [m for m in inputs.xsec_models(setup.channel) if m not in incomplete] if setup.channel != "es" else []
     if choice == "es_model":
         return ["tree", "snowglobes"] if setup.channel == "es" else []
     if choice == "earth_model":
@@ -634,7 +636,8 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
     if stat is not None:
         sampled(f"statistics ({setup.exposure:g} kt yr)", central + stat * rng.standard_normal(n))
         total = total + stat * rng.standard_normal(n)
-    for source, sigma in detector_sigmas(inputs, probabilities, setup, params, quantity, central, night):
+    for source, sigma in (detector_sigmas(inputs, probabilities, setup, params, quantity, central, night)
+                          + level_sigmas(inputs, probabilities, setup, params, quantity, central, night)):
         z = rng.standard_normal(n)  # one Gaussian draw per source: its row and its share of the total
         sampled(source, central + sigma * z)
         total = total + sigma * z
@@ -682,6 +685,22 @@ def detector_sigmas(inputs, probabilities, setup, params, quantity, central, nig
         out.append((f"detector normalisation (±{100 * setup.normalisation_error:g} %)",
                     abs(central) * setup.normalisation_error))
     return out
+
+
+def level_sigmas(inputs, probabilities, setup, params, quantity, central, night):
+    """[(source, sigma)] of measured nuclear strengths, when the cross-section model has
+    them: one table per level with its B(GT) raised by 1 sigma (sigma is linear in each),
+    levels independent, so sigma^2 = sum of the squared shifts of the quantity."""
+    if setup.channel == "es":
+        return []
+    levels = inputs.data.get("xsec_levels", {}).get(setup.channel, {}).get(setup.xsec_model)
+    if not levels:
+        return []
+    def value(s):
+        per = component_totals(inputs, probabilities, s, oscillation(params), night)
+        return quantity_value(quantity, s.period, *combine(per, list(s.components)))
+    variance = sum((value(setup.replace(xsec_model=level["name"])) - central) ** 2 for level in levels)
+    return [(f"measured B(GT) ({len(levels)} levels)", float(np.sqrt(variance)))]
 
 
 def _relative(error, central):

@@ -32,7 +32,11 @@ function close(a, b, where) {
 }
 const nan = (v) => (v === null ? NaN : v);
 
+const plain = inputs;
 for (const c of fixtures.cases) {
+  // a case may add tables to the inputs (e.g. synthetic B(GT)-shifted cross sections)
+  const inputs = c.inject ? new engine.Inputs({ ...plain.data, xsec: { ...plain.data.xsec, cc_nue_ar40: { ...plain.data.xsec.cc_nue_ar40, ...c.inject.xsec } },
+                                                xsec_levels: c.inject.xsec_levels }) : plain;
   const setup = engine.makeSetup(c.setup), params = c.params;
   const given = { osc: c.draws.osc, flux: c.draws.flux, noise: c.draws.noise };
   const f = engine.fluxSummary(inputs, tables, setup, engine.oscillation(params));

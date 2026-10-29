@@ -48,6 +48,26 @@ variants:
     description: >-
       MARLEY with B(GT) from 40Ti beta decay (SNOwGLoBES commit 072d2bd, 2018: "marley1 is based on 40Ti
       measurements"); SNOwGLoBES xs_nue_Ar40_marley1.dat, zero below 5 MeV.
+  ar40_marley2_bhattacharya2009:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: >-
+      MARLEY 2.0.0 recommended model: HF-CRPA for the unbound continuum, measured B(GT) of Bhattacharya et al.,
+      PRC 80, 055501 (2009) for bound 40K levels.
+  ar40_marley2_liu1998:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: MARLEY 2.0.0, HF-CRPA + B(GT) from 40Ti beta decay, Liu et al., PRC 58, 2677 (1998).
+  ar40_marley2_bhattacharya1998:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: MARLEY 2.0.0, HF-CRPA + B(GT) from 40Ti beta decay, Bhattacharya et al., PRC 58, 3677 (1998).
+  ar40_marley1_bhattacharya2009:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: >-
+      MARLEY's v1 reaction file (allowed approximation over all levels, B(GT) of Bhattacharya et al. 2009),
+      run by MARLEY 2.0.0: SNOwGLoBES's xs_nue_Ar40_marley.dat above 5 MeV, down to threshold.
 
 constants:
   G_F_GeV-2: 1.1663788e-5       # PDG 2024

@@ -110,7 +110,7 @@ def cmd_budget(args):
 def cmd_export_app(args):
     from .export import export_app
 
-    manifest = export_app(args.out, s12=args.s12, dm21=args.dm21, jobs=args.jobs)
+    manifest = export_app(args.out, s12=args.s12, dm21=args.dm21, jobs=args.jobs, inputs_only=args.inputs_only)
     for name in manifest["files"]:
         print(f"wrote   {args.out}/{name}")
     return 0
@@ -160,6 +160,7 @@ def main(argv=None):
     p.add_argument("--dm21", type=float, nargs=3, default=[3.0, 11.0, 0.2], metavar=("START", "STOP", "STEP"),
                    help="1e-5 eV^2")
     p.add_argument("--jobs", type=int, default=None, help="worker processes (default: all cores)")
+    p.add_argument("--inputs-only", action="store_true", help="rewrite inputs.json only (the tables are unchanged)")
     p.set_defaults(func=cmd_export_app)
 
     args = parser.parse_args(argv)

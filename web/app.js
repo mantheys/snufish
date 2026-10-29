@@ -7,8 +7,16 @@ const DATA = "data/";
 const N_DRAWS = 400, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O" };
 const DETECTORS = { argon: "Liquid argon", water: "Water" };
-const XSEC = { default: "SNOwGLoBES default", ar40_klmv: "KLMV", ar40_marley: "MARLEY, B(GT) from (p,n)",
-               ar40_marley1: "MARLEY, B(GT) from ⁴⁰Ti decay" };
+const XSEC = {
+  ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
+  ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
+  ar40_marley2_bhattacharya1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Bhattacharya 1998)",
+  ar40_marley1_bhattacharya2009: "MARLEY v1 model, B(GT) from (p,n) (run by MARLEY 2)",
+  default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
+  ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
+  ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
+};
+const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first available is selected by default
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
@@ -130,8 +138,9 @@ function sync() {
   const exp = exposure();
   $("exposure-note").textContent = exp ? `Exposure ${fmt(exp)} kt·yr (half by night).` : "Set both for a statistical error.";
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
-  const keep = models.includes($("xsec").value) ? $("xsec").value : "default"; // the nominal model unless one was chosen
-  fillSelect($("xsec"), models.map((m) => [m, XSEC[m] || m]), keep);
+  const keep = models.includes($("xsec").value) ? $("xsec").value : NOMINAL_XSEC.find((m) => models.includes(m)) || models[0];
+  const ordered = [...Object.keys(XSEC).filter((m) => models.includes(m)), ...models.filter((m) => !(m in XSEC))];
+  fillSelect($("xsec"), ordered.map((m) => [m, XSEC[m] || m]), keep);
   $("xsec-row").hidden = models.length < 2;
   const comps = [...document.querySelectorAll('input[name="components"]:checked')].map((x) => x.value);
   $("b8-row").hidden = !comps.includes("B8");

@@ -61,6 +61,9 @@ CASES = [
           smearing_table=dict(id="m2", x=[1.5, 5, 8, 12, 17], y=[0, 4, 8, 12, 20], true_axis="neutrino",
                               matrix=[[0.9, 0.1, 0, 0], [0.2, 0.7, 0.1, 0], [0, 0.2, 0.7, 0.1], [0, 0, 0.2, 0.8]])),
      "adn", "solar_global_2024", "full"),
+    ("argon CC with synthetic measured B(GT) levels", dict(detector="argon", channel="cc_nue_ar40", threshold=4.0,
+                                                            inject_levels=[1.013, 0.995, 1.021]),
+     "rate", "juno_2025", "fluxes"),
     ("argon ES 7Be line, smeared, low threshold", dict(detector="argon", components=["Be7", "pep"], threshold=0.3,
                                                       resolution_a=0.1, period="night", site="LNGS"), "rate",
      "nufit60_global", "fluxes"),
@@ -87,9 +90,19 @@ def clean(value):
 
 
 def test_web_engine_matches_python(tmp_path):
-    inputs, tables = engine.Inputs.load(APP / "inputs.json"), engine.TableProbabilities(APP)
+    plain, tables = engine.Inputs.load(APP / "inputs.json"), engine.TableProbabilities(APP)
     cases = []
     for name, changes, quantity, set_name, solar_range in CASES:
+        inject, inputs = None, plain
+        if "inject_levels" in changes:  # synthetic B(GT)-shifted tables of the default argon CC model
+            changes = dict(changes)
+            base = plain.data["xsec"]["cc_nue_ar40"]["default"]
+            names = [f"default#bgt{n}" for n in range(1, len(changes["inject_levels"]) + 1)]
+            inject = {"xsec": {name: {"energy": base["energy"], "sigma": [f * v for v in base["sigma"]]}
+                               for name, f in zip(names, changes.pop("inject_levels"))},
+                      "xsec_levels": {"cc_nue_ar40": {"default": [{"name": n} for n in names]}}}
+            inputs = engine.Inputs(dict(plain.data, xsec={**plain.data["xsec"], "cc_nue_ar40": {
+                **plain.data["xsec"]["cc_nue_ar40"], **inject["xsec"]}}, xsec_levels=inject["xsec_levels"]))
         imported = {k: engine.Table(v["id"], tuple(v["x"]), tuple(v["y"]), tuple(map(tuple, v.get("matrix", ()))),
                                   v.get("true_axis", "observed"))
                   for k, v in changes.items() if k.endswith("_table")}
@@ -100,14 +113,16 @@ def test_web_engine_matches_python(tmp_path):
         rng, osc_draws, flux_draws = engine._draws(inputs, setup, params, n, seed)
         # the Gaussian draws budget() takes next: statistics (two), then one per detector uncertainty
         extra = (2 if setup.exposure else 0) + (setup.energy_scale_error > 0) + (setup.resolution_error > 0) \
-            + (setup.normalisation_error > 0 and quantity == "rate")
+            + (setup.normalisation_error > 0 and quantity == "rate") \
+            + (setup.smearing_table is not None and setup.resolution_error > 0) * -1 \
+            + bool(inputs.data.get("xsec_levels", {}).get(setup.channel, {}).get(setup.xsec_model))
         state = rng.bit_generator.state
         noise = [rng.standard_normal(n) for _ in range(extra)]
         rng.bit_generator.state = state
         rows, _ = engine.budget(inputs, tables, setup, params, quantity, n=n, seed=seed, solar_range=solar_range)
         night = engine.needs_night(quantity, setup.period)
         spec = engine.spectra(inputs, tables, setup, params, n=n, seed=seed, night=night)
-        cases.append(dict(name=name, setup={**changes, "components": list(setup.components)}, quantity=quantity,
+        cases.append(dict(name=name, inject=inject, setup={**changes, "components": list(setup.components)}, quantity=quantity,
                           params=params, solar_range=solar_range, rows=rows,
                           draws=dict(osc=osc_draws, flux=flux_draws, noise=noise),
                           flux=engine.flux_summary(inputs, tables, setup, engine.oscillation(params)),

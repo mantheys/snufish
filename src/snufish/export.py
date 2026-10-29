@@ -39,6 +39,9 @@ XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504}
 # Visible energy of a CC interaction, E_nu - Q (the electron plus the de-excitation gammas, no losses):
 # Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV.
 VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42}
+# Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
+XSEC_INCOMPLETE = {"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]}
+MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"
 
 S12_GRID = (0.24, 0.38, 0.01)
 DM21_GRID = (3.0, 11.0, 0.2)   # 1e-5 eV^2; 0.1 is no closer to the exact solvers
@@ -85,6 +88,21 @@ def collect_inputs():
         # NaN: not provided by the model at that energy; counted as zero (a lower bound)
         xsec.setdefault(row.Channel, {})[row.Variant] = {"energy": np.asarray(row.Energy).tolist(),
                                                          "sigma": np.nan_to_num(np.asarray(row.Sigma)).tolist()}
+    # MARLEY's own tables (its `default` is one of its named variants), and its per-level B(GT) shifts
+    for row in sigma[(sigma.Tool == "marley") & (sigma.Variant != "default")].itertuples():
+        xsec.setdefault(row.Channel, {})[row.Variant] = {"energy": np.asarray(row.Energy).tolist(),
+                                                         "sigma": np.nan_to_num(np.asarray(row.Sigma)).tolist()}
+    levels = {}
+    shifts = sorted((repo_root() / "contributions" / "marley" / "B4_xsec").glob("*/bgt_levels.parquet"))
+    if shifts and MARLEY_DEFAULT in xsec.get("cc_nue_ar40", {}):
+        entries = []
+        for n, row in enumerate(pd.read_parquet(shifts[-1]).itertuples(), 1):
+            name = f"{MARLEY_DEFAULT}#bgt{n}"
+            xsec["cc_nue_ar40"][name] = {"energy": np.asarray(row.Energy).tolist(),
+                                         "sigma": np.nan_to_num(np.asarray(row.Sigma)).tolist()}
+            entries.append({"name": name, "level_MeV": row.Level, "kind": row.Kind, "strength": row.Strength,
+                            "error": row.Error})
+        levels = {"cc_nue_ar40": {MARLEY_DEFAULT: entries}}
     ratio = {}
     for flavour in ("nue", "numu"):
         rows = {r.Tool: r for r in sigma[(sigma.Channel == f"es_{flavour}") & (sigma.Variant == "default")].itertuples()}
@@ -103,6 +121,8 @@ def collect_inputs():
         "xsec": xsec,
         "xsec_thresholds_MeV": XSEC_THRESHOLDS,
         "visible_offset_MeV": VISIBLE_OFFSET,
+        "xsec_incomplete": XSEC_INCOMPLETE,
+        "xsec_levels": levels,
         "es_radiative_ratio": ratio,
         "earth_models": list(b3["earth_models"]),
         "sites": b3["sites"],
@@ -175,12 +195,14 @@ def _point(args):
     return day, np.array(night), energies
 
 
-def export_app(out, s12=S12_GRID, dm21=DM21_GRID, jobs=None, solar_models=None):
+def export_app(out, s12=S12_GRID, dm21=DM21_GRID, jobs=None, solar_models=None, inputs_only=False):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     inputs = collect_inputs()
     with (out / "inputs.json").open("w") as handle:
         json.dump(inputs, handle, allow_nan=False)  # read by JavaScript too
+    if inputs_only:  # new cross sections, parameter sets, ...: the probability tables do not change
+        return {"files": ["inputs.json"]}
     s12_axis, dm21_axis = _axis(*s12), _axis(*dm21)
     solar_models = list(solar_models or inputs["solar_models"])
     earth_models, sites = inputs["earth_models"], inputs["sites"]
