@@ -104,7 +104,9 @@ page crediting every experiment, model and tool used (`index.html`), and the
 calculator (`rates.html`): choose the result (rate or day-night asymmetry),
 oscillation parameters, solar model and flux components, site and Earth
 model, interaction (target, channel, cross-section model) and detector
-(threshold, Gaussian resolution, efficiency, exposure), each step with links
+(threshold, resolution, efficiency, exposure and detector uncertainties; a
+Super-K IV preset from its published values; or an imported smearing matrix
+and efficiency curve, read in the browser and never uploaded), each step with links
 to its sources; get the spectrum in observed energy (ES: electron kinetic
 energy; CC: E_nu - Q), the distribution of the sampled values and the error
 budget.

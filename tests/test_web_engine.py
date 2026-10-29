@@ -48,6 +48,19 @@ CASES = [
                                                        normalisation_error=0.011), "adn", "juno_2025", "full"),
     ("argon CC, energy scale shifted", dict(detector="argon", channel="cc_nue_ar40", threshold=5.0, energy_scale=1.01),
      "rate", "juno_2025", "fluxes"),
+    ("water ES with an imported matrix and efficiency curve",
+     dict(threshold=4.0, energy_scale_error=0.005, resolution_error=0.03,
+          smearing_table=dict(id="m1", x=[0, 2, 4, 6, 9, 13, 20, 25], y=[0, 1, 3, 4, 5, 7, 10, 15, 25],
+                              matrix=[[0.6, 0.3, 0.1, 0, 0, 0, 0, 0], [0.1, 0.5, 0.3, 0.1, 0, 0, 0, 0],
+                                      [0, 0.1, 0.3, 0.4, 0.15, 0.05, 0, 0], [0, 0, 0.1, 0.2, 0.4, 0.25, 0.05, 0],
+                                      [0, 0, 0, 0, 0.1, 0.5, 0.35, 0.05], [0, 0, 0, 0, 0, 0.1, 0.6, 0.3],
+                                      [0, 0, 0, 0, 0, 0, 0.2, 0.8]]),
+          efficiency_table=dict(id="e1", x=[3, 4, 5, 8, 20], y=[0.0, 0.5, 0.85, 0.95, 0.95])),
+     "rate", "juno_2025", "fluxes"),
+    ("argon CC, matrix in neutrino energy", dict(detector="argon", channel="cc_nue_ar40", threshold=3.0,
+          smearing_table=dict(id="m2", x=[1.5, 5, 8, 12, 17], y=[0, 4, 8, 12, 20], true_axis="neutrino",
+                              matrix=[[0.9, 0.1, 0, 0], [0.2, 0.7, 0.1, 0], [0, 0.2, 0.7, 0.1], [0, 0, 0.2, 0.8]])),
+     "adn", "solar_global_2024", "full"),
     ("argon ES 7Be line, smeared, low threshold", dict(detector="argon", components=["Be7", "pep"], threshold=0.3,
                                                       resolution_a=0.1, period="night", site="LNGS"), "rate",
      "nufit60_global", "fluxes"),
@@ -77,7 +90,10 @@ def test_web_engine_matches_python(tmp_path):
     inputs, tables = engine.Inputs.load(APP / "inputs.json"), engine.TableProbabilities(APP)
     cases = []
     for name, changes, quantity, set_name, solar_range in CASES:
-        setup = engine.Setup(**{**changes, "components": tuple(changes.get("components", ("B8",))),
+        imported = {k: engine.Table(v["id"], tuple(v["x"]), tuple(v["y"]), tuple(map(tuple, v.get("matrix", ()))),
+                                  v.get("true_axis", "observed"))
+                  for k, v in changes.items() if k.endswith("_table")}
+        setup = engine.Setup(**{**changes, **imported, "components": tuple(changes.get("components", ("B8",))),
                                 "resolution_poly": tuple(changes.get("resolution_poly", ()))})
         params = engine.parameters(inputs, set_name)
         n, seed = 12, 7

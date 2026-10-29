@@ -175,3 +175,8 @@ ul.plain li { margin: 4px 0; }
 .flux .big { font-size: 1.5rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .flux .big small, .flux .sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
 .flux .sub { margin-top: 2px; }
+
+.import { margin-top: 6px; padding: 8px; border: 1px dashed var(--border); border-radius: 8px; }
+.import input[type="file"] { font-size: 0.8rem; color: var(--text-secondary); max-width: 100%; }
+label.check { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.import a { color: var(--accent); }

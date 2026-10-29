@@ -97,20 +97,39 @@
         <label>Energy resolution <select id="res-model">
           <option value="quadrature">σ = √((a√E)² + (bE)²)</option>
           <option value="sk4">Super-K IV: σ = −0.05525 + 0.3162√E + 0.04572E (E: total energy, MeV)</option>
+          <option value="import">Imported smearing matrix</option>
         </select></label>
+        <div id="smear-import" class="import" hidden>
+          <input id="smear-file" type="file" accept=".csv,.txt,.dat">
+          <label class="check"><input id="smear-neutrino" type="checkbox"> true axis is the neutrino energy (CC)</label>
+          <p class="hint">First line: the observed-bin edges (MeV). Then one line per true bin: its low and high edge,
+            then the probability into each observed bin (rows may sum to less than 1). Commas or spaces; # comments.
+            <a href="#" id="smear-template">Template from the current resolution</a>.</p>
+          <p id="smear-info" class="hint"></p>
+        </div>
         <div class="row" id="res-ab">
           <label>a (MeV<sup>½</sup>) <input id="res-a" type="number" min="0" max="2" step="0.01" value="0"></label>
           <label>b (%) <input id="res-b" type="number" min="0" max="100" step="0.1" value="0"></label>
         </div>
       </div>
       <div class="field">
-        <span class="field-label">Efficiency</span>
-        <div class="row three">
+        <label>Efficiency <select id="eff-model">
+          <option value="parametric">Plateau with a logistic turn-on</option>
+          <option value="import">Imported curve</option>
+        </select></label>
+        <div id="eff-import" class="import" hidden>
+          <input id="eff-file" type="file" accept=".csv,.txt,.dat">
+          <p class="hint">Two columns: energy (MeV) and efficiency (0–1, or %). Interpolated linearly; 0 below the first
+            point, the last value above. <a href="#" id="eff-template">Template from the current efficiency</a>.</p>
+          <p id="eff-info" class="hint"></p>
+        </div>
+        <div class="row three" id="eff-parametric">
           <label>plateau (%) <input id="eff" type="number" min="0" max="100" step="1" value="100"></label>
           <label>50 % at (MeV) <input id="eff-e50" type="number" min="0" max="25" step="0.1" value="0" title="0: flat"></label>
           <label>width (MeV) <input id="eff-width" type="number" min="0.001" max="10" step="0.1" value="0.5"></label>
         </div>
-        <p class="hint">Turn-on point 0: a flat efficiency.</p>
+        <p class="hint" id="eff-parametric-hint">Turn-on point 0: a flat efficiency.</p>
+        <p class="hint">Imported files are read in your browser and never uploaded; they are not part of a shared link.</p>
       </div>
       <div class="field">
         <span class="field-label">Exposure (for the statistical error)</span>

@@ -135,6 +135,26 @@ def sample_fluxes(inputs, rng, solar_model, components, n, b8_flux="model"):
 
 # ---------------------------------------------------------------- rates
 
+@dataclass(frozen=True, eq=False)
+class Table:
+    """An imported detector response, compared by ``id`` (so setups stay cheap to
+    hash). Efficiency: ``x`` energies (MeV) and ``y`` efficiencies (0-1). Smearing:
+    ``x`` true-bin edges, ``y`` observed-bin edges (MeV) and ``matrix`` [true][observed]
+    probabilities (rows may sum to less than 1); ``true_axis`` "observed" (the
+    true value of the observed energy) or "neutrino" (CC: E_nu, shifted by -Q)."""
+    id: str
+    x: tuple
+    y: tuple
+    matrix: tuple = ()
+    true_axis: str = "observed"
+
+    def __eq__(self, other):
+        return isinstance(other, Table) and self.id == other.id
+
+    def __hash__(self):
+        return hash(self.id)
+
+
 @dataclass(frozen=True)
 class Setup:
     """Everything but the oscillation parameters."""
@@ -159,6 +179,8 @@ class Setup:
                                     # total electron energy for ES (T + m_e), as Super-K publishes it
     energy_scale: float = 1.0       # observed energy = scale x true (for the energy-scale uncertainty)
     resolution_scale: float = 1.0   # sigma multiplied by this (for the resolution uncertainty)
+    efficiency_table: Table = None  # imported efficiency curve, in place of efficiency and its turn-on
+    smearing_table: Table = None    # imported smearing matrix, in place of the resolution
     energy_scale_error: float = 0.0     # detector uncertainties (fractions, 1 sigma), sampled in the budget:
     resolution_error: float = 0.0       # on the energy scale, on sigma,
     normalisation_error: float = 0.0    # and on the rate (efficiencies, fiducial volume, cuts...)
@@ -214,6 +236,15 @@ def check(inputs, setup, quantity="rate"):
     within("the energy-scale uncertainty", setup.energy_scale_error, 0.0, 0.2)
     within("the resolution uncertainty", setup.resolution_error, 0.0, 1.0)
     within("the normalisation uncertainty", setup.normalisation_error, 0.0, 1.0)
+    for name, table in (("efficiency", setup.efficiency_table), ("smearing", setup.smearing_table)):
+        if table is not None and (len(table.x) < 2 or np.any(np.diff(table.x) <= 0)):
+            raise ValueError(f"the imported {name} needs increasing energies")
+    t = setup.smearing_table
+    if t is not None:
+        if len(t.matrix) != len(t.x) - 1 or any(len(row) != len(t.y) - 1 for row in t.matrix):
+            raise ValueError("the imported smearing matrix needs one row per true bin and one column per observed bin")
+        if t.true_axis == "neutrino" and setup.channel == "es":
+            raise ValueError("a smearing matrix in neutrino energy applies to CC channels only")
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
     if setup.exposure is not None and setup.exposure <= 0:
@@ -296,8 +327,29 @@ def resolution(inputs, setup, energy):
 
 
 def _response_key(setup):
-    return (setup.channel == "es", setup.threshold, setup.resolution_a, setup.resolution_b, tuple(setup.resolution_poly),
-            setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width)
+    return (setup.channel, setup.threshold, setup.resolution_a, setup.resolution_b, tuple(setup.resolution_poly),
+            setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width,
+            setup.efficiency_table and setup.efficiency_table.id, setup.smearing_table and setup.smearing_table.id)
+
+
+def _imported_matrix(inputs, setup, edges):
+    """[fine true bin, fine observed bin] from an imported smearing matrix: each fine bin
+    takes the row of the imported true bin holding its centre (none outside: kept as
+    is), each imported observed bin spread over the fine bins it overlaps."""
+    t = setup.smearing_table
+    true_edges = np.asarray(t.x, float)
+    if t.true_axis == "neutrino":
+        true_edges = true_edges - inputs["visible_offset_MeV"][setup.channel]
+    obs = setup.energy_scale * np.asarray(t.y, float)
+    probs = np.asarray(t.matrix, float)
+    spread = np.clip(np.minimum(obs[1:, None], edges[None, 1:]) - np.maximum(obs[:-1, None], edges[None, :-1]), 0, None)
+    spread = spread / np.diff(obs)[:, None]   # [imported observed bin, fine observed bin]
+    centres = 0.5 * (edges[1:] + edges[:-1])
+    matrix = np.eye(len(centres))
+    inside = (centres >= true_edges[0]) & (centres < true_edges[-1])
+    rows = np.searchsorted(true_edges, centres[inside], side="right") - 1
+    matrix[inside] = probs[rows] @ spread
+    return matrix
 
 
 def _response(inputs, setup, edges):
@@ -307,10 +359,12 @@ def _response(inputs, setup, edges):
     cache = inputs.__dict__.setdefault("_responses", {})
     if key not in cache:
         centres = 0.5 * (edges[1:] + edges[:-1])
-        sigma = resolution(inputs, setup, centres)
+        sigma = np.zeros_like(centres) if setup.smearing_table is not None else resolution(inputs, setup, centres)
         scale = setup.energy_scale
         matrix = np.eye(len(centres))
-        if scale != 1.0:  # without resolution: each bin's content spread uniformly over its scaled width
+        if setup.smearing_table is not None:
+            matrix = _imported_matrix(inputs, setup, edges)
+        elif scale != 1.0:  # without resolution: each bin's content spread uniformly over its scaled width
             low, high = scale * edges[:-1], scale * edges[1:]
             overlap = np.clip(np.minimum(high[:, None], edges[None, 1:]) - np.maximum(low[:, None], edges[None, :-1]), 0, None)
             matrix = overlap / (high - low)[:, None]
@@ -324,7 +378,10 @@ def _response(inputs, setup, edges):
             rows[:, -1] += 1 - cdf(z[:, -1])   # above the last edge: the last bin
             matrix[smeared] = rows
         acceptance = np.full(len(centres), setup.efficiency)
-        if setup.efficiency_e50 > 0:
+        if setup.efficiency_table is not None:
+            t = setup.efficiency_table
+            acceptance = np.interp(centres, t.x, t.y, left=0.0, right=t.y[-1])
+        elif setup.efficiency_e50 > 0:
             acceptance = acceptance / (1 + np.exp(-(centres - setup.efficiency_e50) / setup.efficiency_width))
         acceptance = np.where(edges[:-1] >= setup.threshold - 1e-12, acceptance, 0.0)
         cache[key] = (matrix, acceptance)
@@ -617,7 +674,7 @@ def detector_sigmas(inputs, probabilities, setup, params, quantity, central, nig
         e = setup.energy_scale_error
         up, down = (value(setup.replace(energy_scale=setup.energy_scale * (1 + k * e))) for k in (1, -1))
         out.append((f"energy scale (±{100 * e:g} %)", abs(up - down) / 2))
-    if setup.resolution_error > 0:
+    if setup.resolution_error > 0 and setup.smearing_table is None:  # an imported matrix has no sigma to scale
         r = setup.resolution_error
         up, down = (value(setup.replace(resolution_scale=setup.resolution_scale * (1 + k * r))) for k in (1, -1))
         out.append((f"energy resolution (±{100 * r:g} %)", abs(up - down) / 2))

@@ -28,7 +28,7 @@ const PRESET_NOTES = {
 
 const $ = (id) => document.getElementById(id);
 const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
-              worker: null, rendered: [], renderId: 0 };
+              worker: null, rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
 
 // ------------------------------------------------------------------ loading
 
@@ -101,6 +101,8 @@ function readSetup() {
     period: radio("period"), threshold: number("threshold"), resolution_a: number("res-a"),
     resolution_b: number("res-b") / 100, resolution_poly: $("res-model").value === "sk4" ? SK4_RESOLUTION : [],
     efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"), efficiency_width: number("eff-width", 0.5),
+    smearing_table: $("res-model").value === "import" ? app.imports.smearing : null,
+    efficiency_table: $("eff-model").value === "import" ? app.imports.efficiency : null,
     energy_scale_error: number("unc-scale") / 100, resolution_error: number("unc-res") / 100,
     normalisation_error: number("unc-norm") / 100, exposure: exposure(),
   });
@@ -114,6 +116,11 @@ function sync() {
   const es = $("channel").value === "es";
   $("es-row").hidden = !es;
   $("res-ab").hidden = $("res-model").value !== "quadrature";
+  $("smear-import").hidden = $("res-model").value !== "import";
+  const effImport = $("eff-model").value === "import";
+  $("eff-import").hidden = !effImport;
+  $("eff-parametric").hidden = $("eff-parametric-hint").hidden = effImport;
+  if (app.imports.smearing) app.imports.smearing.true_axis = $("smear-neutrino").checked ? "neutrino" : "observed";
   $("preset-note").textContent = PRESET_NOTES[$("preset").value];
   $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
   const q = d.visible_offset_MeV[$("channel").value];
@@ -145,7 +152,7 @@ function sync() {
 const KEYS = { set: "set", solar: "solar", site: "site", earth: "earth", detector: "target", channel: "channel",
                xsec: "xsec", preset: "preset", threshold: "threshold", "res-model": "resolution", "res-a": "a", "res-b": "b",
                eff: "eff", "eff-e50": "e50", "eff-width": "width", mass: "mass", years: "years", "unc-scale": "dscale",
-               "unc-res": "dres", "unc-norm": "dnorm" };
+               "unc-res": "dres", "unc-norm": "dnorm", "eff-model": "efficiency" };
 const RADIOS = { b8: "b8", es: "es", quantity: "q", period: "period" };
 
 function saveHash() {
@@ -230,6 +237,8 @@ async function run() {
 async function compute() {
   const setup = readSetup(), quantity = radio("quantity"), d = app.inputs.data;
   saveHash();
+  if ($("res-model").value === "import" && !app.imports.smearing) { status("⚠ Choose a smearing-matrix file (step 5).", true); return; }
+  if ($("eff-model").value === "import" && !app.imports.efficiency) { status("⚠ Choose an efficiency file (step 5).", true); return; }
   try { engine.check(app.inputs, setup, quantity); } catch (error) { status(`⚠ ${error.message}`, true); return; }
   const night = engine.needsNight(quantity, setup.period);
   // A rate's solar-model range needs only the fluxes (one table); A_DN, where a single flux cancels,
@@ -407,6 +416,92 @@ async function renderPlotipus() {
   }
 }
 
+// ------------------------------------------------------------------ imported detector response
+
+function numbers(text) {
+  // rows of numbers from CSV or whitespace-separated text; # comments and blank lines skipped
+  return text.split(/\r?\n/).map((line) => line.replace(/#.*/, "").trim()).filter(Boolean)
+    .map((line, i) => line.split(/[\s,;]+/).map((v) => {
+      const x = Number(v);
+      if (!Number.isFinite(x)) throw new Error(`line ${i + 1}: "${v}" is not a number`);
+      return x;
+    }));
+}
+
+function parseEfficiency(text, name) {
+  const rows = numbers(text);
+  if (rows.length < 2 || rows.some((r) => r.length < 2)) throw new Error("need at least two lines of: energy, efficiency");
+  const x = rows.map((r) => r[0]), raw = rows.map((r) => r[1]);
+  const percent = Math.max(...raw) > 1.5, y = raw.map((v) => (percent ? v / 100 : v));
+  if (y.some((v) => v < 0 || v > 1)) throw new Error("efficiencies must be between 0 and 1 (or 0 and 100 %)");
+  return { id: `eff:${name}:${Date.now()}`, x, y, name, summary: `${x.length} points, ${x[0]}–${x[x.length - 1]} MeV${percent ? " (read as %)" : ""}` };
+}
+
+function parseSmearing(text, name) {
+  const [obs, ...rows] = numbers(text);
+  if (!obs || obs.length < 2 || !rows.length) throw new Error("need the observed-bin edges, then one line per true bin");
+  const nObs = obs.length - 1, x = [];
+  rows.forEach((r, i) => {
+    if (r.length !== nObs + 2) throw new Error(`true bin ${i + 1}: expected 2 edges and ${nObs} probabilities, found ${r.length} numbers`);
+    if (i > 0 && Math.abs(r[0] - x[x.length - 1]) > 1e-9) throw new Error(`true bin ${i + 1} does not start where the previous one ends`);
+    if (i === 0) x.push(r[0]);
+    x.push(r[1]);
+  });
+  let matrix = rows.map((r) => r.slice(2));
+  const sums = matrix.map((r) => r.reduce((t, v) => t + v, 0));
+  if (matrix.flat().some((v) => v < 0) || Math.max(...sums) > 1.001) throw new Error("probabilities must be ≥ 0 with each row summing to at most 1");
+  matrix = matrix.map((r, i) => (sums[i] > 1 ? r.map((v) => v / sums[i]) : r)); // rounding: rows a hair above 1 scaled to 1
+  return { id: `smear:${name}:${Date.now()}`, x, y: obs, matrix, true_axis: "observed", name,
+           summary: `${rows.length} true × ${nObs} observed bins; rows sum ${Math.min(...sums).toFixed(3)}–${Math.min(1, Math.max(...sums)).toFixed(3)}` };
+}
+
+function setupImport(kind, fileId, infoId, parse) {
+  $(fileId).addEventListener("change", async () => {
+    const file = $(fileId).files[0];
+    if (!file) return;
+    try {
+      app.imports[kind] = parse(await file.text(), file.name);
+      $(infoId).textContent = `Imported ${file.name}: ${app.imports[kind].summary}.`;
+      $("preset").value = "custom";
+      sync(); schedule();
+    } catch (error) {
+      app.imports[kind] = null;
+      $(infoId).textContent = `Could not read ${file.name}: ${error.message}`;
+    }
+  });
+}
+
+function download(name, text) {
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv" })), download: name });
+  document.body.append(a); a.click(); a.remove();
+}
+
+function templates() {
+  // the file formats, filled from the current parametric settings
+  $("eff-template").addEventListener("click", (e) => {
+    e.preventDefault();
+    const s = readSetup(), lines = ["# energy (MeV), efficiency (0-1): SNUfish template from the current settings"];
+    for (let E = 0; E <= 25; E += 0.5) {
+      let a = s.efficiency;
+      if (s.efficiency_e50 > 0) a /= 1 + Math.exp(-(E - s.efficiency_e50) / s.efficiency_width);
+      lines.push(`${E}, ${a.toPrecision(6)}`);
+    }
+    download("efficiency_template.csv", lines.join("\n") + "\n");
+  });
+  $("smear-template").addEventListener("click", (e) => {
+    e.preventDefault();
+    const s = { ...readSetup(), smearing_table: null }, edges = Array.from({ length: 51 }, (_, i) => 0.5 * i);
+    const lines = ["# observed-bin edges (MeV), then per true bin: low, high, P(observed bin) ...",
+                   "# SNUfish template: Gaussian smearing from the current resolution", edges.join(", ")];
+    for (let i = 0; i + 1 < edges.length; i++) {
+      const c = 0.5 * (edges[i] + edges[i + 1]), sigma = engine.resolution(app.inputs, s, c);
+      const cdf = edges.map((x) => (sigma > 0 ? 0.5 * (1 + engine.erf((x - c) / sigma / Math.SQRT2)) : x > c ? 1 : 0));
+      lines.push([edges[i], edges[i + 1], ...cdf.slice(1).map((v, k) => (v - cdf[k]).toPrecision(6))].join(", "));
+    }
+    download("smearing_template.csv", lines.join("\n") + "\n");
+  });
+}
+
 function applyPreset(name) {
   const values = PRESETS[name];
   if (!values) return;
@@ -464,6 +559,9 @@ async function init() {
     $("download").disabled = false;
   });
   $("render").addEventListener("click", renderPlotipus);
+  setupImport("smearing", "smear-file", "smear-info", parseSmearing);
+  setupImport("efficiency", "eff-file", "eff-info", parseEfficiency);
+  templates();
   await run();
 }
 

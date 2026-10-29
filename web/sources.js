@@ -97,6 +97,8 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
     out.push(S("Super-K IV threshold 3.49 MeV and other rate systematics ±1.1 %: table IV", sk),
              S("Super-K IV energy scale ±0.48 %: table II; resolution ±3 %: sec. IV A 3", sk),
              S("Super-K IV 22.5 kt fiducial volume (fig. 28) and 2970 days live time (sec. V A 1)", sk));
+  if (setup.smearing_table) out.push(S(`Imported smearing matrix: ${setup.smearing_table.name || "file"} (your own source)`));
+  if (setup.efficiency_table) out.push(S(`Imported efficiency curve: ${setup.efficiency_table.name || "file"} (your own source)`));
   return [...out, S("Generic detector response: Gaussian resolution σ = √((a√E)² + (bE)²), a logistic efficiency turn-on and a hard threshold, all in observed energy (ES: electron kinetic energy; CC: E_ν − Q). Statistics: Poisson, no backgrounds.")];
 }
 

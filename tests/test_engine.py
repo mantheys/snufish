@@ -247,3 +247,37 @@ def test_detector_uncertainties_in_the_budget(inputs):
     assert 0 < sigma["energy scale (±0.48 %)"] < 0.02 and 0 < sigma["energy resolution (±3 %)"] < 0.02
     rows, _ = engine.budget(inputs, Vacuum(), setup, params, "adn", n=50, ranges=())
     assert not any("normalisation" in r["Source"] for r in rows)  # cancels in the asymmetry
+
+
+
+def gaussian_table(inputs, setup, true_edges, obs_edges):
+    """A smearing matrix built like an experiment would publish one, from the engine's own resolution."""
+    rows = []
+    for lo, hi in zip(true_edges[:-1], true_edges[1:]):
+        c = 0.5 * (lo + hi)
+        sigma = float(engine.resolution(inputs, setup, [c])[0])
+        cdf = [0.5 * (1 + __import__("math").erf((e - c) / sigma / 2 ** 0.5)) for e in obs_edges]
+        rows.append(tuple(np.diff(cdf)))
+    return engine.Table("gauss", tuple(true_edges), tuple(obs_edges), tuple(rows))
+
+
+def test_imported_response(inputs):
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+
+    def rate(**changes):
+        return engine.totals(engine.observed_rates(inputs, Vacuum(), engine.Setup(**changes), osc, False))["B8"]["day"]
+
+    grid = np.arange(0.0, 25.01, 0.25)
+    identity = engine.Table("identity", tuple(grid), tuple(grid), tuple(map(tuple, np.eye(len(grid) - 1))))
+    assert rate(smearing_table=identity) == pytest.approx(rate(), rel=1e-9)            # keeps every event
+    flat = engine.Table("flat", (0.0, 30.0), (0.8, 0.8))
+    assert rate(threshold=3.49, efficiency_table=flat) == pytest.approx(0.8 * rate(threshold=3.49), rel=1e-12)
+    sk = engine.Setup(threshold=3.49, resolution_poly=(-0.05525, 0.3162, 0.04572))
+    table = gaussian_table(inputs, sk, grid, grid)
+    assert rate(threshold=3.49, smearing_table=table) == pytest.approx(rate(**{**sk.__dict__}), rel=0.01)
+    # a CC matrix in neutrino energy is shifted by Q
+    cc = dict(detector="argon", channel="cc_nue_ar40")
+    shifted = engine.Table("nu", tuple(grid + 1.504), tuple(grid), tuple(map(tuple, np.eye(len(grid) - 1))), "neutrino")
+    assert rate(**cc, smearing_table=shifted) == pytest.approx(rate(**cc), rel=1e-9)
+    with pytest.raises(ValueError, match="CC channels only"):
+        engine.check(inputs, engine.Setup(smearing_table=shifted))

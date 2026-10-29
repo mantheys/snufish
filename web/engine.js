@@ -168,6 +168,10 @@ export const DEFAULT_SETUP = {
   resolution_poly: [], energy_scale: 1.0, resolution_scale: 1.0,
   // detector uncertainties (fractions, 1 sigma), sampled in the budget: energy scale, sigma, rate normalisation
   energy_scale_error: 0.0, resolution_error: 0.0, normalisation_error: 0.0,
+  // imported response, {id, x, y, matrix, true_axis}: an efficiency curve (x energies, y efficiencies) in place of
+  // efficiency and its turn-on; a smearing matrix (x true edges, y observed edges, matrix [true][observed]) in place
+  // of the resolution; compared by id
+  efficiency_table: null, smearing_table: null,
   exposure: null, profile_model: null,
 };
 
@@ -207,6 +211,14 @@ export function check(inputs, setup, quantity = "rate") {
   within("the energy-scale uncertainty", setup.energy_scale_error, 0, 0.2);
   within("the resolution uncertainty", setup.resolution_error, 0, 1);
   within("the normalisation uncertainty", setup.normalisation_error, 0, 1);
+  for (const [name, t] of [["efficiency", setup.efficiency_table], ["smearing", setup.smearing_table]])
+    if (t && (t.x.length < 2 || t.x.some((v, i) => i > 0 && v <= t.x[i - 1]))) throw new Error(`the imported ${name} needs increasing energies`);
+  const t = setup.smearing_table;
+  if (t) {
+    if (t.matrix.length !== t.x.length - 1 || t.matrix.some((row) => row.length !== t.y.length - 1))
+      throw new Error("the imported smearing matrix needs one row per true bin and one column per observed bin");
+    if (t.true_axis === "neutrino" && setup.channel === "es") throw new Error("a smearing matrix in neutrino energy applies to CC channels only");
+  }
   allowed("site", setup.site, Object.keys(d.sites));
   allowed("Earth model", setup.earth_model, d.earth_models);
   if (setup.exposure !== null && !(setup.exposure > 0)) throw new Error("the exposure must be > 0 (or none)");
@@ -303,8 +315,29 @@ export function resolution(inputs, setup, energy) {
   return setup.resolution_scale * sigma;
 }
 
-const responseKey = (setup) => [setup.channel === "es", setup.threshold, setup.resolution_a, setup.resolution_b, setup.resolution_poly.join(","),
+const responseKey = (setup) => [setup.channel, setup.efficiency_table?.id, setup.smearing_table?.id, setup.threshold, setup.resolution_a, setup.resolution_b, setup.resolution_poly.join(","),
   setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+
+function importedRows(inputs, setup, edges) {
+  // fine rows from an imported matrix: each fine bin takes the row of the imported true bin holding its centre
+  // (outside: identity, null), each imported observed bin spread over the fine bins it overlaps
+  const t = setup.smearing_table, n = edges.length - 1;
+  const shift = t.true_axis === "neutrino" ? inputs.data.visible_offset_MeV[setup.channel] : 0;
+  const trueEdges = t.x.map((x) => x - shift), obs = t.y.map((y) => setup.energy_scale * y);
+  const spread = obs.slice(0, -1).map((lo, k) => {
+    const hi = obs[k + 1];
+    return Float64Array.from({ length: n }, (_, m) => Math.max(0, Math.min(hi, edges[m + 1]) - Math.max(lo, edges[m])) / (hi - lo));
+  });
+  return Array.from({ length: n }, (_, j) => {
+    const c = 0.5 * (edges[j] + edges[j + 1]);
+    if (!(c >= trueEdges[0] && c < trueEdges[trueEdges.length - 1])) return null;
+    let i = 0;
+    while (i < trueEdges.length - 2 && trueEdges[i + 1] <= c) i++;
+    const row = new Float64Array(n), probs = t.matrix[i];
+    probs.forEach((p, k) => { if (p) { const sp = spread[k]; for (let m = 0; m < n; m++) row[m] += p * sp[m]; } });
+    return row;
+  });
+}
 
 function response(inputs, setup, edges) {
   // [rows of the response matrix (null: identity), acceptance per observed bin]: energy scale, resolution,
@@ -314,7 +347,9 @@ function response(inputs, setup, edges) {
   if (!inputs.responseCache.has(key)) {
     const n = edges.length - 1, centres = Array.from({ length: n }, (_, j) => 0.5 * (edges[j] + edges[j + 1]));
     const scale = setup.energy_scale, cdfOf = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
+    const imported = setup.smearing_table ? importedRows(inputs, setup, edges) : null;
     const rows = centres.map((c, j) => {
+      if (imported) return imported[j];
       const sigma = resolution(inputs, setup, c);
       if (sigma > 0) {
         const cdf = edges.map((e) => cdfOf((e - scale * c) / sigma));
@@ -329,9 +364,11 @@ function response(inputs, setup, edges) {
       row[n - 1] += 1 - kept;
       return row;
     });
+    const et = setup.efficiency_table;
     const acceptance = centres.map((c, j) => {
       let a = setup.efficiency;
-      if (setup.efficiency_e50 > 0) a = a / (1 + Math.exp(-(c - setup.efficiency_e50) / setup.efficiency_width));
+      if (et) a = interp(c, et.x, et.y, 0, et.y[et.y.length - 1]);
+      else if (setup.efficiency_e50 > 0) a = a / (1 + Math.exp(-(c - setup.efficiency_e50) / setup.efficiency_width));
       return edges[j] >= setup.threshold - 1e-12 ? a : 0;
     });
     inputs.responseCache.set(key, [rows, acceptance]);
@@ -543,7 +580,7 @@ export function detectorSigmas(inputs, probabilities, setup, params, quantity, c
     const [up, down] = [1, -1].map((k) => value({ ...setup, energy_scale: setup.energy_scale * (1 + k * e) }));
     out.push([`energy scale (±${pct(e)} %)`, Math.abs(up - down) / 2]);
   }
-  if (setup.resolution_error > 0) {
+  if (setup.resolution_error > 0 && !setup.smearing_table) { // an imported matrix has no sigma to scale
     const r = setup.resolution_error;
     const [up, down] = [1, -1].map((k) => value({ ...setup, resolution_scale: setup.resolution_scale * (1 + k * r) }));
     out.push([`energy resolution (±${pct(r)} %)`, Math.abs(up - down) / 2]);
