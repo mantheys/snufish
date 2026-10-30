@@ -2,7 +2,8 @@
 import * as engine from "./engine.js";
 import { budgetPlot, distributionPlot, officialPlot, spectrumPlot } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
-import { CHECKS, PAPER_SETS, RESULTS } from "./checks.js";
+import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
+         reproduced } from "./checks.js";
 import { officialFigure } from "./official.js";
 
 const DATA = "data/";
@@ -21,53 +22,19 @@ const XSEC = {
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
 };
-const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first available is selected by default
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
 const ES = { bks: "Radiative corrections (BKS)", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
 // reference/status.yaml, via engine.status: what is the state of the art, what is legacy, what is an approximation
 const STATUS_LABEL = { current: "state of the art", legacy: "legacy", approximation: "approximation", reproduction: "as used in a paper" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
-const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
-const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
-                ktday: [1 / DAYS, "per kt·day"], cpd100t: [0.1 / DAYS, "per 100 t·day"] };
 const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
-// Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
-// (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
-const SK4_RESOLUTION = [-0.05525, 0.3162, 0.04572];
 const PRESETS = {
   // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector
   thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
            "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
            components: ORDER, quantity: "rate", period: "annual", unit: "g" },
-  // Borexino Phase-II (arXiv:1707.09279): interaction rates over all recoil energies, in counts per day per 100 t
-  borexino: { unit: "cpd100t", detector: "scintillator_pc", channel: "es", site: "LNGS", threshold: 0, "res-model": "quadrature",
-              "res-a": 0.05, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.0713, years: +(1291.51 / DAYS).toFixed(4),
-              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["Be7"], quantity: "rate", period: "annual" },
-  // JUNO 8B (arXiv:2006.11760): 2 MeV recoil threshold, 3 %/sqrt(E), SNO NC 8B flux, energy scale 0.3 %, efficiency 1 %
-  juno: { unit: "ktday", detector: "scintillator_lab", channel: "es", site: "Jiangmen", threshold: 2.0, "res-model": "quadrature",
-          "res-a": 0.03, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "",
-          "unc-scale": 0.3, "unc-res": 0, "unc-norm": 1, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
-  // SNO phases I and II (arXiv:1109.0763): 770 t fiducial D2O, T_eff > 3.5 MeV, 277.3 + 391.4 days, energy scale 0.41 %
-  sno: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 3.5, "res-model": "quadrature",
-         "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +((277.3 + 391.4) / DAYS).toFixed(4),
-         "unc-scale": 0.41, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], quantity: "rate", period: "annual" },
-  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC
-  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "quadrature",
-              "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +(391.4 / DAYS).toFixed(4),
-              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
-  // DUNE far detector, public numbers only: 4 x 10 kt fiducial LAr, 5 MeV detected-energy threshold and ~20 % resolution
-  // (supernova-burst paper, arXiv:2008.06647); 100 kt yr as in Capozzi, Li, Zhu & Beacom (arXiv:1808.08232)
-  dune: { unit: "kt", detector: "argon", channel: "cc_nue_ar40", site: "SURF", threshold: 5.0, "res-model": "quadrature",
-          "res-a": 0, "res-b": 20, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 40, years: 2.5,
-          "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
-  // Hyper-K design report (arXiv:1805.04163): 187 kt fiducial per tank, 4.5 MeV kinetic threshold, scale 0.5 %, resolution 0.6 %
-  hyperk: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 4.5, "res-model": "sk4", "eff-model": "parametric",
-            eff: 100, "eff-e50": 0, mass: 187, years: 10, "unc-scale": 0.5, "unc-res": 0.6, "unc-norm": 0, components: ["B8", "hep"],
-            quantity: "rate", period: "annual" },
-  sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", "eff-model": "curve:sk4_final",
-         eff: 100, "eff-e50": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual",
-         mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
+  ...EXPERIMENTS,
 };
 const PRESET_NOTES = {
   thumb: `A thumb, as ${THUMB_GRAMS} g of water: every solar flux component, elastic scattering on its electrons, `
@@ -440,12 +407,9 @@ function publishedLine(r) {
   // the selected published check: the paper's number next to this one (a measurement with its pull)
   const c = r.check;
   if (!c) return "";
-  const p = c.published, central = r.rows[0].Central;
-  let ours, shown, unit = "";
-  if (p.kind === "rate") { ours = central * UNITS[p.unit][0]; unit = ` ${UNITS[p.unit][1]}`; }
-  else if (p.kind === "events") { ours = central * r.setup.exposure; unit = " events"; }
-  else if (p.kind === "ratio") ours = central;
-  else ours = -central; // A_DN in the papers' (D - N)/mean
+  const p = c.published, ours = reproduced(c, r.rows[0].Central, r.setup.exposure); // A_DN in the papers' (D - N)/mean
+  const unit = { rate: () => ` ${UNITS[p.unit][1]}`, events: () => " events" }[p.kind]?.() || "";
+  let shown;
   const minus = (text) => text.replace("-", "−");
   const digits = (v, n = 4) => (p.kind === "events" ? Math.round(v).toLocaleString("en-US")
     : p.kind === "adn" ? minus(`${(100 * v).toFixed(2)} %`) : minus(Number(v.toPrecision(n)).toString()));
@@ -818,10 +782,6 @@ function applyValues(values) {
   }
 }
 
-// every field a check may leave untouched, at its default: a check sets the whole page
-const CHECK_BASE = { set: "nufit60_global", solar: "b23_gs98", b8: "model", es: "bks", earth: "prem_full", "res-model": "quadrature",
-                     "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, "eff-width": 0.5, mass: "", years: "",
-                     "unc-scale": 0, "unc-res": 0, "unc-norm": 0, quantity: "rate", period: "annual", unit: "kt", orbit: false };
 const STEP5 = ["threshold", "res-model", "res-a", "res-b", "eff-model", "eff", "eff-e50", "eff-width", "mass", "years", "unc-scale", "unc-res", "unc-norm"];
 
 function applyCheck(id) {

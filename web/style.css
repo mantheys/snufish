@@ -225,16 +225,33 @@ a.button.ghost-link { background: transparent; color: var(--text-primary); borde
 .bench .card { overflow: hidden; }
 @media (max-width: 600px) { .top h1 span { display: none; } .bench { padding: 16px; } .tabs { padding: 8px 16px 0; } }
 .matrix { overflow-x: auto; }
-.matrix td.num { color: var(--text-primary); }
+.matrix td.num { color: var(--text-primary); white-space: nowrap; }
 .matrix td.empty { color: var(--text-muted); text-align: center; }
 .matrix th { white-space: nowrap; }
 label.inline { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; }
 label.inline select { width: auto; margin-top: 0; }
 .plot-legend .kind { color: var(--plot-muted); }
 #b2-tools, #b3-tools, #b5-tools { overflow-x: auto; padding: 0 6px 6px; }
+.matrix td.template { min-width: 18em; }
+.matrix td.template a { color: var(--text-primary); text-decoration: none; }
+.matrix td.template a:hover { text-decoration: underline; }
+.matrix td.template .note { display: block; margin-top: 2px; color: var(--text-muted); font-size: 0.76rem; max-width: 46em; }
+.matrix td a { color: var(--accent); }
+.matrix .error-bar { color: var(--text-muted); font-size: 0.78rem; white-space: nowrap; }
+.scale { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 4px; font-size: 0.8rem; color: var(--text-secondary); }
+.scale i { display: inline-block; width: 60px; height: 10px; border-radius: 2px; border: 1px solid var(--border); }
+.scale .key { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-right: 18px; }
+.scale .key i { width: 60px; }
 
 .status-section p { margin: 0 0 10px; font-size: 0.9rem; color: var(--text-secondary); }
 .status-table { overflow-x: auto; }
 .status-table table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .status-table th, .status-table td { text-align: left; vertical-align: top; padding: 5px 8px; border-top: 1px solid var(--border); }
 .status-table td:nth-child(2) { white-space: nowrap; }
+.matrix td.inputs { min-width: 16em; font-size: 0.8rem; }
+.matrix td.inputs .input { display: block; margin: 1px 0; }
+.matrix th.group { text-align: center; border-bottom: 3px solid; color: var(--text-primary); }
+.matrix th.group.reproduction { border-bottom-color: var(--series-3); }
+.matrix th.group.update { border-bottom-color: var(--series-5); }
+.matrix td.start { border-left: 1px solid var(--border); }
+.matrix td.muted, .matrix .muted { color: var(--text-muted); }

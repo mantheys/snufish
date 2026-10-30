@@ -1,6 +1,9 @@
 // SNUfish benchmark pages (benchmarks.html): what each benchmark varies, how well tools agree on it, and how
-// much it moves five reference observables. Reads data/sections.json (snufish export-sections) and data/inputs.json.
+// much it moves five reference observables. Reads data/sections.json (snufish export-sections) and data/inputs.json;
+// the discrepancies tab recomputes the calculator's result templates (checks.js) on its tables.
+import * as engine from "./engine.js";
 import { DISPLAY } from "./engine.js";
+import { CHECKS, PAPER_SETS, UNITS, checkSetup, currentSetup, reproduced } from "./checks.js";
 import { CONFIG, alpha, colours, htmlLegend, layout } from "./plots.js";
 
 const DATA = "data/";
@@ -294,9 +297,171 @@ function b5() {
     : `<p class="hint">No full-chain tool has contributed yet.</p>`;
 }
 
+// ------------------------------------------------------------------ discrepancies
+
+async function loadTable(name) {
+  // as app.js: a table's JSON index and its float32 binary (base64 text in a hosted copy)
+  const meta = await (await fetch(`${DATA}${name}.json`)).json();
+  const response = await fetch(`${DATA}${meta.bin}`);
+  if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
+  if (meta.encoding === "base64") {
+    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
+    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
+    return { meta, buffer: bytes.buffer };
+  }
+  return { meta, buffer: await response.arrayBuffer() };
+}
+
+async function templates() {
+  // every template's central value as the calculator computes it (the paper's inputs), and again with every legacy
+  // input and approximation replaced by the state of the art (reference/status.yaml), next to the published number
+  Object.assign(page.inputs.parameter_sets.sets, PAPER_SETS);
+  const inputs = new engine.Inputs(page.inputs);
+  const tables = new engine.TableProbabilities(loadTable, page.inputs.parameter_sets.defaults.sin2_theta13.value);
+  const value = async (c, { setup, quantity, set }) => {
+    engine.check(inputs, setup, quantity);
+    const night = engine.needsNight(quantity, setup.period);
+    await tables.ensure([`day_${setup.solar_model}`, ...(night ? [`night_${setup.earth_model}`] : [])]);
+    const osc = engine.oscillation(engine.parameters(inputs, set));
+    return reproduced(c, engine.quantityValue(quantity, setup.period,
+      ...engine.combine(engine.componentTotals(inputs, tables, setup, osc, night), setup.components)), setup.exposure);
+  };
+  const pull = (p, v) => (p.measured ? (v - p.value) / (v > p.value ? p.plus : p.minus) : undefined);
+  const rows = [];
+  for (const [order, c] of CHECKS.entries()) {
+    const row = { check: c, order }, p = c.published;
+    try {
+      row.ours = await value(c, checkSetup(inputs, c));
+      row.relative = 100 * (row.ours / p.value - 1);
+      row.pull = pull(p, row.ours);
+      const current = currentSetup(inputs, c);
+      row.flagged = current.flagged;
+      row.current = current.flagged.some((f) => f.by) ? await value(c, current) : row.ours;
+      row.shift = 100 * (row.current / row.ours - 1);
+      row.currentRelative = 100 * (row.current / p.value - 1);
+      row.currentPull = pull(p, row.current);
+    } catch (error) {
+      row.error = String(error.message || error);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+const HEAT = [0.1, 20]; // per cent: the ends of the colour scale (log), as |relative difference|
+const heat = (v) => Math.max(0, Math.min(1, Math.log10(Math.abs(v) / HEAT[0]) / Math.log10(HEAT[1] / HEAT[0])));
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const minus = (text) => text.replace("-", "−");
+const signedPct = (v) => `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v) < 10 ? Math.abs(v).toFixed(2) : Math.abs(v).toFixed(1)} %`;
+
+function paperNumber(p, v) {
+  // as the calculator's published line: events whole, A_DN in per cent, the rest to four figures
+  if (p.kind === "events") return Math.round(v).toLocaleString("en-US");
+  if (p.kind === "adn") return minus(`${(100 * v).toFixed(2)} %`);
+  return minus(Number(v.toPrecision(4)).toString());
+}
+
+const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A_DN" };
+const ES = { bks: "BKS radiative corrections", tree: "ES at tree level", snowglobes: "SNOwGLoBES ES" };
+const STATUS_LABEL = { legacy: "legacy", approximation: "approximation", reproduction: "paper's parameters" }; // as app.js
+const ORDERS = { size: (r) => -Math.abs(r.relative), shift: (r) => -Math.abs(r.shift), calculator: (r) => r.order };
+
+function inputName(category, name) {
+  // the labels of these pages, without the " · legacy" tags main() adds
+  const label = { parameter_set: () => page.inputs.parameter_sets.sets[name]?.label, solar_model: () => page.inputs.solar_models[name]?.label,
+                  earth_model: () => EARTH[name], xsec_model: () => XSEC[name], es_model: () => ES[name] }[category]?.() || name;
+  return label.replace(/ · (legacy|approximation)$/, "");
+}
+
+function inputsCell(r) {
+  // the paper's inputs that are not the state of the art, each with its status: what the reproduction rests on
+  if (!r.flagged.length) return `<span class="badge current">state of the art</span>`;
+  return r.flagged.map((f) => `<span class="input" title="${(f.status === "reproduction" ? "The scenario the paper computes: kept in the update." : f.summary).replace(/"/g, "&quot;")}">`
+    + `<span class="badge ${f.status}">${STATUS_LABEL[f.status]}</span> ${inputName(f.category, f.name)}</span>`).join("");
+}
+
+async function discrepancies() {
+  const note = $("discrepancy-status");
+  if (!page.templates) {
+    note.textContent = "Recomputing the calculator's templates…";
+    page.templates = templates();
+  }
+  let rows;
+  try { rows = await page.templates; } catch (error) {
+    note.textContent = `Could not compute the templates: ${error.message || error}`; note.classList.add("error"); return;
+  }
+  if (page.tab !== "discrepancies") return;
+  const failed = rows.filter((r) => r.error);
+  note.textContent = failed.length ? `${failed.length} template${failed.length > 1 ? "s" : ""} could not be computed: ${failed.map((r) => `${r.check.id} (${r.error})`).join("; ")}` : "";
+  note.classList.toggle("error", failed.length > 0);
+  const order = ORDERS[$("discrepancy-order").value];
+  const shown = rows.filter((r) => !r.error).sort((a, b) => order(a) - order(b));
+  // two questions, two colour scales: reproduction (the paper's own assumptions against its number) and update
+  // (what the state-of-the-art models and measurements change in SNUfish's own number)
+  const hues = { reproduction: css("--series-3"), update: css("--series-5") };
+  const shade = (kind, strength) => alpha(hues[kind], 0.06 + 0.6 * strength);
+  const strip = (kind) => `<i style="background:linear-gradient(to right, ${shade(kind, 0)}, ${shade(kind, 1)})"></i>`;
+  const pullCell = (kind, v) => (v === undefined ? `<td class="num empty">–</td>`
+    : `<td class="num" style="background:${shade(kind, Math.min(Math.abs(v) / 3, 1))}">${minus(v.toFixed(1))}σ</td>`);
+  const empty = `<td class="num empty">–</td>`;
+
+  $("discrepancy-scale").innerHTML = `<span class="key"><b>Reproduction</b> |Δ| ${HEAT[0]} % ${strip("reproduction")} ≥ ${HEAT[1]} %; pull 0 ${strip("reproduction")} ≥ 3σ</span>`
+    + `<span class="key"><b>Update</b> |shift| ${HEAT[0]} % ${strip("update")} ≥ ${HEAT[1]} %; pull 0 ${strip("update")} ≥ 3σ</span>`;
+  $("discrepancy-table").innerHTML = `<table><thead>`
+    + `<tr><th colspan="3"></th><th colspan="5" class="group reproduction">Reproduction: the paper's own assumptions</th>`
+    + `<th colspan="4" class="group update">Update: state-of-the-art models and measurements</th><th></th></tr>`
+    + `<tr><th>Experiment</th><th>Template</th><th>Unit</th>`
+    + `<th class="num">Published</th><th class="num" title="With the paper's inputs, as the calculator's template">SNUfish</th>`
+    + `<th class="num" title="SNUfish ÷ published − 1: what SNUfish does not reproduce with the paper's assumptions">Δ</th>`
+    + `<th class="num" title="Measurements: (SNUfish − measured) / its error">Pull</th><th>Paper's inputs</th>`
+    + `<th>Replaced</th><th class="num" title="Every legacy input and approximation replaced by the state of the art">SNUfish</th>`
+    + `<th class="num" title="State of the art ÷ paper's inputs − 1: what the newer models and measurements change">Shift</th>`
+    + `<th class="num" title="Measurements: the state-of-the-art prediction's pull">Pull</th><th>Source</th></tr></thead><tbody>${
+    shown.map((r) => {
+      const c = r.check, p = c.published, changed = r.flagged.some((f) => f.by);
+      const published = `${paperNumber(p, p.value)}${p.measured ? ` <span class="error-bar">−${paperNumber(p, p.minus)} +${paperNumber(p, p.plus)}</span>` : ""}`;
+      const points = p.kind === "adn" ? ` (${minus((100 * (r.ours - p.value)).toFixed(2))} points)` : "";
+      const replaced = r.flagged.filter((f) => f.by);
+      return `<tr><td>${c.group}</td><td class="template"><a href="rates.html#check=${encodeURIComponent(c.id)}" title="Open in the calculator">${c.label}</a>`
+        + `${c.note ? `<span class="note">${c.note}</span>` : ""}</td><td>${UNIT_OF[p.kind](p)}${p.measured ? " (measured)" : ""}</td>`
+        + `<td class="num start">${published}</td><td class="num">${paperNumber(p, r.ours)}</td>`
+        + `<td class="num" style="background:${shade("reproduction", heat(r.relative))}" title="SNUfish ÷ published − 1${points}">${signedPct(r.relative)}</td>`
+        + pullCell("reproduction", r.pull)
+        + `<td class="inputs">${inputsCell(r)}</td>`
+        + `<td class="inputs start">${replaced.length ? replaced.map((f) => `<span class="input" title="${f.summary.replace(/"/g, "&quot;")}">${inputName(f.category, f.name)} → ${inputName(f.category, f.by)}</span>`).join("") : `<span class="muted">nothing</span>`}</td>`
+        + (changed ? `<td class="num">${paperNumber(p, r.current)}</td>`
+            + `<td class="num" style="background:${shade("update", heat(r.shift))}" title="State of the art ÷ published − 1: ${signedPct(r.currentRelative)}">${signedPct(r.shift)}</td>`
+            + pullCell("update", r.currentPull)
+          : `<td class="num muted">same</td>${empty}${empty}`)
+        + `<td><a href="https://arxiv.org/abs/${c.arxiv}" target="_blank" rel="noopener">${c.source}</a></td></tr>`;
+    }).join("")}</tbody></table>`;
+
+  const c = colours(), node = $("plot-discrepancies"), ordered = [...shown].reverse(); // the first row at the top
+  const short = (r) => { const t = `${r.check.group}: ${r.check.label}`; return t.length > 58 ? `${t.slice(0, 57)}…` : t; };
+  const names = ordered.map((r) => `${r.check.group}: ${r.check.label}`), y = ordered.map((_, i) => i);
+  const bars = (kind, values, label) => ({
+    type: "bar", orientation: "h", y, x: values, name: label,
+    marker: { color: values.map((v) => alpha(hues[kind], 0.25 + 0.75 * heat(v))),
+              line: { color: ordered.map((r) => (r.check.published.measured ? c.text : "rgba(0,0,0,0)")), width: 1 } },
+    text: values.map((v) => (kind === "update" && Math.abs(v) < 0.05 ? "" : signedPct(v))), textposition: "outside", cliponaxis: false,
+    textfont: { size: 9, color: c.secondary }, customdata: names, hovertemplate: `%{customdata}<br>${label}: %{x:.2f} %<extra></extra>` });
+  const traces = [bars("update", ordered.map((r) => r.shift), "update, state of the art ÷ paper's inputs − 1"),
+                  bars("reproduction", ordered.map((r) => r.relative), "reproduction, SNUfish ÷ published − 1")];
+  const reach = Math.max(1, ...shown.flatMap((r) => [Math.abs(r.relative), Math.abs(r.shift)])) * 1.25;
+  htmlLegend(node, [{ label: "Reproduction: SNUfish with the paper's own assumptions ÷ published − 1", colour: hues.reproduction, fill: true },
+                    { label: "Update: SNUfish with state-of-the-art models and measurements ÷ SNUfish with the paper's − 1", colour: hues.update, fill: true }],
+             "Outlined: a measurement (pulls in the table). The update bar is empty where every input the template uses is already the state of the art.");
+  node.style.height = `${Math.max(400, 30 * shown.length + 90)}px`;
+  return Plotly.react(node, traces, layout(c, node, "Two kinds of divergence, per template", "Relative difference (%)", "",
+    { showlegend: false, barmode: "group", bargap: 0.25, bargroupgap: 0.05, margin: { l: 20, r: 60, t: 24, b: 48 },
+      xaxis: { range: [-reach, reach] },
+      yaxis: { tickvals: y, ticktext: ordered.map(short), automargin: true, minor: { ticks: "" }, tickfont: { size: 11 } },
+      shapes: [{ type: "line", yref: "paper", y0: 0, y1: 1, x0: 0, x1: 0, line: { color: c.muted, width: 1 } }] }), CONFIG);
+}
+
 // ------------------------------------------------------------------ pages
 
-const RENDER = { overview: () => { matrix(); overviewPlot(); }, B1: b1, B2: b2, B3: b3, B4: b4, B5: b5 };
+const RENDER = { overview: () => { matrix(); overviewPlot(); }, B1: b1, B2: b2, B3: b3, B4: b4, B5: b5, discrepancies };
 
 function show() {
   const tab = (location.hash || "#overview").slice(1);
@@ -360,6 +525,7 @@ async function main() {
   fill($("b1-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);
   fill($("b2-component"), ORDER.map((comp) => [comp, DISPLAY[comp]]), "hep");
   fill($("b3-site"), Object.keys(page.inputs.sites).map((site) => [site, site]), "Kamioka");
+  $("discrepancy-order").addEventListener("change", render);
   addEventListener("hashchange", show);
   setupTheme();
   show();

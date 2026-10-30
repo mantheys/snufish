@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SNUfish benchmarks</title>
-  <meta name="description" content="What each SNUfish benchmark (B1–B5) varies, how well tools agree on it, and how much it moves solar neutrino rates and the day-night asymmetry.">
+  <meta name="description" content="What each SNUfish benchmark (B1–B5) varies, how well tools agree on it, and how much it moves solar neutrino rates and the day-night asymmetry, and how the calculator's templates compare with the published numbers.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23eda100'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@4.1.2/plotly-basic.min.js"></script>
@@ -28,6 +28,7 @@
   <a href="#B3" data-tab="B3">B3 Earth</a>
   <a href="#B4" data-tab="B4">B4 Cross sections</a>
   <a href="#B5" data-tab="B5">B5 Rates</a>
+  <a href="#discrepancies" data-tab="discrepancies">Discrepancies</a>
 </nav>
 
 <main class="home bench">
@@ -151,6 +152,39 @@
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
     <section class="card"><h3 class="plot-title">Full-chain rates over SNUfish's folding</h3><div id="b5-tools"></div></section>
+  </section>
+
+  <section data-page="discrepancies" hidden>
+    <section class="hero">
+      <h2>Discrepancies · the calculator's result templates</h2>
+      <p>Every result template of the calculator sets each step to a paper's inputs. Each one is computed here twice,
+        to keep apart two kinds of divergence:</p>
+      <ul class="plain">
+        <li><b>Reproduction</b>: SNUfish with the paper's own assumptions (its solar model, oscillation parameters,
+          cross section, Earth model) against the number the paper publishes. What remains is what SNUfish cannot
+          reproduce: rounding, an undocumented choice of the paper, or a difference of method; each template's note
+          says which.</li>
+        <li><b>Update</b>: SNUfish again, with every legacy input and approximation replaced by the state of the art
+          (<a href="index.html#status">which inputs are which</a>), against SNUfish with the paper's. That is what newer
+          models and measurements change in the prediction: not an error of the paper, and not an uncertainty. A paper's
+          own oscillation parameters are kept: they are the scenario its number answers (an asymmetry at a stated
+          Δm²).</li>
+      </ul>
+      <p>For measurements the pull says how far each prediction lies from the measured value. Day-night asymmetries
+        are in the papers' convention, (D − N)/mean. See also
+        <a href="https://github.com/mantheys/snufish/blob/main/docs/crosschecks.md">docs/crosschecks.md</a>.</p>
+    </section>
+    <p id="discrepancy-status" class="status"></p>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-discrepancies" class="plot"></div></section>
+    <section class="card">
+      <label class="inline">Order <select id="discrepancy-order">
+        <option value="size">Largest reproduction difference first</option>
+        <option value="shift">Largest update shift first</option>
+        <option value="calculator">As in the calculator</option>
+      </select></label>
+      <div id="discrepancy-scale" class="scale"></div>
+      <div id="discrepancy-table" class="matrix"></div>
+    </section>
   </section>
 </main>
 </body>
