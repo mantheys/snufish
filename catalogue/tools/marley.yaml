@@ -15,5 +15,6 @@ notes: >
   table per level (bgt_levels.parquet), so the B(GT) uncertainty of a rate is propagated exactly.
   Check against SNOwGLoBES's 2018 MARLEY table (xs_nue_Ar40_marley.dat, B(GT) of Bhattacharya 2009): MARLEY 2
   running its v1 model gives 46 % more at 10 MeV; without the g_A^2 = 1.26^2 factor its reaction file applies
-  to the measured GT strengths, 6-9 % more at 8-15 MeV and 23 % at 6 MeV. The SNOwGLoBES table appears to
-  predate that factor; the rest of the difference is not explained by the files.
+  to the measured GT strengths, 6-9 % more at 8-15 MeV and 23 % at 6 MeV. The rest is the Coulomb factor:
+  the allowed cross section from the same strengths reproduces the SNOwGLoBES table to 4-6 % without the
+  Fermi function, and MARLEY's own table to 3 % with it (docs/crosschecks.md, "Investigated").

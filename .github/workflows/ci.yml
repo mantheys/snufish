@@ -8,9 +8,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install -e ".[dev,plots]"
-      - run: pytest
       - run: snufish validate
-      - run: snufish build
+      - run: snufish build              # the engine tests read build/data (B4 cross sections)
+      - run: pytest
       - run: plotipus run b3 --jobs 4
       - run: plotipus run b2 --jobs 4
       - run: plotipus run b45 --jobs 4

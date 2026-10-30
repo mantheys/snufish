@@ -16,7 +16,7 @@ def test_treatments_move_hep_towards_the_core():
     # hep is produced further out than 8B: on 8B's profile, at the centre or at n_e = 66.7 its P_ee is lower
     osc, energies = oscillation("juno_2025"), np.array([10.0])
     ue2 = np.array([0.67, 0.31, 0.022])
-    pee = {t: float(ProductionTreatment(t, None).day(osc, "b16_gs98", "hep", energies) @ ue2)
+    pee = {t: float((ProductionTreatment(t, None).day(osc, "b16_gs98", "hep", energies) @ ue2)[0])
            for t in ("own", "B8", "centre", "single")}
     assert pee["centre"] < pee["B8"] < pee["single"] < pee["own"]
     assert electron_density("b16_gs98", 0.0) > SINGLE_DENSITY

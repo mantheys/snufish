@@ -82,8 +82,8 @@ an issue.
   not yet checked against a source.
 - SNOwGLoBES's 2018 MARLEY table is 35–40 % low at 8–14 MeV: it appears
   to lack the Coulomb (Fermi) factor ([crosschecks.md](crosschecks.md#investigated)).
-  `catalogue/tools/marley.yaml` still describes the older, partial
-  explanation (the g_A² factor).
+  It stays selectable and is kept out of the ⁴⁰Ar model range (it is also
+  zero below 5 MeV).
 
 ## Published numbers not reproduced
 
