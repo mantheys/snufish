@@ -153,7 +153,9 @@ described in [docs/usage.md](docs/usage.md).
 **[mantheys.github.io/snufish](https://mantheys.github.io/snufish/)**: a
 static site (plain JavaScript, no server) on top of the same engine. The
 calculator takes six steps (result; oscillation parameters; Sun; Earth;
-interaction; detector), each with links to its sources, and returns the
+interaction; detector), each with links to its sources (the Earth step can
+include the real Earth–Sun distance:
+[cross-checks](docs/crosschecks.md#earthsun-distance)), and returns the
 spectrum in observed energy, the distribution of the sampled values and the
 error budget, in ~50 ms. "Result Templates" sets every step to a
 paper's inputs. "Render with plotipus" draws the plotipus figures in the

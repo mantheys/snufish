@@ -174,7 +174,7 @@ export const DEFAULT_SETUP = {
   // efficiency and its turn-on; a smearing matrix (x true edges, y observed edges, matrix [true][observed]) in place
   // of the resolution; compared by id
   efficiency_table: null, smearing_table: null,
-  exposure: null, profile_model: null,
+  exposure: null, profile_model: null, orbit: false,
 };
 
 export function makeSetup(changes = {}) { return { ...DEFAULT_SETUP, ...changes }; }
@@ -223,6 +223,10 @@ export function check(inputs, setup, quantity = "rate") {
   }
   allowed("site", setup.site, Object.keys(d.sites));
   allowed("Earth model", setup.earth_model, d.earth_models);
+  if (setup.orbit) {
+    if (quantity === "ratio") throw new Error("a rate over the rate without oscillations does not depend on the Earth-Sun distance; leave orbit off");
+    if (d.sites[setup.site].orbit_day === undefined) throw new Error("these inputs have no orbital factors: rebuild them (snufish export-app --inputs-only)");
+  }
   if (setup.exposure !== null && !(setup.exposure > 0)) throw new Error("the exposure must be > 0 (or none)");
 }
 
@@ -431,6 +435,13 @@ function response(inputs, setup, edges) {
   return inputs.responseCache.get(key);
 }
 
+export function orbital(inputs, setup) {
+  // [day, night] factors of the rates: the site's mean (1 AU / R)^2 over its days and nights with setup.orbit, else [1, 1]
+  if (!setup.orbit) return [1, 1];
+  const site = inputs.data.sites[setup.site];
+  return [site.orbit_day, site.orbit_night];
+}
+
 export function survival(inputs, probabilities, setup, osc, night = true) {
   // {component: [P_ee by day, P_ee by night or null]} at the component's energies
   const U2 = ue2(osc), nightTable = night ? probabilities.night(osc, setup.earth_model, setup.site) : null;
@@ -481,11 +492,12 @@ export function observedRates(inputs, probabilities, setup, osc, night = true) {
   // The reference path: componentTotals and componentSpectra give the same numbers faster.
   const [edges] = observedEdges(setup.threshold), [rows, acceptance] = response(inputs, setup, edges);
   const nb = edges.length - 1, seconds = inputs.data.seconds_per_year, targets = targetsOf(inputs, setup);
+  const [gDay, gNight] = orbital(inputs, setup);
   const out = {};
   for (const [c, [peeDay, peeNight]] of Object.entries(survival(inputs, probabilities, setup, osc, night))) {
     const { kind, energy, weight } = inputs.components[c];
     const scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds, k = kernels(inputs, setup, c, edges);
-    const spectrum = (pee) => {
+    const spectrum = (pee, g) => {
       if (pee === null) return null;
       if (isNC(setup)) pee = pee.map(() => 1); // all active flavours alike
       let truth = new Float64Array(nb);
@@ -504,9 +516,9 @@ export function observedRates(inputs, probabilities, setup, osc, night = true) {
         if (rows[j] === null) observed[j] += truth[j];
         else for (let m = 0; m < nb; m++) observed[m] += truth[j] * rows[j][m];
       }
-      return Array.from(observed, (v, m) => v * acceptance[m]);
+      return Array.from(observed, (v, m) => g * v * acceptance[m]);
     };
-    out[c] = { day: spectrum(peeDay), night: spectrum(peeNight) };
+    out[c] = { day: spectrum(peeDay, gDay), night: spectrum(peeNight, gNight) };
   }
   return out;
 }
@@ -554,6 +566,7 @@ function prepared(inputs, setup, component) {
 }
 
 function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
+  const [gDay, gNight] = orbital(inputs, setup), times = (g, v) => (v === null ? null : wantSpectra ? v.map((x) => g * x) : g * v);
   const out = {};
   for (const [c, [peeDay, peeNight]] of Object.entries(survival(inputs, probabilities, setup, osc, night))) {
     const { kind, energy, weight } = inputs.components[c], prep = prepared(inputs, setup, c);
@@ -572,7 +585,7 @@ function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
       if (!wantSpectra) return truth.reduce((t, v, j) => t + v * prep.accepted[j], 0);
       return Array.from(prep.observe(truth));
     };
-    out[c] = { day: value(peeDay), night: value(peeNight) };
+    out[c] = { day: times(gDay, value(peeDay)), night: times(gNight, value(peeNight)) };
     if (!wantSpectra) out[c].ref = value(peeDay.map(() => 1)); // without oscillations: the denominator of "ratio"
   }
   return out;

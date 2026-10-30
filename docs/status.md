@@ -43,8 +43,15 @@ an issue.
 - **No backgrounds.** Statistical errors are Poisson on the signal alone.
 - **Equal day and night exposure.** The annual rate is (D + N)/2 and the
   statistics split the exposure in halves, at every latitude.
-- **No seasonal modulation.** Fluxes are at 1 AU; the Earth's orbital
-  eccentricity (about ±3.3 % in flux) is not modelled.
+- **Earth–Sun distance optional, as day and night averages only.** By
+  default fluxes are at 1 AU (the convention of published A_DN);
+  `Setup(orbit=True)` scales day and night rates by the site's mean
+  (1 AU/R)² ([crosschecks.md](crosschecks.md#earthsun-distance)). Not
+  modelled: deeper nights near perihelion (< 0.2 % of A_DN), time-resolved
+  seasonal spectra, and the 3D Earth (radial PREM variants only).
+- **PREM ends in 3 km of ocean.** The B3 detector sits in it, which
+  under-predicts A_DN at continental sites; a crust variant exists only in
+  an investigation driver ([crosschecks.md](crosschecks.md#investigated)).
 - **Detector at the surface.** B3 sets the detector depth to 0.
 - **CC visible energy is E_ν − Q** with no neutron, binding or quenching
   losses; NC on deuterium deposits 6.25 MeV (capture on ²H in pure D₂O),
@@ -73,10 +80,10 @@ an issue.
 
 - Jiangmen latitude 22.12°: the JUNO paper gives 22° N; the hundredths are
   not yet checked against a source.
-- MARLEY 2 running its v1 model gives 46 % more than SNOwGLoBES's 2018
-  MARLEY table at 10 MeV; the g_A² factor the reaction file applies to the
-  measured strengths explains part of it, the rest is not explained by the
-  files (`catalogue/tools/marley.yaml`).
+- SNOwGLoBES's 2018 MARLEY table is 35–40 % low at 8–14 MeV: it appears
+  to lack the Coulomb (Fermi) factor ([crosschecks.md](crosschecks.md#investigated)).
+  `catalogue/tools/marley.yaml` still describes the older, partial
+  explanation (the g_A² factor).
 
 ## Published numbers not reproduced
 
@@ -84,7 +91,10 @@ From [crosschecks.md](crosschecks.md):
 
 - Super-K's expected A_DN for the SK-I range at Δm²₂₁ = 4.8 × 10⁻⁵ eV²:
   −3.84 % published, −3.32 % here (13.5 % off) while 6.1 and
-  7.5 × 10⁻⁵ eV² agree to 2.5 %. Possibly an older calculation.
+  7.5 × 10⁻⁵ eV² agree to 2.5 %; Super-K's own 2014 paper expects −3.3 %
+  there, as SNUfish does.
+- Capozzi, Li, Zhu & Beacom's DUNE CC A_DN at 4.85 × 10⁻⁵ eV²: −7.90 %
+  published, −6.87 % here; the ten- and four-region PREM bracket it.
 - JUNO's −1.6 % expected A_DN at 7.5 × 10⁻⁵ eV² in its text, against
   −1.4 % from its own table 1 and −1.38 % here.
 
