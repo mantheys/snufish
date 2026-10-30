@@ -413,7 +413,7 @@ async function discrepancies() {
   $("discrepancy-table").innerHTML = `<table><thead>`
     + `<tr><th colspan="3"></th><th colspan="5" class="group reproduction">Reproduction: the paper's own assumptions</th>`
     + `<th colspan="4" class="group update">Update: state-of-the-art models and measurements</th><th></th></tr>`
-    + `<tr><th>Experiment</th><th>Template</th><th>Unit</th>`
+    + `<tr><th>Experiment</th><th title="Δm² is Δm²₂₁; T the electron's kinetic energy">Template (Δm² in 10⁻⁵ eV²)</th><th>Unit</th>`
     + `<th class="num">Published</th><th class="num" title="With the paper's inputs, as the calculator's template">SNUfish</th>`
     + `<th class="num" title="SNUfish ÷ published − 1: what SNUfish does not reproduce with the paper's assumptions">Δ</th>`
     + `<th class="num" title="Measurements: (SNUfish − measured) / its error">Pull</th><th>Paper's inputs</th>`
