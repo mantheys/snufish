@@ -140,6 +140,7 @@ The analyses below need the NuFast-Earth driver for the night:
 snufish scan                     # solar observables against Delta m^2_21; plotipus run scan
 snufish budget                   # error budget of the 8B rates and A_DN; plotipus run budget
 snufish export-app --out build/app      # tables of the web page, ~3 min on 8 cores
+snufish export-sections                 # data of the benchmark pages (benchmarks.html)
 python web/build.py --out build/site    # page + tables + plotipus wheel (--plotipus ../plotipus)
 python -m http.server -d build/site     # open http://localhost:8000
 ```

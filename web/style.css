@@ -192,3 +192,25 @@ ul.plain li { margin: 4px 0; }
 label.check { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .import a { color: var(--accent); }
 .official-caption { margin: 4px 12px 12px; }
+
+/* benchmark pages */
+a.button.ghost-link { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+.home li a { color: var(--accent); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 20px 0; max-width: 1100px; margin: 0 auto; }
+.tabs a { padding: 7px 12px; border-radius: 8px 8px 0 0; color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;
+          border: 1px solid transparent; border-bottom: 0; }
+.tabs a.active { background: var(--surface-1); color: var(--text-primary); border-color: var(--border); font-weight: 600; }
+.bench .hero p { margin: 6px 0; }
+.bench .hero a { color: var(--accent); }
+.bench section[data-page] { display: flex; flex-direction: column; gap: 16px; }
+.bench .trio { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+.bench .card { overflow: hidden; }
+@media (max-width: 600px) { .top h1 span { display: none; } .bench { padding: 16px; } .tabs { padding: 8px 16px 0; } }
+.matrix { overflow-x: auto; }
+.matrix td.num { color: var(--text-primary); }
+.matrix td.empty { color: var(--text-muted); text-align: center; }
+.matrix th { white-space: nowrap; }
+label.inline { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; }
+label.inline select { width: auto; margin-top: 0; }
+.plot-legend .kind { color: var(--plot-muted); }
+#b2-tools, #b3-tools, #b5-tools { overflow-x: auto; padding: 0 6px 6px; }

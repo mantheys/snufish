@@ -13,14 +13,14 @@ export function colours() {
   };
 }
 
-function alpha(hex, a) {
+export function alpha(hex, a) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
 const FONT = '"DejaVu Sans", Verdana, Geneva, sans-serif';
 
-function layout(c, node, title, xTitle, yTitle, extra = {}) {
+export function layout(c, node, title, xTitle, yTitle, extra = {}) {
   node.previousElementSibling.textContent = title; // the card's heading: Plotly's toolbar would cover a title in the plot
   const axis = { showline: true, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
                  tickwidth: 1, tickcolor: c.axis, minor: { ticks: "inside", ticklen: 3, tickcolor: c.axis, showgrid: false },
@@ -36,7 +36,7 @@ function layout(c, node, title, xTitle, yTitle, extra = {}) {
   };
 }
 
-const CONFIG = { responsive: true, displaylogo: false, displayModeBar: "hover",
+export const CONFIG = { responsive: true, displaylogo: false, displayModeBar: "hover",
                  modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d", "zoomIn2d", "zoomOut2d"] };
 const ENERGY_TICKS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
 
@@ -75,7 +75,7 @@ function bandTraces(c, edges, low, high, name = "sampled 68 %") {
   return traces;
 }
 
-function htmlLegend(node, items, key = "") {
+export function htmlLegend(node, items, key = "") {
   // a legend in HTML under the plot, one row that wraps at the card's edge (a Plotly legend gives every entry the
   // width of the longest, and does not move the axis title out of its way). items: {label, colour, dash, fill}
   let legend = node.nextElementSibling;

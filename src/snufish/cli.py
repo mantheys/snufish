@@ -116,6 +116,13 @@ def cmd_export_app(args):
     return 0
 
 
+def cmd_export_sections(args):
+    from .sections import export_sections
+
+    print(f"wrote   {export_sections(args.tables)}")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="snufish", description=__doc__)
     parser.add_argument("--version", action="version", version=__version__)
@@ -162,6 +169,10 @@ def main(argv=None):
     p.add_argument("--jobs", type=int, default=None, help="worker processes (default: all cores)")
     p.add_argument("--inputs-only", action="store_true", help="rewrite inputs.json only (the tables are unchanged)")
     p.set_defaults(func=cmd_export_app)
+
+    p = sub.add_parser("export-sections", help="uncertainty and impact of each benchmark, for the web page")
+    p.add_argument("--tables", default="build/app", help="app tables (snufish export-app); sections.json goes there")
+    p.set_defaults(func=cmd_export_sections)
 
     args = parser.parse_args(argv)
     return args.func(args)

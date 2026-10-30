@@ -1,8 +1,10 @@
 """Assemble the static SNUfish page: web/ plus the tables of ``snufish export-app``.
 
     snufish export-app --out build/app
+    snufish export-sections --tables build/app   # the benchmark pages
     python web/build.py --out build/site     # --plotipus: the plotipus checkout (default ../plotipus)
-    python -m http.server -d build/site      # open http://localhost:8000 (home), rates.html (calculator)
+    python -m http.server -d build/site      # open http://localhost:8000 (home), rates.html (calculator),
+                                             # benchmarks.html (the benchmarks' uncertainties)
 
 The result is plain files (HTML, JS, CSS, JSON, binary tables): any static
 host serves it (GitHub Pages, a lab web server).
@@ -18,7 +20,7 @@ from pathlib import Path
 
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
-PAGE = ["index.html", "rates.html", "style.css", "app.js", "engine.js", "plots.js", "export.js", "sources.js", "checks.js", "official.js",
+PAGE = ["index.html", "rates.html", "benchmarks.html", "benchmarks.js", "style.css", "app.js", "engine.js", "plots.js", "export.js", "sources.js", "checks.js", "official.js",
         "plotipus-worker.js"]
 
 
@@ -35,6 +37,8 @@ def main():
     args = parser.parse_args()
     if not (args.tables / "inputs.json").exists():
         raise SystemExit(f"no tables in {args.tables}: run snufish export-app first")
+    if not (args.tables / "sections.json").exists():
+        print(f"warning: no sections.json in {args.tables}: benchmarks.html will say so (snufish export-sections)")
     if args.out.exists():
         shutil.rmtree(args.out)
     args.out.mkdir(parents=True)
