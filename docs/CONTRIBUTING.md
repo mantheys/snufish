@@ -30,7 +30,7 @@ that needs a contributor is listed in [status.md](status.md).
 4. `snufish validate contributions/<tool>/<benchmark>/<version>` must pass:
    grid, required variants, value ranges and the benchmark's physics checks
    (for B3: unitarity and the vacuum limit at the horizon).
-5. Open a pull request. CI regenerates every plot with your results.
+5. Open a pull request. CI lints (`ruff check .`), runs the tests and regenerates every plot with your results.
 
 Keep the script that produced the data in your tool's repository (or under
 `contributions/<tool>/scripts/`, as for `nufast-earth`) so anyone can

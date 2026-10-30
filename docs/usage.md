@@ -271,6 +271,9 @@ python -m http.server -d build/site             # http://localhost:8000
 bash web/deploy.sh                              # build and force-push to gh-pages (needs a clean tree)
 ```
 
+CI does the last step on every push to `main` once lint and tests pass
+(the `deploy` job in `.github/workflows/ci.yml`).
+
 `web/build.py --artifact` builds a variant for hosts that cannot fetch
 from other origins (bundled Pyodide, no downloads or shareable links).
 The JavaScript engine is checked by `tests/test_web_engine.py`, which

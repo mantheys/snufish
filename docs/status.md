@@ -52,9 +52,11 @@ an issue.
   (1 AU/R)² ([crosschecks.md](crosschecks.md#earthsun-distance)). Not
   modelled: deeper nights near perihelion (< 0.2 % of A_DN), time-resolved
   seasonal spectra, and the 3D Earth (radial PREM variants only).
-- **PREM ends in 3 km of ocean.** The B3 detector sits in it, which
-  under-predicts A_DN at continental sites; a crust variant exists only in
-  an investigation driver ([crosschecks.md](crosschecks.md#investigated)).
+- **B3's Earth models end in PREM's 3 km of ocean.** The engine and the
+  calculator default to `prem_crust1` (the CRUST1.0 column of each site
+  above PREM's Moho, [crosschecks.md](crosschecks.md#local-crust)), but the
+  B3 benchmark has no crust variant: its detector sits in the ocean, which
+  shifts A_DN by −2.4 % to +3.8 % against the local crust at the five sites.
 - **Detector at the surface.** B3 sets the detector depth to 0.
 - **CC visible energy is E_ν − Q** with no neutron, binding or quenching
   losses; NC on deuterium deposits 6.25 MeV (capture on ²H in pure D₂O),
@@ -118,9 +120,12 @@ From [crosschecks.md](crosschecks.md):
 
 ## Housekeeping
 
-- CI runs the tests, validation, build and the `b1`, `b2`, `b3`, `b45`
-  plots. It does not build the NuFast-Earth driver, so the tests that need
-  it or the app tables (`test_engine.py` table tests, the scan,
-  `test_web_engine.py`) are skipped there, and `scan`, `budget` and
-  `export-app` are not exercised.
+- CI runs ruff, validation, build, the tests on Python 3.10 and 3.12 and
+  the `b1`, `b2`, `b3`, `b45` plots. It builds the NuFast-Earth driver and
+  the app tables (`export-app`, cached on the inputs and the code), so no
+  test is skipped, including `test_web_engine.py` (the page's engine against
+  the Python one). The `scan` and `budget` commands themselves are not run.
+- Pushes to `main` publish the page (`web/deploy.sh`) once lint and tests
+  pass. plotipus is pinned to a commit in `pyproject.toml`; the page serves
+  the wheel of that commit.
 - No release on PyPI; the package version is 0.1.0.
