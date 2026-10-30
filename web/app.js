@@ -2,7 +2,8 @@
 import * as engine from "./engine.js";
 import { budgetPlot, distributionPlot, officialPlot, spectrumPlot } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
-import { CHECKS, PAPER_SETS, RESULTS } from "./checks.js";
+import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
+         reproduced } from "./checks.js";
 import { officialFigure } from "./official.js";
 
 const DATA = "data/";
@@ -16,55 +17,25 @@ const XSEC = {
   ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
   ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
   ar40_marley2_bhattacharya1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Bhattacharya 1998)",
+  ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g_A = 1.00)",
   ar40_marley1_bhattacharya2009: "MARLEY v1 model, B(GT) from (p,n) (run by MARLEY 2)",
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
 };
-const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first available is selected by default
-const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
+const ES = { bks: "Radiative corrections (BKS)", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
+// reference/status.yaml, via engine.status: what is the state of the art, what is legacy, what is an approximation
+const STATUS_LABEL = { current: "state of the art", legacy: "legacy", approximation: "approximation", reproduction: "as used in a paper" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
-const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
-const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
-                ktday: [1 / DAYS, "per kt·day"], cpd100t: [0.1 / DAYS, "per 100 t·day"] };
 const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
-// Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
-// (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
-const SK4_RESOLUTION = [-0.05525, 0.3162, 0.04572];
 const PRESETS = {
   // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector
   thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
            "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
            components: ORDER, quantity: "rate", period: "annual", unit: "g" },
-  // Borexino Phase-II (arXiv:1707.09279): interaction rates over all recoil energies, in counts per day per 100 t
-  borexino: { unit: "cpd100t", detector: "scintillator_pc", channel: "es", site: "LNGS", threshold: 0, "res-model": "quadrature",
-              "res-a": 0.05, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.0713, years: +(1291.51 / DAYS).toFixed(4),
-              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["Be7"], quantity: "rate", period: "annual" },
-  // JUNO 8B (arXiv:2006.11760): 2 MeV recoil threshold, 3 %/sqrt(E), SNO NC 8B flux, energy scale 0.3 %, efficiency 1 %
-  juno: { unit: "ktday", detector: "scintillator_lab", channel: "es", site: "Jiangmen", threshold: 2.0, "res-model": "quadrature",
-          "res-a": 0.03, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "",
-          "unc-scale": 0.3, "unc-res": 0, "unc-norm": 1, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
-  // SNO phases I and II (arXiv:1109.0763): 770 t fiducial D2O, T_eff > 3.5 MeV, 277.3 + 391.4 days, energy scale 0.41 %
-  sno: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 3.5, "res-model": "quadrature",
-         "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +((277.3 + 391.4) / DAYS).toFixed(4),
-         "unc-scale": 0.41, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], quantity: "rate", period: "annual" },
-  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC
-  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "quadrature",
-              "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +(391.4 / DAYS).toFixed(4),
-              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
-  // DUNE far detector, public numbers only: 4 x 10 kt fiducial LAr, 5 MeV detected-energy threshold and ~20 % resolution
-  // (supernova-burst paper, arXiv:2008.06647); 100 kt yr as in Capozzi, Li, Zhu & Beacom (arXiv:1808.08232)
-  dune: { unit: "kt", detector: "argon", channel: "cc_nue_ar40", site: "SURF", threshold: 5.0, "res-model": "quadrature",
-          "res-a": 0, "res-b": 20, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 40, years: 2.5,
-          "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual" },
-  // Hyper-K design report (arXiv:1805.04163): 187 kt fiducial per tank, 4.5 MeV kinetic threshold, scale 0.5 %, resolution 0.6 %
-  hyperk: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 4.5, "res-model": "sk4", "eff-model": "parametric",
-            eff: 100, "eff-e50": 0, mass: 187, years: 10, "unc-scale": 0.5, "unc-res": 0.6, "unc-norm": 0, components: ["B8", "hep"],
-            quantity: "rate", period: "annual" },
-  sk4: { unit: "kt", detector: "water", channel: "es", site: "Kamioka", threshold: 3.49, "res-model": "sk4", "eff-model": "curve:sk4_final",
-         eff: 100, "eff-e50": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "rate", period: "annual",
-         mass: 22.5, years: +(2970 / 365.25).toFixed(3), "unc-scale": 0.48, "unc-res": 3, "unc-norm": 1.1 },
+  ...EXPERIMENTS,
 };
 const PRESET_NOTES = {
   thumb: `A thumb, as ${THUMB_GRAMS} g of water: every solar flux component, elastic scattering on its electrons, `
@@ -132,6 +103,47 @@ function fillSelect(select, entries, value) {
   if (!entries.some(([v]) => v === value) && entries.length) select.value = entries[0][0];
 }
 
+// ------------------------------------------------------------------ state of the art
+
+const statusOf = (category, name, channel = null) => engine.status(app.inputs, category, name, channel);
+const suffix = (s) => (s.status === "current" ? "" : ` · ${STATUS_LABEL[s.status]}`);
+const badge = (status) => `<span class="badge ${status}">${STATUS_LABEL[status]}</span>`;
+
+function nameOf(category, name, channel = null) {
+  const d = app.inputs.data;
+  return { parameter_set: () => d.parameter_sets.sets[name]?.label, solar_model: () => d.solar_models[name]?.label,
+           earth_model: () => EARTH[name], es_model: () => ES[name], xsec_model: () => XSEC[name] }[category]?.() || name;
+}
+
+function group(label, options) {
+  const g = document.createElement("optgroup");
+  g.label = label;
+  g.append(...options);
+  return g;
+}
+
+function statusNote(id, category, name, channel = null) {
+  // the status of the selected choice under its control: badge, why, and what to use instead
+  const s = statusOf(category, name, channel);
+  const instead = s.superseded_by ? ` State of the art instead: ${nameOf(category, s.superseded_by, channel)}.` : "";
+  $(id).innerHTML = `${badge(s.status)} ${s.summary}${instead}`;
+}
+
+function currencyLine(r) {
+  // which inputs of this result are not the state of the art, and what that means for its ranges
+  const flagged = engine.notCurrent(app.inputs, r.setup, r.quantity, r.set);
+  if (!flagged.length)
+    return `<div class="currency">${badge("current")} Every input that enters this result is the state of the art. The model ranges
+      compare the competing state-of-the-art models; with the sampled σ, that is the uncertainty.</div>`;
+  const items = flagged.map((c) => `${nameOf(c.category, c.name, r.setup.channel)} (${STATUS_LABEL[c.status]}${c.superseded_by
+    ? `; state of the art: ${nameOf(c.category, c.superseded_by, r.setup.channel)}` : ""})`);
+  const outside = r.rows.filter((x) => x.Kind === "model range" && (x.Central < x.Low || x.Central > x.High)).map((x) => x.Source);
+  return `<div class="currency outdated">${badge(flagged.some((c) => c.status !== "approximation") ? "legacy" : "approximation")}
+    <b>Not the state of the art:</b> ${items.join("; ")}. Use it to reproduce published work: its difference from a
+    state-of-the-art result comes from outdated inputs or approximations, not from an uncertainty.${outside.length
+    ? ` The central value lies outside the state-of-the-art range of the ${outside.join(" and the ")}.` : ""}</div>`;
+}
+
 function buildControls() {
   const d = app.inputs.data;
   Object.assign(d.parameter_sets.sets, PAPER_SETS); // the papers' own values, for the published checks
@@ -146,23 +158,24 @@ function buildControls() {
     list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
     return group;
   }));
-  const set = $("set");
-  for (const [kind, label] of Object.entries(KINDS)) {
-    const group = document.createElement("optgroup");
-    group.label = label;
-    for (const [name, info] of Object.entries(d.parameter_sets.sets)) if (info.kind === kind) group.append(option(name, info.label));
-    if (group.children.length) set.append(group);
+  // state-of-the-art choices first; legacy ones (kept to reproduce papers) and approximations apart, and labelled
+  const sets = Object.entries(d.parameter_sets.sets).map(([name, info]) => [name, info, statusOf("parameter_set", name)]);
+  $("set").replaceChildren(...[
+    ...Object.entries(KINDS).filter(([kind]) => kind !== "paper").map(([kind, label]) => group(`State of the art: ${label.toLowerCase()}`,
+      sets.filter(([, info, s]) => info.kind === kind && s.status === "current").map(([name, info]) => option(name, info.label)))),
+    group("Legacy (superseded)", sets.filter(([, , s]) => s.status === "legacy").map(([name, info, s]) => option(name, info.label + suffix(s)))),
+    group(KINDS.paper, sets.filter(([, , s]) => s.status === "reproduction").map(([name, info]) => option(name, info.label))),
+  ].filter((g) => g.children.length));
+  $("set").value = "juno_2025";
+  const solar = $("solar"), families = {}, current = [];
+  for (const [name, info] of Object.entries(d.solar_models)) {
+    const s = statusOf("solar_model", name);
+    if (s.status === "current") current.push(option(name, info.label));
+    else (families[info.label.split(" ")[0]] ||= []).push(option(name, info.label + suffix(s)));
   }
-  set.value = "juno_2025";
-  const solar = $("solar"), families = {};
-  for (const [name, info] of Object.entries(d.solar_models)) (families[info.label.split(" ")[0]] ||= []).push([name, info.label]);
-  for (const [family, models] of Object.entries(families)) {
-    const group = document.createElement("optgroup");
-    group.label = family;
-    models.forEach(([name, label]) => group.append(option(name, label)));
-    solar.append(group);
-  }
-  solar.value = "b23_gs98";
+  solar.replaceChildren(group("State of the art", current),
+                        ...Object.entries(families).map(([family, options]) => group(`Legacy: ${family}`, options)));
+  solar.value = "b23_mb22m"; // NuFIT 6.0's reference model (arXiv:2410.05380)
   $("components").replaceChildren(...ORDER.map((c, i) => {
     const label = document.createElement("label");
     label.style.setProperty("--dot", `var(--series-${i + 1})`);
@@ -170,7 +183,8 @@ function buildControls() {
     return label;
   }));
   fillSelect($("site"), Object.entries(d.sites).map(([s, info]) => [s, `${s} (${info.latitude_deg.toFixed(1)}° N)`]), "Kamioka");
-  fillSelect($("earth"), d.earth_models.map((e) => [e, EARTH[e] || e]), "prem_full");
+  const earth = d.earth_models.map((e) => [e, statusOf("earth_model", e)]).sort(([, a], [, b]) => (a.status !== "current") - (b.status !== "current"));
+  fillSelect($("earth"), earth.map(([e, s]) => [e, (EARTH[e] || e) + suffix(s)]), "prem_crust1");
   fillSelect($("detector"), Object.keys(d.detectors).map((k) => [k, DETECTORS[k] || k]), "water");
 }
 
@@ -199,6 +213,7 @@ function readSetup() {
     efficiency_table: efficiencyTable(),
     energy_scale_error: number("unc-scale") / 100, resolution_error: number("unc-res") / 100,
     normalisation_error: number("unc-norm") / 100, exposure: exposure(),
+    orbit: $("orbit").checked && !$("orbit").disabled,
   });
 }
 
@@ -218,6 +233,8 @@ function sync() {
   fillSelect($("channel"), channels.map((c) => [c, CHANNELS[c] || c]), $("channel").value);
   const es = $("channel").value === "es";
   $("es-row").hidden = !es;
+  $("es-status").hidden = !es;
+  $("xsec-status").hidden = es;
   $("res-ab").hidden = $("res-model").value !== "quadrature";
   $("smear-import").hidden = $("res-model").value !== "import";
   const effImport = $("eff-model").value === "import", effCurve = $("eff-model").value.startsWith("curve:");
@@ -235,7 +252,14 @@ function sync() {
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
   const keep = models.includes($("xsec").value) ? $("xsec").value : NOMINAL_XSEC.find((m) => models.includes(m)) || models[0];
   const ordered = [...Object.keys(XSEC).filter((m) => models.includes(m)), ...models.filter((m) => !(m in XSEC))];
-  fillSelect($("xsec"), ordered.map((m) => [m, XSEC[m] || m]), keep);
+  const channel = $("channel").value, xsecStatus = (m) => statusOf("xsec_model", m, channel);
+  $("xsec").replaceChildren(...[
+    group("State of the art", ordered.filter((m) => xsecStatus(m).status === "current").map((m) => option(m, XSEC[m] || m))),
+    group("Legacy (superseded)", ordered.filter((m) => xsecStatus(m).status !== "current").map((m) => option(m, (XSEC[m] || m) + suffix(xsecStatus(m))))),
+  ].filter((g) => g.children.length));
+  $("xsec").value = keep;
+  if (!es && models.length) statusNote("xsec-status", "xsec_model", $("xsec").value, channel);
+  if (es) statusNote("es-status", "es_model", radio("es"));
   $("xsec-row").hidden = models.length < 2;
   const comps = [...document.querySelectorAll('input[name="components"]:checked')].map((x) => x.value);
   $("b8-row").hidden = !comps.includes("B8");
@@ -243,6 +267,17 @@ function sync() {
   $("unit-row").hidden = radio("quantity") !== "rate";
   const night = engine.needsNight(radio("quantity"), radio("period"));
   $("site").disabled = $("earth").disabled = !night;
+  $("orbit").disabled = !night || radio("quantity") === "ratio";
+  const g = d.sites[$("site").value] || {};
+  $("orbit-note").textContent = $("orbit").disabled ? ""
+    : g.orbit_day === undefined ? "These tables have no orbital factors (rebuild them with snufish export-app --inputs-only)."
+    : $("orbit").checked
+      ? `Rates at the real Earth–Sun distance: × ${g.orbit_day.toFixed(4)} by day, × ${g.orbit_night.toFixed(4)} by night at ${$("site").value} (mean (1 AU/R)² over its days and nights). This adds ${(200 * (g.orbit_night - g.orbit_day) / (g.orbit_night + g.orbit_day)).toFixed(2)} percentage points to the day-night asymmetry.`
+      : "Off: fluxes at 1 AU, the convention of published day-night asymmetries (experiments correct each event for the Earth–Sun distance).";
+  statusNote("set-status", "parameter_set", $("set").value);
+  statusNote("solar-status", "solar_model", $("solar").value);
+  statusNote("earth-status", "earth_model", $("earth").value);
+  $("earth-status").hidden = !night;
   $("earth-note").textContent = night
     ? "Neutrinos cross the Earth at night; the site's latitude sets the path lengths through it."
     : "Not used: daytime neutrinos do not cross the Earth. Choose a night or annual rate, or the day-night asymmetry.";
@@ -251,7 +286,7 @@ function sync() {
     sin²θ₁₂ = ${s.value.toFixed(4)} (−${s.error[0].toFixed(4)} +${s.error[1].toFixed(4)})<br>
     ${p.sin2_theta13 ? `sin²θ₁₃ = ${p.sin2_theta13.value}; θ₂₃, δ, Δm²₃₁` : "θ₁₃, θ₂₃, δ, Δm²₃₁"}: NuFIT 6.0 · ${p.source}`;
   const check = CHECKS.find((c) => c.id === $("check").value);
-  $("check-note").innerHTML = check ? `${sourceLink(check)}.${check.note ? ` ${check.note}` : ""} Change any setting to leave the check.`
+  $("check-note").innerHTML = check ? `${sourceLink(check)}.${check.note ? ` ${check.note}` : ""} The paper's own inputs are often legacy ones: the result says which. Change any setting to leave the check.`
     : $("check").value === "thumb" ? PRESET_NOTES.thumb
     : "Sets every step to a paper's inputs and shows its number next to SNUfish's, with the paper's figure recreated.";
 }
@@ -270,6 +305,7 @@ function saveHash() {
   for (const [id, key] of Object.entries(KEYS)) if ($(id).value) p.set(key, $(id).value);
   for (const [name, key] of Object.entries(RADIOS)) p.set(key, radio(name));
   p.set("components", readSetup().components.join(","));
+  if ($("orbit").checked) p.set("orbit", "1");
   history.replaceState(null, "", `#${p}`);
 }
 
@@ -282,6 +318,7 @@ function loadHash() {
   if (p.has("channel")) { $("channel").value = p.get("channel"); sync(); }
   for (const [id, key] of Object.entries(KEYS)) if (p.has(key) && id !== "detector" && id !== "channel") $(id).value = p.get(key);
   for (const [name, key] of Object.entries(RADIOS)) if (p.has(key)) setRadio(name, p.get(key));
+  $("orbit").checked = p.get("orbit") === "1";
   if (p.has("components")) {
     const chosen = p.get("components").split(",");
     document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = chosen.includes(x.value); });
@@ -371,12 +408,9 @@ function publishedLine(r) {
   // the selected published check: the paper's number next to this one (a measurement with its pull)
   const c = r.check;
   if (!c) return "";
-  const p = c.published, central = r.rows[0].Central;
-  let ours, shown, unit = "";
-  if (p.kind === "rate") { ours = central * UNITS[p.unit][0]; unit = ` ${UNITS[p.unit][1]}`; }
-  else if (p.kind === "events") { ours = central * r.setup.exposure; unit = " events"; }
-  else if (p.kind === "ratio") ours = central;
-  else ours = -central; // A_DN in the papers' (D - N)/mean
+  const p = c.published, ours = reproduced(c, r.rows[0].Central, r.setup.exposure); // A_DN in the papers' (D - N)/mean
+  const unit = { rate: () => ` ${UNITS[p.unit][1]}`, events: () => " events" }[p.kind]?.() || "";
+  let shown;
   const minus = (text) => text.replace("-", "−");
   const digits = (v, n = 4) => (p.kind === "events" ? Math.round(v).toLocaleString("en-US")
     : p.kind === "adn" ? minus(`${(100 * v).toFixed(2)} %`) : minus(Number(v.toPrecision(n)).toString()));
@@ -450,7 +484,7 @@ async function compute() {
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
   app.tables.clamped = 0;
-  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange });
+  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange, legacy: true });
   const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
   const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
   const ms = performance.now() - t0;
@@ -462,7 +496,7 @@ async function compute() {
                  lines: lineMarks(setup) };
   app.result.official = await officialFigure(check, { inputs: app.inputs, tables: app.tables, setup, set: $("set").value });
   render();
-  setTimeout(thumb, 0); // the all-components example, after the result is on screen
+  if (thumbShown()) setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
   const notes = [];
   if (app.tables.clamped) notes.push(`${app.tables.clamped} sampled points fell outside the tables and were moved to their edge.`);
@@ -492,11 +526,13 @@ function renderFlux() {
   }
   card.innerHTML = `<div><h4>Flux at Earth</h4><div class="big">${fmt(f.total)} <small>cm⁻² s⁻¹</small></div>
       <div class="sub">${names} (${d.solar_models[r.setup.solar_model].label}); νₑ by day ${(100 * f.nue_day).toFixed(1)} %</div>${per}</div>
-    ${compare}<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>`;
+    ${compare}${thumbShown() ? `<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>` : ""}`;
   card.hidden = false;
-  if (app.thumb && app.thumb.key === thumbKey()) showThumb();
+  if (thumbShown() && app.thumb && app.thumb.key === thumbKey()) showThumb();
 }
 
+// the thumb card belongs to the opening example: shown while the thumb preset is set, gone once any setting changes
+const thumbShown = () => $("preset").value === "thumb";
 const thumbKey = () => `${$("set").value}|${$("solar").value}`;
 
 async function thumb() {
@@ -545,9 +581,10 @@ function render() {
   const { setup, quantity, rows, scale, unit, live } = r;
   const total = rows.find((x) => x.Source === "total sampled"), central = total.Central;
   const sampled = rows.filter((x) => x.Kind === "sampled" && x.Source !== "total sampled").map((x) => x.Source);
-  const ranges = rows.filter((x) => x.Kind === "model range").map((x) => quantity !== "adn"
+  const range = (x) => (quantity !== "adn"
     ? `${x.Source}: ${fmt(x.Low * scale)} to ${fmt(x.High * scale)} (${signed(100 * (x.Low / central - 1))} % / ${signed(100 * (x.High / central - 1))} %)`
     : `${x.Source}: ${(x.Low * scale).toFixed(3)} to ${(x.High * scale).toFixed(3)} %`);
+  const ranges = rows.filter((x) => x.Kind === "model range").map(range), legacy = rows.filter((x) => x.Kind === "legacy spread").map(range);
   const events = live && quantity === "rate"
     ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
@@ -555,7 +592,9 @@ function render() {
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
-    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}${publishedLine(r)}${measuredLine(r)}`;
+    <div class="ranges"><b>Model ranges: the competing state-of-the-art models</b>${ranges.join("<br>") || "none: one state-of-the-art model per choice here"}${
+      legacy.length ? `<div class="legacy-ranges">With legacy models and approximations too (context, not an uncertainty):<br>${legacy.join("<br>")}</div>` : ""}</div>
+    ${currencyLine(r)}${thumbLine(r)}${publishedLine(r)}${measuredLine(r)}`;
   renderFlux();
   spectrumPlot($("plot-spectrum"), r);
   distributionPlot($("plot-distribution"), r, checkBand(r) || measuredBand(setup, quantity));
@@ -564,7 +603,9 @@ function render() {
   const cell = (v) => (Number.isFinite(v) ? fmt(v * scale) : "–");
   $("table").innerHTML = `<table><thead><tr><th>Source</th><th>Kind</th><th class="num">σ or range</th><th class="num">Relative</th></tr></thead><tbody>${
     rows.map((x) => `<tr><td>${x.Source}</td><td>${x.Kind}</td><td class="num">${x.Kind === "sampled" ? cell(x.Sigma) : `${cell(x.Low)} to ${cell(x.High)}`}</td><td class="num">${Number.isFinite(x.Relative) ? (100 * x.Relative).toFixed(2) + " %" : "–"}</td></tr>`).join("")
-  }</tbody></table>`;
+  }</tbody></table><p class="hint">Sampled: a 1σ from random draws. Model range: the spread of the state-of-the-art models
+  of one choice, never folded into the σ. Legacy spread: the same choice over every model, legacy ones and approximations
+  included; context for reading published numbers, not an uncertainty. <a href="index.html#status">Which inputs are which</a>.</p>`;
 }
 
 // ------------------------------------------------------------------ theme, share, download
@@ -737,14 +778,11 @@ function applyValues(values) {
     if (["detector", "channel"].includes(id)) continue;
     if (id === "components") document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = v.includes(x.value); });
     else if (id === "quantity" || id === "period" || id === "b8" || id === "es") setRadio(id, v);
+    else if (id === "orbit") $(id).checked = v;
     else $(id).value = v;
   }
 }
 
-// every field a check may leave untouched, at its default: a check sets the whole page
-const CHECK_BASE = { set: "nufit60_global", solar: "b23_gs98", b8: "model", es: "bks", earth: "prem_full", "res-model": "quadrature",
-                     "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, "eff-width": 0.5, mass: "", years: "",
-                     "unc-scale": 0, "unc-res": 0, "unc-norm": 0, quantity: "rate", period: "annual", unit: "kt" };
 const STEP5 = ["threshold", "res-model", "res-a", "res-b", "eff-model", "eff", "eff-e50", "eff-width", "mass", "years", "unc-scale", "unc-res", "unc-norm"];
 
 function applyCheck(id) {
@@ -763,7 +801,13 @@ function applyCheck(id) {
     $("eff-model").value = "import";
     $("eff-info").textContent = `Energy window ${lo}–${hi} MeV (set by the published check).`;
   }
-  if (c.window || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
+  if (c.electron) { // the electron alone, gammas undetected: a matrix over the nuclear levels, in neutrino energy
+    app.imports.smearing = engine.electronSmearing(app.inputs, $("channel").value, $("xsec").value, c.electron);
+    $("res-model").value = "import";
+    $("smear-neutrino").checked = true;
+    $("smear-info").textContent = `The ${app.imports.smearing.summary} (set by the published check): T = Eν − Q − E_level.`;
+  }
+  if (c.window || c.electron || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
 }
 
 function refreshSources() {

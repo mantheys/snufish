@@ -24,6 +24,9 @@ Uncertainties are kept in two kinds, as in ``snufish budget``: sampled
 for an exposure), reported as a standard deviation; and model choices
 (cross-section model, ES radiative corrections, Earth model, solar model),
 reported as the range of the alternatives and never folded into a sigma.
+Ranges run over the state-of-the-art alternatives only (``status``, from
+reference/status.yaml): a legacy model or an approximation is selectable,
+but its difference from the current ones is not an uncertainty.
 """
 
 import json
@@ -156,13 +159,46 @@ class Table:
         return hash(self.id)
 
 
+def electron_smearing(inputs, channel, xsec_model, b, step=0.1, top=25.0):
+    """Smearing matrix in neutrino energy (a Table) for the electron of a CC event alone,
+    its de-excitation gammas undetected: each nuclear level takes its share of the cross
+    section to T = E_nu - Q - E_level, smeared by a Gaussian of sigma = b T (b = 0: none).
+    The shares come from the model's measured levels (their 1-sigma tables: sigma is linear
+    in each strength); the rest of the cross section (unmeasured levels) goes to the highest."""
+    table = inputs["xsec"][channel]
+    energy, total = np.asarray(table[xsec_model]["energy"]), np.asarray(table[xsec_model]["sigma"])
+    levels = inputs["xsec_levels"][channel][xsec_model]
+    edges = np.round(np.arange(0.0, top + step / 2, step), 10)
+    centres = 0.5 * (edges[1:] + edges[:-1])
+    sigma = np.interp(centres, energy, total, left=0.0)
+    shares = [np.interp(centres, energy, (np.interp(energy, table[l["name"]]["energy"], table[l["name"]]["sigma"]) - total)
+                        * l["strength"] / l["error"], left=0.0) for l in levels]
+    shares = [np.clip(np.divide(s, sigma, out=np.zeros_like(s), where=sigma > 0), 0, None) for s in shares]
+    shares[-1] = shares[-1] + np.where(sigma > 0, np.clip(1 - sum(shares), 0, None), 0)
+    cdf = np.vectorize(lambda z: 0.5 * (1 + erf(z / np.sqrt(2))))
+    matrix = np.zeros((len(centres), len(edges) - 1))
+    for level, share in zip(levels, shares):
+        t = centres - inputs["visible_offset_MeV"][channel] - level["level_MeV"]
+        for i in np.flatnonzero((share > 0) & (t > 0)):
+            if b > 0:
+                c = cdf((edges - t[i]) / (b * t[i]))
+                row = np.diff(c)
+                row[0] += c[0]
+                row[-1] += 1 - c[-1]
+            else:
+                row = np.zeros(len(edges) - 1)
+                row[min(np.searchsorted(edges, t[i], side="right") - 1, len(row) - 1)] = 1
+            matrix[i] += share[i] * row
+    return Table(f"electron:{channel}:{xsec_model}:{b:g}", tuple(edges), tuple(edges), tuple(map(tuple, matrix)), "neutrino")
+
+
 @dataclass(frozen=True)
 class Setup:
     """Everything but the oscillation parameters."""
-    solar_model: str = "b23_gs98"
+    solar_model: str = "b23_mb22m"
     components: tuple = ("B8",)
     b8_flux: str = "model"          # "model" or "sno_nc" (measured total 8B flux)
-    earth_model: str = "prem_full"
+    earth_model: str = "prem_crust1"
     site: str = "Kamioka"
     detector: str = "water"
     channel: str = "es"
@@ -187,6 +223,9 @@ class Setup:
     normalisation_error: float = 0.0    # and on the rate (efficiencies, fiducial volume, cuts...)
     exposure: float = None          # kton-years, for the statistical uncertainty
     profile_model: str = None       # solar model of the day fractions, if not solar_model
+    orbit: bool = False             # day and night rates times the site's mean (1 AU / R)^2 over its days or nights
+                                    # (exposure.orbital_factors); False: at 1 AU, the convention of published A_DN
+                                    # (experiments correct each event for the Earth-Sun distance)
 
     def replace(self, **changes):
         return replace(self, **changes)
@@ -248,6 +287,12 @@ def check(inputs, setup, quantity="rate"):
             raise ValueError("a smearing matrix in neutrino energy applies to CC channels only")
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
+    if setup.orbit:
+        if quantity == "ratio":
+            raise ValueError("a rate over the rate without oscillations does not depend on the Earth-Sun distance; "
+                             "leave orbit off")
+        if "orbit_day" not in inputs["sites"][setup.site]:
+            raise ValueError("these inputs have no orbital factors: rebuild them (snufish export-app --inputs-only)")
     if setup.exposure is not None and setup.exposure <= 0:
         raise ValueError("the exposure must be > 0 (or None for no statistical uncertainty)")
 
@@ -414,6 +459,15 @@ def _response(inputs, setup, edges):
     return cache[key]
 
 
+def orbital(inputs, setup):
+    """(day, night) factors of the rates: the site's mean (1 AU / R)^2 over its
+    days and nights with ``setup.orbit``, else (1, 1)."""
+    if not setup.orbit:
+        return 1.0, 1.0
+    site = inputs["sites"][setup.site]
+    return site["orbit_day"], site["orbit_night"]
+
+
 def survival(inputs, probabilities, setup, osc, night=True):
     """{component: (P_ee by day, P_ee by night or None)} at the component's energies."""
     U2 = np.abs(pmns(osc)) ** 2
@@ -458,13 +512,14 @@ def observed_rates(inputs, probabilities, setup, osc, night=True):
     edges, _ = observed_edges(setup.threshold)
     matrix, acceptance = _response(inputs, setup, edges)
     seconds, targets = inputs["seconds_per_year"], _targets(inputs, setup)
+    g_day, g_night = orbital(inputs, setup)
     out = {}
     for c, (pee_day, pee_night) in survival(inputs, probabilities, setup, osc, night).items():
         kind, energy, weight = inputs.components[c]
         scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds
         kernels = _kernels(inputs, setup, c, edges)
 
-        def spectrum(pee):
+        def spectrum(pee, g):
             if pee is None:
                 return None
             if is_nc(setup):
@@ -474,9 +529,9 @@ def observed_rates(inputs, probabilities, setup, osc, night=True):
                 true = (q * pee) @ kernels[0] + (q * (1 - pee)) @ kernels[1]
             else:
                 true = _visible(inputs, setup, kind, energy, scale * weight * pee * kernels, edges)
-            return (true @ matrix) * acceptance
+            return g * (true @ matrix) * acceptance
 
-        out[c] = {"day": spectrum(pee_day), "night": spectrum(pee_night)}
+        out[c] = {"day": spectrum(pee_day, g_day), "night": spectrum(pee_night, g_night)}
     return out
 
 
@@ -512,6 +567,7 @@ def _prepared(inputs, setup, component):
 
 
 def _fast(inputs, probabilities, setup, osc, night, spectra):
+    g_day, g_night = orbital(inputs, setup)
     out = {}
     for c, peeses in survival(inputs, probabilities, setup, osc, night).items():
         kind, energy, weight = inputs.components[c]
@@ -534,7 +590,8 @@ def _fast(inputs, probabilities, setup, osc, night, spectra):
             smeared = true if prep["identity"] else true @ prep["matrix"]
             return rebin(smeared * prep["acceptance"], prep["edges"], prep["display"])
 
-        out[c] = {"day": value(peeses[0]), "night": value(peeses[1])}
+        day, nite = value(peeses[0]), value(peeses[1])
+        out[c] = {"day": day if day is None else g_day * day, "night": nite if nite is None else g_night * nite}
         if not spectra:  # without oscillations (every neutrino a nu_e): the denominator of "ratio"
             out[c]["ref"] = value(np.ones_like(peeses[0]))
     return out
@@ -621,19 +678,67 @@ ES_MODELS = ("bks", "tree", "snowglobes")
 ES_RANGE = ("bks", "snowglobes")  # the radiatively corrected calculations; tree level is selectable, not a model
 RANGE_LABELS = {"xsec_model": "cross-section model", "es_model": "ES radiative corrections",
                 "earth_model": "Earth model", "solar_model": "solar model"}
+# reference/status.yaml: current (state of the art; current entries compete, their spread is the model
+# uncertainty), legacy (superseded), approximation (a simplified current entry), reproduction (a paper's inputs)
+STATUSES = ("current", "legacy", "approximation", "reproduction")
 
 
-def alternatives(inputs, setup, choice):
+def status(inputs, category, name, channel=None):
+    """dict(status, summary, superseded_by) of one choice (``category``: solar_model, parameter_set,
+    earth_model, es_model or xsec_model, which takes the ``channel``). Unlisted: current; a parameter
+    set of kind "paper" (the calculator's published checks): reproduction."""
+    table = inputs.data.get("status", {}).get(category, {})
+    if category == "xsec_model":
+        table = table.get(channel, {})
+    found = dict(table.get(name) or {})
+    if not found and category == "parameter_set":
+        info = inputs["parameter_sets"]["sets"].get(name, {})
+        if info.get("kind") == "paper":
+            found = dict(status="reproduction", summary=f"As used in {info.get('source', 'a paper')}.")
+    return dict(status=found.get("status", "current"), summary=found.get("summary", ""),
+                superseded_by=found.get("superseded_by"))
+
+
+def is_current(inputs, category, name, channel=None):
+    return status(inputs, category, name, channel)["status"] == "current"
+
+
+def not_current(inputs, setup, quantity="rate", set_name=None):
+    """[dict(category, name, status, summary, superseded_by)] of the choices of ``setup`` (and the
+    parameter set) that are not state of the art and matter for ``quantity``: the solar model, the
+    Earth model at night, the ES model for ES, the cross-section model otherwise."""
+    night = needs_night(quantity, setup.period)
+    flux_only_measured = list(setup.components) == ["B8"] and setup.b8_flux == "sno_nc"
+    choices = [("parameter_set", set_name, None) if set_name else None,
+               ("solar_model", setup.solar_model, None) if not (flux_only_measured and quantity == "rate") else None,
+               ("earth_model", setup.earth_model, None) if night else None,
+               ("es_model", setup.es_model, None) if setup.channel == "es" else
+               ("xsec_model", setup.xsec_model, setup.channel)]
+    out = []
+    for category, name, channel in filter(None, choices):
+        found = status(inputs, category, name, channel)
+        if found["status"] != "current":
+            out.append(dict(category=category, name=name, **found))
+    return out
+
+
+def alternatives(inputs, setup, choice, scope="current"):
+    """The models a range of ``choice`` runs over: the state-of-the-art ones (``scope`` "current"), or
+    every selectable one, legacy and approximations included ("all")."""
     if choice == "xsec_model":  # without the tables that are incomplete (zero below 5 MeV)
         incomplete = inputs.data.get("xsec_incomplete", {}).get(setup.channel, [])
-        return [m for m in inputs.xsec_models(setup.channel) if m not in incomplete] if setup.channel != "es" else []
-    if choice == "es_model":
-        return list(ES_RANGE) if setup.channel == "es" else []
-    if choice == "earth_model":
-        return list(inputs["earth_models"])
-    if choice == "solar_model":
-        return list(inputs["solar_models"])
-    raise KeyError(choice)
+        options = [m for m in inputs.xsec_models(setup.channel) if m not in incomplete] if setup.channel != "es" else []
+    elif choice == "es_model":
+        options = list(ES_RANGE if scope == "current" else ES_MODELS) if setup.channel == "es" else []
+    elif choice == "earth_model":
+        options = list(inputs["earth_models"])
+    elif choice == "solar_model":
+        options = list(inputs["solar_models"])
+    else:
+        raise KeyError(choice)
+    if scope == "all":
+        return options
+    return [o for o in options if is_current(inputs, choice, o, setup.channel)]
 
 
 def flux_label(setup):
@@ -644,13 +749,16 @@ def flux_label(setup):
 
 
 def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
-           ranges=("xsec_model", "es_model", "earth_model", "solar_model"), solar_range="full"):
+           ranges=("xsec_model", "es_model", "earth_model", "solar_model"), solar_range="full", legacy=False):
     """(rows, samples) of the error budget of one quantity ("rate" in
     ``setup.period``, or "adn"). Rows: dict(Source, Kind, Central, Sigma,
     Relative, Low, High); samples: {source: array}. ``solar_range``
     "fluxes" takes the solar-model range from the fluxes alone, with the
     day fractions of ``setup.solar_model`` (one table instead of all; the
-    density profile moves F_i by ~1e-3, the fluxes by ~10%)."""
+    density profile moves F_i by ~1e-3, the fluxes by ~10%). Model ranges
+    run over the state-of-the-art models only (reference/status.yaml);
+    ``legacy`` adds a "legacy spread" row per choice over every selectable
+    model, where that is wider: context, not an uncertainty."""
     check(inputs, setup, quantity)
     night = needs_night(quantity, setup.period)
     comps = list(setup.components)
@@ -693,21 +801,22 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         total = total + sigma * z
     sampled("total sampled", total)
 
-    for choice in ranges:
-        options = alternatives(inputs, setup, choice)
-        if choice == "earth_model" and not night:
-            options = []
-        if len(options) < 2:
-            continue
-        fixed = {"profile_model": setup.solar_model} if choice == "solar_model" and solar_range == "fluxes" else {}
-        values = [value(s=setup.replace(**{choice: o}, **fixed)) for o in options]
-        low, high = min(values), max(values)
-        if high - low <= 1e-12 * abs(central):
-            continue  # e.g. the solar model, when the only component's flux is measured
-        label = "40Ar nuclear model" if choice == "xsec_model" and setup.channel == "cc_nue_ar40" \
-            else RANGE_LABELS[choice]
-        rows.append(dict(Source=label, Kind="model range", Central=central, Sigma=np.nan,
-                         Relative=_relative(max(high - central, central - low), central), Low=low, High=high))
+    for scope, kind in (("current", "model range"), ("all", "legacy spread"))[:2 if legacy else 1]:
+        for choice in ranges:
+            options = alternatives(inputs, setup, choice, scope)
+            if choice == "earth_model" and not night:
+                options = []
+            if len(options) < 2 or (scope == "all" and options == alternatives(inputs, setup, choice)):
+                continue
+            fixed = {"profile_model": setup.solar_model} if choice == "solar_model" and solar_range == "fluxes" else {}
+            values = [value(s=setup.replace(**{choice: o}, **fixed)) for o in options]
+            low, high = min(values), max(values)
+            if high - low <= (1e-12 if scope == "current" else 1e-5) * abs(central):
+                continue  # e.g. the solar model when the only flux is measured; the Earth model for a rate
+            label = "40Ar nuclear model" if choice == "xsec_model" and setup.channel == "cc_nue_ar40" \
+                else RANGE_LABELS[choice]
+            rows.append(dict(Source=label, Kind=kind, Central=central, Sigma=np.nan,
+                             Relative=_relative(max(high - central, central - low), central), Low=low, High=high))
     return rows, samples
 
 

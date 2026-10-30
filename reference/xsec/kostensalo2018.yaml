@@ -1,0 +1,21 @@
+# nu_e 40Ar -> e- 40K total cross sections (cm^2 per 40Ar nucleus), nuclear shell model for the initial and
+# final states (sd-pf, all multipoles to J = 3), quenched g_A = 1.00: J. Kostensalo, J. Suhonen and K. Zuber,
+# Phys. Rev. C 97, 034309 (2018), table I ("Total" and "0+" columns, 10^-42 cm^2). Open-access copy:
+# https://jyx.jyu.fi/handle/123456789/57301 (kostensalophysrevc.97.pdf, sha256 18ee6540...12754857),
+# retrieved 2026-10-30, method: table.
+#
+# The authors' folded 8B cross section is 1.777e-42 cm^2 (1.78(23): g_A = 1.00(5) and 3 % nuclear structure);
+# with the free g_A = 1.27 it is 2.642e-42. Between the table's points SNUfish interpolates log(sigma) linearly
+# in log(E - Q), Q = 1.5044 MeV, and below 5 MeV continues the first segment to the threshold: folded with the
+# Winter et al. 8B spectrum this gives 1.725e-42 (-2.9 %; a monotone cubic gives +2.5 %, so the 5 MeV spacing
+# of the table costs about 3 %).
+source: Phys. Rev. C 97, 034309 (2018), table I
+retrieved: '2026-10-30'
+method: table
+uncertainty: 0.13                  # the paper's 1.78(23)
+threshold_MeV: 1.5044
+g_A: 1.00
+energy_MeV: [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0, 60.0]
+total_1e-42cm2: [0.101, 4.56, 19.9, 46.8, 84.3, 131.0, 238.0, 342.0, 445.0]
+fermi_0plus_1e-42cm2: [9.27e-09, 0.845, 5.85, 15.5, 29.0, 45.5, 82.8, 115.0, 139.0]
+folded_8B_cm2: {g_A_1.00: 1.777e-42, g_A_1.27: 2.642e-42}

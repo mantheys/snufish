@@ -11,7 +11,10 @@
 //
 // Usage: b3_driver MODEL s12sq s13sq s23sq delta_deg dm2_21 dm2_31 depth_km
 //                  E_start E_stop E_step cos_start cos_stop cos_step
-// MODEL: prem_prob3 | prem_four | prem_full | native. Energies in MeV.
+// MODEL: prem_prob3 | prem_four | prem_full | native | regions:FILE. Energies in MeV.
+// FILE: one radial region per line, innermost first: outer radius (km), Ye, then the coefficients c_k of
+// rho(x) = sum_k c_k x^k with x = r / 6371 km (the B3 spec's `regions`); NuFast-Earth takes each crossing's
+// mean density, as for its own PREM models.
 // Output, one line per grid point: E_MeV cos_nadir m00 m01 m02 m10 ... m22
 
 #include <cmath>
@@ -32,6 +35,49 @@ using namespace NuFast;
 #ifndef SOLAR_RHOYE
 #define SOLAR_RHOYE (100. * 2. / 3.) // the value in NuFast-Earth's validation
 #endif
+
+class Regions : public Earth_Density
+{
+	public:
+		explicit Regions(const char *path)
+		{
+			FILE *file = fopen(path, "r");
+			if (!file) { fprintf(stderr, "cannot read %s\n", path); exit(1); }
+			char line[4096];
+			while (fgets(line, sizeof line, file))
+			{
+				std::vector<double> values;
+				char *cursor = line, *end;
+				for (double v = strtod(cursor, &end); end != cursor; v = strtod(cursor, &end))
+				{
+					values.push_back(v);
+					cursor = end;
+				}
+				if (values.size() < 3) continue; // blank or comment
+				outer.push_back(values[0]);
+				ye.push_back(values[1]);
+				coefficients.emplace_back(values.begin() + 2, values.end());
+			}
+			fclose(file);
+			n_discontinuities = (int)outer.size();
+			discontinuities = outer;
+			constant_shells = false;
+		}
+		double rhoYe(double r)
+		{
+			for (unsigned int k = 0; k < outer.size(); k++)
+				if (r <= outer[k])
+				{
+					double x = r / r_E, rho = 0, power = 1;
+					for (double c : coefficients[k]) { rho += c * power; power *= x; }
+					return ye[k] * rho;
+				}
+			return 0;
+		}
+	private:
+		std::vector<double> outer, ye;
+		std::vector<std::vector<double>> coefficients;
+};
 
 static std::vector<double> grid(double start, double stop, double step)
 {
@@ -58,6 +104,7 @@ int main(int argc, char **argv)
 	else if (!strcmp(model, "prem_four")) earth.reset(new PREM_Four());
 	else if (!strcmp(model, "prem_full")) earth.reset(new PREM_Full());
 	else if (!strcmp(model, "native")) earth.reset(new PREM_NDiscontinuityLayer(2, 10, 10, 5));
+	else if (!strncmp(model, "regions:", 8)) earth.reset(new Regions(model + 8));
 	else { fprintf(stderr, "unknown model %s\n", model); return 1; }
 
 	std::vector<double> energies_mev = grid(p[7], p[8], p[9]);

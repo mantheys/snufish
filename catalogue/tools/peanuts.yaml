@@ -7,5 +7,5 @@ repository: null
 documentation: null
 reference: null
 maintainers: null
-benchmarks: [B1_flux, B2_sun, B3_earth]
+benchmarks: [B1_ssm, B2_sun, B3_earth]
 status: draft

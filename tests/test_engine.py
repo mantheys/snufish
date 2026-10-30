@@ -283,6 +283,24 @@ def test_imported_response(inputs):
         engine.check(inputs, engine.Setup(smearing_table=shifted))
 
 
+def test_electron_alone_drops_the_level_energy(inputs):
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+    marley = "ar40_marley2_bhattacharya2009"
+    cc = dict(detector="argon", channel="cc_nue_ar40", xsec_model=marley)
+
+    def rate(**changes):
+        return engine.totals(engine.observed_rates(inputs, Vacuum(), engine.Setup(**cc, **changes), osc, False))["B8"]["day"]
+
+    table = engine.electron_smearing(inputs, "cc_nue_ar40", marley, 0.0)
+    xsec = inputs["xsec"]["cc_nue_ar40"][marley]
+    centres = 0.5 * (np.array(table.x[1:]) + np.array(table.x[:-1]))
+    open_ = np.interp(centres, xsec["energy"], xsec["sigma"], left=0.0) > 0
+    assert np.allclose(np.sum(table.matrix, axis=1)[open_], 1, atol=2e-3)   # every event goes somewhere
+    assert rate(smearing_table=table) == pytest.approx(rate(), rel=1e-3)
+    # the 2.3-6.1 MeV of the 40K level is lost: about half the events above 5 MeV remain
+    assert 0.4 < rate(threshold=5.0, smearing_table=table) / rate(threshold=5.0) < 0.6
+
+
 
 def with_levels(inputs, shifts):
     """A copy of the inputs with synthetic B(GT)-shifted tables of the default argon CC model."""
@@ -312,8 +330,41 @@ def test_measured_strengths_propagate_in_quadrature(inputs):
 
 def test_incomplete_tables_stay_out_of_the_model_range(inputs):
     data = dict(inputs.data, xsec_incomplete={"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]})
-    options = engine.alternatives(engine.Inputs(data), engine.Setup(detector="argon", channel="cc_nue_ar40"), "xsec_model")
+    options = engine.alternatives(engine.Inputs(data), engine.Setup(detector="argon", channel="cc_nue_ar40"), "xsec_model",
+                                  scope="all")
     assert "ar40_marley" not in options and "ar40_klmv" in options
+
+
+def test_model_ranges_compare_the_state_of_the_art_only(inputs):
+    """reference/status.yaml: ranges run over the current models; legacy ones and approximations are selectable,
+    and their spread is reported apart ("legacy spread") on request."""
+    argon, water = engine.Setup(detector="argon", channel="cc_nue_ar40"), engine.Setup(threshold=3.49)
+    assert set(engine.alternatives(inputs, argon, "xsec_model")) == {
+        "ar40_marley2_bhattacharya2009", "ar40_marley2_liu1998", "ar40_marley2_bhattacharya1998", "ar40_ksz2018"}
+    assert set(engine.alternatives(inputs, argon, "solar_model")) == {"b23_mb22m", "b23_mb22p", "b23_aag21"}
+    assert engine.alternatives(inputs, water, "earth_model") == ["prem_crust1"]
+    assert engine.alternatives(inputs, water, "es_model") == ["bks", "snowglobes"]
+    assert "tree" in engine.alternatives(inputs, water, "es_model", scope="all")
+    assert engine.status(inputs, "solar_model", "b16_gs98")["superseded_by"] == "b23_mb22m"
+    assert engine.status(inputs, "parameter_set", "nufit61_global")["status"] == "current"
+    assert engine.status(inputs, "earth_model", "prem_prob3")["status"] == "approximation"
+    assert engine.status(inputs, "solar_model", "no_such_model")["status"] == "current"  # unlisted
+    legacy = engine.Setup(detector="argon", channel="cc_nue_ar40", solar_model="b16_gs98", xsec_model="ar40_klmv",
+                          earth_model="prem_prob3", period="night")
+    found = {c["category"]: c["status"] for c in engine.not_current(inputs, legacy, "rate", "kamland_2013")}
+    assert found == {"parameter_set": "legacy", "solar_model": "legacy", "earth_model": "approximation",
+                     "xsec_model": "legacy"}
+    by_day = engine.not_current(inputs, legacy.replace(period="day"), "rate")
+    assert "earth_model" not in {c["category"] for c in by_day}  # the Earth does not enter by day
+    assert engine.not_current(inputs, engine.Setup(solar_model="b23_mb22m"), "rate", "juno_2025") == []
+    params = engine.parameters(inputs, "juno_2025")
+    rows, _ = engine.budget(inputs, Vacuum(), argon, params, "rate", n=5, legacy=True)
+    current = {r["Source"]: r for r in rows if r["Kind"] == "model range"}
+    spread = {r["Source"]: r for r in rows if r["Kind"] == "legacy spread"}
+    assert {"40Ar nuclear model", "solar model"} <= set(current) and set(spread) == set(current)
+    for source in current:
+        assert spread[source]["Low"] <= current[source]["Low"] and spread[source]["High"] >= current[source]["High"]
+    assert not [r for r in engine.budget(inputs, Vacuum(), argon, params, "rate", n=5)[0] if r["Kind"] == "legacy spread"]
 
 
 @needs_tables
@@ -404,3 +455,20 @@ def test_tables_follow_theta13():
         (d, n, _), (d0, n0, _) = (engine.combine(engine.component_totals(inputs, p, setup, osc), ["B8"]) for p in (tables, exact))
         assert d == pytest.approx(d0, rel=1e-3)
         assert 2 * (n - d) / (n + d) == pytest.approx(2 * (n0 - d0) / (n0 + d0), rel=0.025)  # tables: ~1 % at any theta13
+
+
+def test_orbit_scales_day_and_night(inputs):
+    params = engine.parameters(inputs, "juno_2025")
+    setup = engine.Setup(components=("B8",), detector="argon", site="SURF")
+    osc = engine.oscillation(params)
+    plain = engine.component_totals(inputs, Vacuum(), setup, osc)["B8"]
+    orbit = engine.component_totals(inputs, Vacuum(), setup.replace(orbit=True), osc)["B8"]
+    g_day, g_night = engine.orbital(inputs, setup.replace(orbit=True))
+    assert orbit["day"] == pytest.approx(g_day * plain["day"]) and orbit["night"] == pytest.approx(g_night * plain["night"])
+    reference = engine.totals(engine.observed_rates(inputs, Vacuum(), setup.replace(orbit=True), osc))["B8"]
+    assert reference["day"] == pytest.approx(orbit["day"], rel=1e-9)
+    # without matter effects the whole asymmetry is the Earth-Sun distance's: ~0.9 % at SURF
+    adn = engine.quantity_value("adn", "day", orbit["day"], orbit["night"])
+    assert adn == pytest.approx(2 * (g_night - g_day) / (g_night + g_day)) and 0.008 < adn < 0.01
+    with pytest.raises(ValueError, match="Earth-Sun distance"):
+        engine.check(inputs, setup.replace(orbit=True), "ratio")

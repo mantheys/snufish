@@ -38,16 +38,20 @@ for (const c of fixtures.cases) {
   const inputs = c.inject ? new engine.Inputs({ ...plain.data, xsec: { ...plain.data.xsec, cc_nue_ar40: { ...plain.data.xsec.cc_nue_ar40, ...c.inject.xsec } },
                                                 xsec_levels: c.inject.xsec_levels }) : plain;
   const setup = engine.makeSetup(c.setup), params = c.params;
+  if (c.electron !== null) setup.smearing_table = engine.electronSmearing(inputs, setup.channel, setup.xsec_model, c.electron);
   const given = { osc: c.draws.osc, flux: c.draws.flux, noise: c.draws.noise };
   const f = engine.fluxSummary(inputs, tables, setup, engine.oscillation(params));
   close(f.total, c.flux.total, `${c.name} flux`); close(f.nue_day, c.flux.nue_day, `${c.name} nue fraction`);
-  const { rows } = engine.budget(inputs, tables, setup, params, c.quantity, { solarRange: c.solar_range, given });
+  const { rows } = engine.budget(inputs, tables, setup, params, c.quantity, { solarRange: c.solar_range, given, legacy: true });
   if (rows.length !== c.rows.length) { failures++; console.log(`  ${c.name}: ${rows.length} rows vs ${c.rows.length}`); }
   rows.forEach((r, i) => {
     const p = c.rows[i] || {};
     if (r.Source !== p.Source) { failures++; console.log(`  ${c.name}: row ${i} ${r.Source} vs ${p.Source}`); }
     for (const k of ["Central", "Sigma", "Low", "High"]) close(r[k], nan(p[k]), `${c.name} ${r.Source} ${k}`);
   });
+  const statuses = (list) => JSON.stringify(list.map((x) => [x.category, x.name, x.status, x.superseded_by]));
+  const flagged = engine.notCurrent(inputs, setup, c.quantity, c.set_name);
+  if (statuses(flagged) !== statuses(c.not_current)) { failures++; console.log(`  ${c.name}: not current ${statuses(flagged)} vs ${statuses(c.not_current)}`); }
   const s = engine.spectra(inputs, tables, setup, params, { night: c.spectra.night !== null, given });
   s.edges.forEach((v, b) => close(v, c.spectra.edges[b], `${c.name} edges ${b}`));
   s.day.forEach((v, b) => close(v, c.spectra.day[b], `${c.name} spectrum day bin ${b}`));

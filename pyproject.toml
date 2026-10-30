@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Sergio Manthey", email = "sergio.manthey@gmail.com" }]
 requires-python = ">=3.10"
-dependencies = ["numpy", "pandas", "pyarrow", "pyyaml"]
+dependencies = ["numpy", "pandas", "pyarrow", "pyyaml", "scipy"]
 
 [project.optional-dependencies]
 plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git"]

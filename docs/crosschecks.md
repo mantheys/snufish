@@ -11,6 +11,12 @@ paper's number next to SNUfish's (all but the BKS cross sections, SNO's φ_CC/φ
 where the paper prints the numbers for it, recomputes an official figure (Super-K figs. 49 and 52, JUNO fig. 3 and table 7,
 SNO fig. 10, Borexino table II) as a Plotly preview and a plotipus figure (web/official.js).
 
+The DUNE entries are predictions for a detector not yet built. Most count the electron of a νₑ CC event alone, its
+de-excitation gammas undetected, as the papers do: the template imports a smearing matrix in neutrino energy
+(`electron_smearing` in engine.py, `electronSmearing` in engine.js) that sends each ⁴⁰K level's share of the
+MARLEY 2 cross section to T = E_ν − Q − E_level with σ = 7 % T. The page's own visible energy, E_ν − Q, counts the
+gammas too and gives about twice the events above 5 MeV.
+
 ## Predictions: reproduced
 
 | Source | Quantity | Published | SNUfish | Δ |
@@ -23,17 +29,30 @@ SNO fig. 10, Borexino table II) as a Plotly preview and a plotipus figure (web/o
 | JUNO 2006.11760, tab. 7 | A_DN at Δm² 4.8 × 10⁻⁵ in 2–16, 5–16, 3–5, 2–3 MeV | −2.9, −3.4, −2.5, −2.1 % | −2.8, −3.4, −2.5, −2.1 % | within the table's rounding |
 | Super-K 2312.12907, §VIII | expected A_DN, SK-IV range, Δm² 6.1 × 10⁻⁵ | −2.38 % | −2.32 % | 2.5 % |
 | | expected A_DN, SK-I range, Δm² 6.1 and 7.5 × 10⁻⁵ | −2.42, −1.72 % | −2.37, −1.67 % | 2.3, 2.6 % |
+| Hajjar, Nairat & Beacom 2606.18347, tab. I | DUNE ⁸B νₑ CC events, electron T > 5 MeV, 20 kt·yr, NuFIT 6.0, SNO flux | 21,722 | 21,914 | +0.9 % |
+| Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE ⁸B νₑ CC events, T > 5 MeV, 100 kt·yr, Δm² 4.85 × 10⁻⁵ | 9.9 × 10⁴ / 0.88 = 1.125 × 10⁵ | 1.061 × 10⁵ | −5.7 % |
+| | DUNE ⁸B ES events, T > 5 MeV, 100 kt·yr | 2.6 × 10⁴ / 0.81 = 3.21 × 10⁴ | 3.41 × 10⁴ | +6.2 % |
+| | DUNE hep νₑ CC events, T > 11 MeV, 100 kt·yr | 150 | 155 | +3.3 % (hep flux 7.95 × 10³ here, 8.25 × 10³ there) |
+| Ioannisian, Smirnov & Wyler 1702.06097, sec. IV | DUNE ⁸B νₑ CC events with E_ν > 11 MeV, 40 kt, one year | 27,000 | 27,871 | +3.2 % |
+| | A_DN, E_ν > 11 MeV, Δm² 7.5 and 5.0 × 10⁻⁵ ("about 4 %" and "6.5 %" as N/D − 1) | −3.92, −6.30 % | −3.99, −6.83 % | 1.7, 8.5 % |
 
 JUNO writes the tree-level cross section with g₁ ≈ 0.73, g₂ ≈ 0.23 (sin²θ_W = 0.23). SNUfish's tree level uses
 0.23857 and comes out 2.2 % above JUNO's numbers; with radiative corrections (BKS, the default) it is within
-0.6 %: the two shifts happen to cancel. Super-K's expected asymmetries come from its amplitude fit, which weights
-the zenith-angle shape by energy bin; SNUfish's is the plain rate asymmetry, ~2.5 % smaller in every case.
+0.6 %: the two shifts happen to cancel. SNUfish's Super-K asymmetries are 2.2–2.8 % smaller than
+Super-K's because PREM ends in 3 km of ocean (see Investigated): with rock in its place they agree to −0.7 to +1.9 %.
+
+Capozzi et al. count events outside (CC) or inside (ES) a 40° cone around the Sun that holds 88 % and 81 % of them;
+the published number is their count divided by that fraction, and both are rounded, so the ±6 % (in opposite
+directions for CC and ES) is within what the paper lets one reconstruct. Ioannisian et al. use an approximate cross
+section (σ ∝ p_e E_e above 5.8 MeV) and do not state their oscillation parameters (NuFIT 6.0 here, with their Δm²);
+their asymmetries are quoted as "about".
 
 ## Not reproduced
 
 | Source | Quantity | Published | SNUfish | Note |
 |---|---|---|---|---|
 | Super-K 2312.12907, §VIII | expected A_DN, SK-I range, Δm² 4.8 × 10⁻⁵ | −3.84 % | −3.32 % (exact solvers: same) | 13.5 % off, while 6.1 and 7.5 × 10⁻⁵ agree to 2.5 %. θ13 = 0 gives −3.48 % (exact); not explained. The value is quoted "for reference" at the previously favoured Δm²; it may come from an older calculation. |
+| Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE A_DN, νₑ CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (from D = 3.04 × 10⁴, N = 3.29 × 10⁴) | −7.90 % | −6.87 % (four-region PREM: −8.75 %) | 13 % off. At DUNE's energies the asymmetry follows the Earth's outer layers: the ten-region PREM, with its crust, and the four-region one, without, bracket the paper's value. The paper describes its Earth treatment only through its ref. 49. |
 | JUNO 2006.11760, sec. 4.2 | expected A_DN, Δm² 7.5 × 10⁻⁵, 2–16 MeV | −1.6 % | −1.38 % | JUNO's own table 1 at this Δm² (1.44 day, 1.46 night) gives −1.4 % ± 0.7 % from rounding, consistent with SNUfish; the −1.6 % in the text is not. |
 
 ## Measurements: SNUfish's prediction
@@ -47,6 +66,83 @@ the zenith-angle shape by energy bin; SNUfish's is the plain rate asymmetry, ~2.
 | | φ_CC/φ_ES | 0.712 ± 0.087 | 0.762 | +0.6σ |
 | SNO 1109.0763 | daytime P_ee(10 MeV) | 0.317 ± 0.018 | 0.326 | +0.5σ |
 | Borexino 1709.00756 | ⁸B rate above 3.2 MeV, B16-GS98 flux (cpd/100 t) | 0.223 ± 0.016 | 0.216 | −0.4σ |
+
+## Earth–Sun distance
+
+Published day-night asymmetries are at 1 AU: experiments correct each event for the Earth–Sun distance. The flux
+at the detector is not, and because a northern site's longest nights fall near perihelion, the eccentricity alone
+makes the night flux larger. With **include the Earth–Sun distance** (`Setup(orbit=True)`), day and night rates are
+scaled by the mean (1 AU/R)² over the site's days and nights (`exposure.orbital_factors`: a Kepler orbit with J2000
+elements, sampled over a year, R from the detector: by night it is one Earth radius × cos(zenith) farther from the
+Sun, −0.009 pp). Han et al. compute the same effect from an ephemeris
+(arXiv:2607.24421, table 7.1: their flux asymmetry minus their survival-probability asymmetry):
+
+| Site | Han et al. (pp) | SNUfish (pp) |
+|---|---|---|
+| Jiangmen (JUNO) | 0.347 | 0.349 |
+| Kamioka | 0.645 | 0.650 |
+| LNGS | 0.808 | 0.813 |
+| SURF | 0.867 | 0.872 |
+| SNOLAB | 0.939 | 0.944 |
+
+Measured from the Earth's centre, SNUfish was 0.012–0.014 pp above at every site; the detector's position (the
+diurnal parallax) accounts for 0.009 pp of it. The remaining 0.002–0.005 pp is below the precision of the table. For the ⁸B ES rate above 3.49 MeV
+(B16-GS98, NuFIT 6.0, PREM, BKS, perfect resolution), the term takes A_DN from 1.54 % to 1.90 % at Jiangmen, 1.51 %
+to 2.16 % at Kamioka and 1.46 % to 2.34 % at SURF: +23 to +60 % of the oscillation-only asymmetry. Left out:
+nights near perihelion are also deeper (more core crossings); weighting the nadir exposure by (1 AU/R)² changes
+A_DN by +0.05 % (Jiangmen) to +0.14 % (SURF) of itself. The 3D Earth (Han et al.: up to 0.2 pp, ~8 % of A_DN at
+CallioLab, site dependent) is not modelled: SNUfish's Earth models are radial (PREM variants).
+
+## Investigated
+
+- **PREM's ocean.** Full PREM ends in 3 km of water (1.02 g/cm³), and the B3 detector sits at the surface, in it.
+  The day-night asymmetry is most sensitive to the density just under the detector, so for continental sites
+  (all of SNUfish's) PREM under-predicts it. With rock (2.6 g/cm³) in place of the ocean (a driver variant in the
+  paper repository), Super-K's expected asymmetries go from 2.2–2.8 % above SNUfish's to −0.7 to +1.9 %:
+  SK-IV range at 6.1 × 10⁻⁵, −2.314 % → −2.392 % (Super-K: −2.38 %). DUNE's argon CC A_DN at SURF moves
+  by +4.9 % of itself. `prem_prob3` and `prem_four` have no crust at all (3.3 and 3.8 g/cm³ at the surface) and
+  give 14–33 % larger asymmetries: as a model range they measure the missing crust, not an Earth-model uncertainty.
+- **Super-K at 4.8 × 10⁻⁵.** Super-K's 2014 paper (arXiv:1312.5176) expects −3.3 % at Δm² = 4.8 × 10⁻⁵
+  (sin²θ12 = 0.342, sin²θ13 = 0.025, the same energy range); SNUfish gives −3.27 % there. The −3.84 % of the 2023
+  paper disagrees with Super-K's own earlier calculation and with the Δm² dependence of its other two values; of the
+  inputs SNUfish varies, only the crustless Earth models move A_DN by more than 4 % (mixing angles, θ13, crust,
+  resolution, solar model: < 4 %).
+- **JUNO at 7.5 × 10⁻⁵.** The −1.6 % of the text is not JUNO's table 1 (1.44 and 1.46 cpd/kt: −1.38 %, with
+  rounding anywhere from −0.7 % to −2.1 %); SNUfish agrees with the table (−1.37 %).
+- **SNOwGLoBES's MARLEY table has no Coulomb factor.** The allowed cross section from the (p,n) strengths of
+  Bhattacharya et al. 2009 reproduces `xs_nue_Ar40_marley.dat` (`ar40_marley`) to 4–6 % *without* the Fermi
+  function, and MARLEY's own calculation with the same strengths (`ar40_marley1_bhattacharya2009`) to 3 % *with*
+  it: the SNOwGLoBES table is 35–40 % low at 8–14 MeV. With MARLEY's calculation SNUfish reproduces DEAP-3600's
+  prediction (arXiv:2605.12769: ⟨σ⟩ = 1.67 × 10⁻⁴¹ cm² over E_ν = 12–14.5 MeV, 2.3 events): 1.60 × 10⁻⁴¹ cm²,
+  2.24 events. The "factor 5–7 at 5 MeV" between nuclear models comes from this table and from tables cut at
+  5 MeV; at the E_ν ≳ 9 MeV a 5 MeV DUNE threshold sees, the MARLEY calculations differ by 13 % (6.1–6.9 × 10⁻⁴² cm²
+  at 10 MeV).
+
+## ⁴⁰Ar: independent calculations
+
+Folded over the ⁸B spectrum (Winter et al.), no threshold, 10⁻⁴² cm²:
+
+| Calculation | ⟨σ⟩ | Source |
+|---|---|---|
+| MARLEY 2, B(GT) from ⁴⁰Ar(p,n) 2009 | 2.72 | SNUfish from MARLEY 2.0.0 |
+| MARLEY 2, B(GT) from ⁴⁰Ti decay (Liu 1998 / Bhattacharya 1998) | 2.42 / 2.43 | SNUfish from MARLEY 2.0.0 |
+| Shell model, Kostensalo, Suhonen & Zuber, g_A = 1.00(5) | 1.78(23) (1.725 from its table) | PRC 97, 034309 (2018) |
+| the same with the free g_A = 1.27 | 2.64 | PRC 97, 034309 (2018), sec. III E |
+
+With electrons above 5 MeV (gammas undetected), Suzuki & Honma's shell model (PRC 87, 014607 (2013),
+[arXiv:1211.4078](https://arxiv.org/abs/1211.4078); its GT strength reproduces the (p,n) data) gives 14.05 ×
+10⁻⁴³ cm² for the GT and Fermi transitions; MARLEY 2 with the (p,n) strengths gives 13.66 (−2.8 %,
+`tests/test_ar40_models.py`). The calculations that use or reproduce the measured strengths agree; the
+shell model with g_A = 1.00 is 27–35 % lower, and with the free g_A within the MARLEY 2 spread. How much the
+Gamow–Teller operator is quenched in ⁴⁰Ar is the open question behind the state-of-the-art range for argon.
+
+## Local crust
+
+The CRUST1.0 column under each detector in place of PREM's ocean and average crust (`prem_crust1`) moves
+the ⁸B A_DN (B23-MB22m, JUNO 2025 parameters, exact solvers) by +1.5 % at Kamioka (ES, T > 3.49 MeV),
++2.2 % at LNGS, +3.8 % at SNOLAB, +3.0 % at Jiangmen (ES, T > 2 MeV) and −2.4 % at SURF (argon CC,
+E_vis > 5 MeV), of itself. SURF's crust is 49 km thick and lighter than the PREM mantle it replaces; the
+others gain dense rock where PREM has ocean.
 
 ## Found by these checks
 

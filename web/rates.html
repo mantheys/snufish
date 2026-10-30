@@ -15,7 +15,10 @@
   <div>
     <h1><a href="index.html" class="home-link">SNUfish</a> <span>solar neutrino rates and their uncertainties</span></h1>
   </div>
-  <button id="theme" class="ghost" type="button" aria-label="Switch colour theme">Theme: system</button>
+  <div class="actions">
+    <a class="button ghost-link" href="benchmarks.html">Benchmarks</a>
+    <button id="theme" class="ghost" type="button" aria-label="Switch colour theme">Theme: system</button>
+  </div>
 </header>
 
 <div class="layout">
@@ -52,12 +55,14 @@
       <div class="sources-box" hidden></div>
       <label>Parameter set <select id="set"></select></label>
       <p id="set-info" class="hint"></p>
+      <p id="set-status" class="hint status-note"></p>
     </section>
 
     <section class="step" data-step="2">
       <h2><span>2</span> Sun <button type="button" class="info" data-step="2" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <label>Solar model <select id="solar"></select></label>
+      <p id="solar-status" class="hint status-note"></p>
       <div class="field">
         <span class="field-label">Flux components</span>
         <div id="components" class="chips" role="group" aria-label="Flux components"></div>
@@ -78,6 +83,9 @@
       <p id="earth-note" class="hint"></p>
       <label>Site <select id="site"></select></label>
       <label>Earth model <select id="earth"></select></label>
+      <p id="earth-status" class="hint status-note"></p>
+      <label class="check"><input id="orbit" type="checkbox"> include the Earth–Sun distance</label>
+      <p id="orbit-note" class="hint"></p>
     </section>
 
     <section class="step" data-step="4">
@@ -89,11 +97,13 @@
         <span class="field-label">ES cross section</span>
         <div class="seg" role="radiogroup" aria-label="ES cross section">
           <label><input type="radio" name="es" value="bks" checked><span>Radiative (BKS)</span></label>
-          <label><input type="radio" name="es" value="tree"><span>Tree level</span></label>
+          <label><input type="radio" name="es" value="tree"><span title="An approximation: no radiative corrections">Tree level (approx.)</span></label>
           <label><input type="radio" name="es" value="snowglobes"><span title="SNOwGLoBES's ES tables (from 0.5 MeV; BKS below)">SNOwGLoBES</span></label>
         </div>
       </div>
+      <p id="es-status" class="hint status-note"></p>
       <label id="xsec-row">Nuclear model <select id="xsec"></select></label>
+      <p id="xsec-status" class="hint status-note"></p>
     </section>
 
     <section class="step" data-step="5">
@@ -203,8 +213,9 @@
       Rates are interactions per kiloton-year, in observed energy after the detector response of step 5 (ES: electron
       kinetic energy; CC: visible energy E_ν − Q, no neutron or binding losses). Probabilities are interpolated from tables of the SNUfish solvers (Sun: B2 reference; Earth: NuFast-Earth), which they reproduce to
       2×10⁻⁴ for rates and 1 % for the day-night asymmetry. Sampled (1σ): oscillation parameters, solar fluxes with
-      their correlations, statistics. Model ranges are the spread of the available models, not probabilities, and are
-      never folded into the σ. <a href="index.html#credits">Sources and credits</a>.
+      their correlations, statistics. Model ranges are the spread of the competing state-of-the-art models, not probabilities, and are
+      never folded into the σ; legacy models and approximations stay selectable, are labelled, and their spread is shown
+      apart as context (<a href="index.html#status">which inputs are which</a>). <a href="index.html#credits">Sources and credits</a>.
     </p>
   </main>
 </div>

@@ -162,7 +162,7 @@ export function sampleFluxes(inputs, rng, solarModel, components, n, b8Flux = "m
 // ------------------------------------------------------------------ setup and checks
 
 export const DEFAULT_SETUP = {
-  solar_model: "b23_gs98", components: ["B8"], b8_flux: "model", earth_model: "prem_full", site: "Kamioka",
+  solar_model: "b23_mb22m", components: ["B8"], b8_flux: "model", earth_model: "prem_crust1", site: "Kamioka",
   detector: "water", channel: "es", xsec_model: "default", es_model: "bks", period: "day",
   // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
   threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,
@@ -174,7 +174,7 @@ export const DEFAULT_SETUP = {
   // efficiency and its turn-on; a smearing matrix (x true edges, y observed edges, matrix [true][observed]) in place
   // of the resolution; compared by id
   efficiency_table: null, smearing_table: null,
-  exposure: null, profile_model: null,
+  exposure: null, profile_model: null, orbit: false,
 };
 
 export function makeSetup(changes = {}) { return { ...DEFAULT_SETUP, ...changes }; }
@@ -223,6 +223,10 @@ export function check(inputs, setup, quantity = "rate") {
   }
   allowed("site", setup.site, Object.keys(d.sites));
   allowed("Earth model", setup.earth_model, d.earth_models);
+  if (setup.orbit) {
+    if (quantity === "ratio") throw new Error("a rate over the rate without oscillations does not depend on the Earth-Sun distance; leave orbit off");
+    if (d.sites[setup.site].orbit_day === undefined) throw new Error("these inputs have no orbital factors: rebuild them (snufish export-app --inputs-only)");
+  }
   if (setup.exposure !== null && !(setup.exposure > 0)) throw new Error("the exposure must be > 0 (or none)");
 }
 
@@ -323,6 +327,42 @@ function kernels(inputs, setup, component, edges) {
   return inputs.kernelCache.get(key);
 }
 
+export function electronSmearing(inputs, channel, xsecModel, b, step = 0.1, top = 25.0) {
+  // smearing matrix in neutrino energy for the electron of a CC event alone, its de-excitation gammas undetected:
+  // each nuclear level takes its share of the cross section to T = E_nu - Q - E_level, smeared by a Gaussian of
+  // sigma = b T (b = 0: none); shares from the model's measured levels (their 1-sigma tables: sigma is linear in
+  // each strength), the rest of the cross section (unmeasured levels) at the highest
+  const table = inputs.data.xsec[channel], { energy, sigma: total } = table[xsecModel];
+  const levels = inputs.data.xsec_levels[channel][xsecModel], q = inputs.data.visible_offset_MeV[channel];
+  const n = Math.round(top / step), edges = Array.from({ length: n + 1 }, (_, i) => +(i * step).toFixed(10));
+  const centres = edges.slice(0, -1).map((e, i) => 0.5 * (e + edges[i + 1]));
+  const sigma = centres.map((c) => interp(c, energy, total, 0));
+  const shares = levels.map((l) => {
+    const t = table[l.name], part = energy.map((e, k) => (interp(e, t.energy, t.sigma) - total[k]) * l.strength / l.error);
+    return centres.map((c, i) => (sigma[i] > 0 ? Math.max(interp(c, energy, part, 0) / sigma[i], 0) : 0));
+  });
+  const last = shares[shares.length - 1];
+  centres.forEach((_, i) => { if (sigma[i] > 0) last[i] += Math.max(1 - shares.reduce((s, x) => s + x[i], 0), 0); });
+  const cdf = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
+  const matrix = centres.map(() => new Array(n).fill(0));
+  levels.forEach((level, j) => centres.forEach((c, i) => {
+    const t = c - q - level.level_MeV, w = shares[j][i];
+    if (!(w > 0 && t > 0)) return;
+    const row = matrix[i];
+    if (b > 0) {
+      const f = edges.map((e) => cdf((e - t) / (b * t)));
+      for (let m = 0; m < n; m++) row[m] += w * (f[m + 1] - f[m]);
+      row[0] += w * f[0]; row[n - 1] += w * (1 - f[n]);
+    } else {
+      let m = 0;
+      while (m < n - 1 && edges[m + 1] <= t) m++;
+      row[m] += w;
+    }
+  }));
+  return { id: `electron:${channel}:${xsecModel}:${b}`, x: edges, y: edges, matrix, true_axis: "neutrino",
+           name: "electron alone", summary: `electron kinetic energy alone over ${levels.length} nuclear levels, σ/T = ${+(100 * b).toFixed(3)} %` };
+}
+
 export function resolution(inputs, setup, energy) {
   // sigma (MeV) at an observed energy: sqrt((a sqrt(E))^2 + (b E)^2), or Super-K's c0 + c1 sqrt(E) + c2 E in
   // total electron energy (ES); times resolution_scale
@@ -395,6 +435,13 @@ function response(inputs, setup, edges) {
   return inputs.responseCache.get(key);
 }
 
+export function orbital(inputs, setup) {
+  // [day, night] factors of the rates: the site's mean (1 AU / R)^2 over its days and nights with setup.orbit, else [1, 1]
+  if (!setup.orbit) return [1, 1];
+  const site = inputs.data.sites[setup.site];
+  return [site.orbit_day, site.orbit_night];
+}
+
 export function survival(inputs, probabilities, setup, osc, night = true) {
   // {component: [P_ee by day, P_ee by night or null]} at the component's energies
   const U2 = ue2(osc), nightTable = night ? probabilities.night(osc, setup.earth_model, setup.site) : null;
@@ -445,11 +492,12 @@ export function observedRates(inputs, probabilities, setup, osc, night = true) {
   // The reference path: componentTotals and componentSpectra give the same numbers faster.
   const [edges] = observedEdges(setup.threshold), [rows, acceptance] = response(inputs, setup, edges);
   const nb = edges.length - 1, seconds = inputs.data.seconds_per_year, targets = targetsOf(inputs, setup);
+  const [gDay, gNight] = orbital(inputs, setup);
   const out = {};
   for (const [c, [peeDay, peeNight]] of Object.entries(survival(inputs, probabilities, setup, osc, night))) {
     const { kind, energy, weight } = inputs.components[c];
     const scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds, k = kernels(inputs, setup, c, edges);
-    const spectrum = (pee) => {
+    const spectrum = (pee, g) => {
       if (pee === null) return null;
       if (isNC(setup)) pee = pee.map(() => 1); // all active flavours alike
       let truth = new Float64Array(nb);
@@ -468,9 +516,9 @@ export function observedRates(inputs, probabilities, setup, osc, night = true) {
         if (rows[j] === null) observed[j] += truth[j];
         else for (let m = 0; m < nb; m++) observed[m] += truth[j] * rows[j][m];
       }
-      return Array.from(observed, (v, m) => v * acceptance[m]);
+      return Array.from(observed, (v, m) => g * v * acceptance[m]);
     };
-    out[c] = { day: spectrum(peeDay), night: spectrum(peeNight) };
+    out[c] = { day: spectrum(peeDay, gDay), night: spectrum(peeNight, gNight) };
   }
   return out;
 }
@@ -518,6 +566,7 @@ function prepared(inputs, setup, component) {
 }
 
 function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
+  const [gDay, gNight] = orbital(inputs, setup), times = (g, v) => (v === null ? null : wantSpectra ? v.map((x) => g * x) : g * v);
   const out = {};
   for (const [c, [peeDay, peeNight]] of Object.entries(survival(inputs, probabilities, setup, osc, night))) {
     const { kind, energy, weight } = inputs.components[c], prep = prepared(inputs, setup, c);
@@ -536,7 +585,7 @@ function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
       if (!wantSpectra) return truth.reduce((t, v, j) => t + v * prep.accepted[j], 0);
       return Array.from(prep.observe(truth));
     };
-    out[c] = { day: value(peeDay), night: value(peeNight) };
+    out[c] = { day: times(gDay, value(peeDay)), night: times(gNight, value(peeNight)) };
     if (!wantSpectra) out[c].ref = value(peeDay.map(() => 1)); // without oscillations: the denominator of "ratio"
   }
   return out;
@@ -596,15 +645,48 @@ export const ES_RANGE = ["bks", "snowglobes"]; // the radiatively corrected calc
 export const RANGE_LABELS = { xsec_model: "cross-section model", es_model: "ES radiative corrections",
                               earth_model: "Earth model", solar_model: "solar model" };
 
-export function alternatives(inputs, setup, choice) {
+// reference/status.yaml: current (state of the art; current entries compete, their spread is the model
+// uncertainty), legacy (superseded), approximation (a simplified current entry), reproduction (a paper's inputs)
+export const STATUSES = ["current", "legacy", "approximation", "reproduction"];
+
+export function status(inputs, category, name, channel = null) {
+  // {status, summary, superseded_by} of one choice; unlisted: current; a "paper" parameter set: reproduction
+  let table = (inputs.data.status || {})[category] || {};
+  if (category === "xsec_model") table = table[channel] || {};
+  let found = { ...(table[name] || {}) };
+  if (!Object.keys(found).length && category === "parameter_set") {
+    const info = inputs.data.parameter_sets.sets[name] || {};
+    if (info.kind === "paper") found = { status: "reproduction", summary: `As used in ${info.source || "a paper"}.` };
+  }
+  return { status: found.status || "current", summary: found.summary || "", superseded_by: found.superseded_by ?? null };
+}
+
+export const isCurrent = (inputs, category, name, channel = null) => status(inputs, category, name, channel).status === "current";
+
+export function notCurrent(inputs, setup, quantity = "rate", setName = null) {
+  // [{category, name, status, summary, superseded_by}] of the choices that are not state of the art and matter
+  // here: the parameter set, the solar model, the Earth model at night, the ES model for ES, the CC/NC model otherwise
+  const night = needsNight(quantity, setup.period);
+  const onlyMeasured = setup.components.length === 1 && setup.components[0] === "B8" && setup.b8_flux === "sno_nc";
+  const choices = [setName ? ["parameter_set", setName, null] : null,
+                   onlyMeasured && quantity === "rate" ? null : ["solar_model", setup.solar_model, null],
+                   night ? ["earth_model", setup.earth_model, null] : null,
+                   setup.channel === "es" ? ["es_model", setup.es_model, null] : ["xsec_model", setup.xsec_model, setup.channel]];
+  return choices.filter(Boolean).map(([category, name, channel]) => ({ category, name, ...status(inputs, category, name, channel) }))
+    .filter((c) => c.status !== "current");
+}
+
+export function alternatives(inputs, setup, choice, scope = "current") {
+  // the models a range of `choice` runs over: the state-of-the-art ones ("current"), or every selectable one ("all")
+  let options;
   if (choice === "xsec_model") { // without the tables that are incomplete (zero below 5 MeV)
     const incomplete = (inputs.data.xsec_incomplete || {})[setup.channel] || [];
-    return setup.channel !== "es" ? inputs.xsecModels(setup.channel).filter((m) => !incomplete.includes(m)) : [];
-  }
-  if (choice === "es_model") return setup.channel === "es" ? [...ES_RANGE] : [];
-  if (choice === "earth_model") return [...inputs.data.earth_models];
-  if (choice === "solar_model") return Object.keys(inputs.data.solar_models);
-  throw new Error(choice);
+    options = setup.channel !== "es" ? inputs.xsecModels(setup.channel).filter((m) => !incomplete.includes(m)) : [];
+  } else if (choice === "es_model") options = setup.channel === "es" ? [...(scope === "current" ? ES_RANGE : ES_MODELS)] : [];
+  else if (choice === "earth_model") options = [...inputs.data.earth_models];
+  else if (choice === "solar_model") options = Object.keys(inputs.data.solar_models);
+  else throw new Error(choice);
+  return scope === "all" ? options : options.filter((o) => isCurrent(inputs, choice, o, setup.channel));
 }
 
 export function fluxLabel(setup) {
@@ -667,8 +749,10 @@ export function draws(inputs, setup, params, n, seed) {
 
 export function budget(inputs, probabilities, setup, params, quantity = "rate",
                        { n = 400, seed = 1, ranges = ["xsec_model", "es_model", "earth_model", "solar_model"],
-                         solarRange = "full", given = null } = {}) {
-  // {rows, samples}: rows {Source, Kind, Central, Sigma, Relative, Low, High}; `given` = {osc, flux, statNoise?}
+                         solarRange = "full", given = null, legacy = false } = {}) {
+  // {rows, samples}: rows {Source, Kind, Central, Sigma, Relative, Low, High}; `given` = {osc, flux, statNoise?}.
+  // Model ranges run over the state-of-the-art models; `legacy` adds a "legacy spread" row per choice over every
+  // selectable model where that is wider: context, not an uncertainty.
   check(inputs, setup, quantity);
   const night = needsNight(quantity, setup.period), comps = setup.components;
   const valueOf = (s, osc = oscillation(params), m = null) =>
@@ -702,17 +786,20 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
     total = total.map((t, i) => t + sigma * z[i]);
   }
   sampled("total sampled", total);
-  for (const choice of ranges) {
-    let options = alternatives(inputs, setup, choice);
-    if (choice === "earth_model" && !night) options = [];
-    if (options.length < 2) continue;
-    const fixed = choice === "solar_model" && solarRange === "fluxes" ? { profile_model: setup.solar_model } : {};
-    const values = options.map((o) => valueOf({ ...setup, [choice]: o, ...fixed }));
-    const low = Math.min(...values), high = Math.max(...values);
-    if (high - low <= 1e-12 * Math.abs(central)) continue; // e.g. the solar model when the only flux is measured
-    const label = choice === "xsec_model" && setup.channel === "cc_nue_ar40" ? "40Ar nuclear model" : RANGE_LABELS[choice];
-    rows.push({ Source: label, Kind: "model range", Central: central, Sigma: NaN,
-                Relative: relative(Math.max(high - central, central - low), central), Low: low, High: high });
+  for (const [scope, kind] of [["current", "model range"], ["all", "legacy spread"]].slice(0, legacy ? 2 : 1)) {
+    for (const choice of ranges) {
+      let options = alternatives(inputs, setup, choice, scope);
+      if (choice === "earth_model" && !night) options = [];
+      if (options.length < 2 || (scope === "all" && options.join() === alternatives(inputs, setup, choice).join())) continue;
+      const fixed = choice === "solar_model" && solarRange === "fluxes" ? { profile_model: setup.solar_model } : {};
+      const values = options.map((o) => valueOf({ ...setup, [choice]: o, ...fixed }));
+      const low = Math.min(...values), high = Math.max(...values);
+      // e.g. the solar model when the only flux is measured; the Earth model for a rate
+      if (high - low <= (scope === "current" ? 1e-12 : 1e-5) * Math.abs(central)) continue;
+      const label = choice === "xsec_model" && setup.channel === "cc_nue_ar40" ? "40Ar nuclear model" : RANGE_LABELS[choice];
+      rows.push({ Source: label, Kind: kind, Central: central, Sigma: NaN,
+                  Relative: relative(Math.max(high - central, central - low), central), Low: low, High: high });
+    }
   }
   return { rows, samples };
 }

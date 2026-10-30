@@ -11,12 +11,38 @@
     import { CREDITS, render } from "./sources.js";
     document.getElementById("credit-groups").innerHTML = CREDITS.map(([title, items]) =>
       `<section class="step"><h2>${title}</h2>${render(items)}</section>`).join("");
+    // reference/status.yaml, as exported to data/inputs.json: per choice, the competing state-of-the-art models,
+    // the legacy ones (with what supersedes them) and the approximations
+    const CATEGORIES = { parameter_set: "Oscillation parameters", solar_model: "Solar model", earth_model: "Earth model",
+                         es_model: "ν–e elastic scattering", xsec_model: "CC and NC cross sections" };
+    const BADGE = { current: "state of the art", legacy: "legacy", approximation: "approximation" };
+    const CHANNELS = { cc_nue_ar40: "⁴⁰Ar", cc_nue_o16: "¹⁶O", cc_nue_d: "d CC", nc_d: "d NC" };
+    const ES = { bks: "BKS", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
+    const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+    fetch("data/inputs.json").then((r) => r.json()).then((d) => {
+      const status = d.status || {}, name = (category, key, channel) => ({
+        parameter_set: d.parameter_sets.sets[key]?.label, solar_model: d.solar_models[key]?.label, earth_model: EARTH[key],
+        es_model: ES[key], xsec_model: `${CHANNELS[channel] || channel}: ${key === "default" ? "default table" : key.replace(/^ar40_/, "")}` }[category] || key);
+      const rows = [];
+      for (const [category, title] of Object.entries(CATEGORIES)) {
+        const tables = category === "xsec_model" ? Object.entries(status[category] || {}) : [[null, status[category] || {}]];
+        for (const [channel, table] of tables)
+          for (const [key, s] of Object.entries(table))
+            rows.push(`<tr><td>${title}</td><td>${name(category, key, channel)}</td><td><span class="badge ${s.status}">${BADGE[s.status]}</span></td>
+              <td>${s.summary}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
+      }
+      document.getElementById("status-table").innerHTML = rows.length
+        ? `<table><thead><tr><th>Choice</th><th>Input</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";
+    }).catch(() => { /* the section's text stands without the table */ });
   </script>
 </head>
 <body>
 <header class="top">
   <h1>SNUfish <span>solar neutrino rates and their uncertainties</span></h1>
-  <a class="button" href="rates.html">Open the calculator →</a>
+  <div class="actions">
+    <a class="button ghost-link" href="benchmarks.html">Benchmarks</a>
+    <a class="button" href="rates.html">Open the calculator →</a>
+  </div>
 </header>
 
 <main class="home">
@@ -30,7 +56,8 @@
       σ. The spectra, the sampled values and the error budget are plotted, and can be downloaded as data with
       <a href="https://github.com/mantheys/plotipus" target="_blank" rel="noopener">plotipus</a> commands.
     </p>
-    <p><a class="button" href="rates.html">Open the calculator →</a></p>
+    <p class="actions"><a class="button" href="rates.html">Open the calculator →</a>
+      <a class="button ghost-link" href="benchmarks.html">Where the uncertainty comes from →</a></p>
   </section>
 
   <section class="home-grid">
@@ -54,9 +81,26 @@
         <li><b>B1</b> standard solar models in one format; <b>B2</b> oscillations in the Sun; <b>B3</b> through the
           Earth; <b>B4</b> cross sections; <b>B5</b> interaction rates.</li>
         <li>Each benchmark fixes its inputs, so tools that compute the same thing can be compared on the same plot.</li>
+        <li><a href="benchmarks.html">The benchmark pages</a> show what each step varies, how tools agree on it, and how
+          much it moves the rates and the day-night asymmetry.</li>
         <li>SNUfish is not a product of any collaboration. Please cite the original work of the results you use.</li>
       </ul>
     </section>
+  </section>
+
+  <h2 id="status" class="credits-title">State of the art, legacy and approximations</h2>
+  <section class="step status-section">
+    <p>
+      Not every input SNUfish offers is current. <span class="badge current">state of the art</span> inputs are the
+      latest calculations and measurements; where several exist (the high- and low-metallicity solar models, the
+      measured Gamow–Teller strengths of ⁴⁰Ar, two radiative-correction calculations) they compete, and their spread is
+      the model range the calculator reports. <span class="badge legacy">legacy</span> inputs have been superseded and
+      are kept to reproduce published numbers; <span class="badge approximation">approximation</span>s simplify a
+      current input. A difference between a legacy or approximate input and the state of the art is not an
+      uncertainty, so the calculator labels both, keeps them out of the model ranges and says when a result uses one.
+      The literature behind each entry: <code>docs/status-of-inputs.md</code>.
+    </p>
+    <div id="status-table" class="status-table"></div>
   </section>
 
   <h2 id="credits" class="credits-title">Credits</h2>

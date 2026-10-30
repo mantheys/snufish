@@ -8,19 +8,19 @@ export function colours() {
   const css = getComputedStyle(document.documentElement), v = (name) => css.getPropertyValue(name).trim();
   return {
     text: v("--plot-ink"), secondary: v("--plot-ticklabel"), muted: v("--plot-muted"), axis: v("--plot-axis"),
-    surface: v("--plot-paper"), sampled: v("--sampled"), range: v("--range"), measured: v("--measured"),
+    surface: v("--plot-paper"), sampled: v("--sampled"), range: v("--range"), measured: v("--measured"), legacy: v("--legacy"),
     component: Object.fromEntries(ORDER.map((c, i) => [c, v(`--series-${i + 1}`)])),
   };
 }
 
-function alpha(hex, a) {
+export function alpha(hex, a) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
 const FONT = '"DejaVu Sans", Verdana, Geneva, sans-serif';
 
-function layout(c, node, title, xTitle, yTitle, extra = {}) {
+export function layout(c, node, title, xTitle, yTitle, extra = {}) {
   node.previousElementSibling.textContent = title; // the card's heading: Plotly's toolbar would cover a title in the plot
   const axis = { showline: true, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
                  tickwidth: 1, tickcolor: c.axis, minor: { ticks: "inside", ticklen: 3, tickcolor: c.axis, showgrid: false },
@@ -36,7 +36,7 @@ function layout(c, node, title, xTitle, yTitle, extra = {}) {
   };
 }
 
-const CONFIG = { responsive: true, displaylogo: false, displayModeBar: "hover",
+export const CONFIG = { responsive: true, displaylogo: false, displayModeBar: "hover",
                  modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d", "zoomIn2d", "zoomOut2d"] };
 const ENERGY_TICKS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20];
 
@@ -75,7 +75,7 @@ function bandTraces(c, edges, low, high, name = "sampled 68 %") {
   return traces;
 }
 
-function htmlLegend(node, items, key = "") {
+export function htmlLegend(node, items, key = "") {
   // a legend in HTML under the plot, one row that wraps at the card's edge (a Plotly legend gives every entry the
   // width of the longest, and does not move the axis title out of its way). items: {label, colour, dash, fill}
   let legend = node.nextElementSibling;
@@ -208,17 +208,22 @@ export function budgetPlot(node, result) {
   // squeeze the plot); the card grows with the number of sources so the legend never covers the axis
   const c = colours(), { rows, quantity, scale, unit } = result;
   const sizes = budgetSizes(rows, quantity, scale), letters = rows.map((_, i) => String.fromCharCode(65 + i));
+  // sampled 1 sigma, the range of the state-of-the-art models, and (grey) the spread with legacy models: context only
+  const colour = (r) => ({ sampled: c.sampled, "model range": c.range })[r.Kind] || c.legacy;
+  const named = (r) => r.Source.replace(/ \(.*\)$/, "") + (r.Kind === "legacy spread" ? " (with legacy)" : "");
   const fmt = (v) => (v >= 10 ? v.toFixed(1) : v >= 1 ? v.toFixed(2) : v.toPrecision(2));
   const traces = rows.map((r, i) => ({
-    type: "bar", orientation: "h", y: [letters[i]], x: [sizes[i]], name: `${letters[i]} · ${r.Source.replace(/ \(.*\)$/, "")}`, // details in the hover
-    marker: { color: r.Kind === "sampled" ? c.sampled : c.range }, text: [fmt(sizes[i])], textposition: "outside",
+    type: "bar", orientation: "h", y: [letters[i]], x: [sizes[i]], name: `${letters[i]} · ${named(r)}`, // details in the hover
+    marker: { color: colour(r) }, text: [fmt(sizes[i])], textposition: "outside",
     cliponaxis: false, textfont: { color: c.secondary, size: 11 }, width: 0.7,
     hovertemplate: `${r.Source}: %{x:.3g}<extra>${r.Kind}</extra>`,
   }));
-  const ranges = rows.some((r) => r.Kind !== "sampled"), fill = (colour) => `<i style="background:${colour}"></i>`;
-  htmlLegend(node, rows.map((r, i) => ({ label: `<b>${letters[i]}</b> ${r.Source.replace(/ \(.*\)$/, "")}`, title: `${r.Source} (${r.Kind})`,
-                                         colour: r.Kind === "sampled" ? c.sampled : c.range, fill: true })),
-             `${fill(c.sampled)}sampled 1σ${ranges ? ` ${fill(c.range)}model range (largest deviation)` : ""}`);
+  const ranges = rows.some((r) => r.Kind === "model range"), legacy = rows.some((r) => r.Kind === "legacy spread");
+  const fill = (colour) => `<i style="background:${colour}"></i>`;
+  htmlLegend(node, rows.map((r, i) => ({ label: `<b>${letters[i]}</b> ${named(r)}`, title: `${r.Source} (${r.Kind})`,
+                                         colour: colour(r), fill: true })),
+             `${fill(c.sampled)}sampled 1σ${ranges ? ` ${fill(c.range)}state-of-the-art model range (largest deviation)` : ""}`
+             + `${legacy ? ` ${fill(c.legacy)}spread with legacy models and approximations: context, not an uncertainty` : ""}`);
   const xTitle = quantity !== "adn" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
   return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
     { barmode: "overlay", showlegend: false, margin: { l: 30, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },

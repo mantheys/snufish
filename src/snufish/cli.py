@@ -86,9 +86,39 @@ def cmd_scan(args):
     out = build_dir()
     out.mkdir(parents=True, exist_ok=True)
     dm2 = np.round(np.arange(args.dm2_min, args.dm2_max + 1e-9, args.dm2_step), 4)
+    _status_notes([("solar_model", args.solar_model)])
     for name, frame in scan(dm2, site=args.site, solar_model=args.solar_model).items():
         _write_frame(frame, out / f"{name}.parquet")
         print(f"wrote   {out / name}.parquet ({len(frame)} rows)")
+    return 0
+
+
+def _status_notes(choices):
+    """Print a note for every (category, name) that is not the state of the art (reference/status.yaml)."""
+    from . import engine
+    from .uncertainty import inputs
+
+    for category, name in choices:
+        found = engine.status(inputs(), category, name)
+        if found["status"] != "current":
+            instead = f"; state of the art: {found['superseded_by']}" if found["superseded_by"] else ""
+            print(f"note    {name} is {found['status']}{instead}. {found['summary']}")
+
+
+def cmd_status(args):
+    from . import engine
+    from .uncertainty import inputs
+
+    table = inputs()["status"]
+    for category in ("parameter_set", "solar_model", "earth_model", "es_model", "xsec_model"):
+        entries = [(channel, name) for channel, models in table[category].items() for name in models] \
+            if category == "xsec_model" else [(None, name) for name in table[category]]
+        for channel, name in entries:
+            found = engine.status(inputs(), category, name, channel)
+            where = f"{category}:{channel}" if channel else category
+            instead = f" -> {found['superseded_by']}" if found["superseded_by"] else ""
+            print(f"{where:26} {name:32} {found['status']:13}{instead}")
+    print("\nModel ranges run over the 'current' entries only; see docs/status-of-inputs.md.")
     return 0
 
 
@@ -98,6 +128,7 @@ def cmd_budget(args):
     from .engine import TableProbabilities
     from .uncertainty import predictions, write_budget
 
+    _status_notes([("solar_model", args.solar_model), *(("parameter_set", s) for s in args.sets)])
     probabilities = TableProbabilities(args.tables) if args.tables else None
     frames = write_budget(args.sets, args.solar_model, args.n, args.seed, probabilities=probabilities)
     frames["Budget_Predictions"] = predictions(frames["Budget"])
@@ -113,6 +144,13 @@ def cmd_export_app(args):
     manifest = export_app(args.out, s12=args.s12, dm21=args.dm21, jobs=args.jobs, inputs_only=args.inputs_only)
     for name in manifest["files"]:
         print(f"wrote   {args.out}/{name}")
+    return 0
+
+
+def cmd_export_sections(args):
+    from .sections import export_sections
+
+    print(f"wrote   {export_sections(args.tables)}")
     return 0
 
 
@@ -148,11 +186,14 @@ def main(argv=None):
 
     p = sub.add_parser("budget", help="uncertainty propagation: error budget of the 8B rates and A_DN")
     p.add_argument("--sets", nargs="+", default=["juno_2025", "solar_global_2024"])
-    p.add_argument("--solar_model", default="b23_gs98")
+    p.add_argument("--solar_model", default="b23_mb22m")
     p.add_argument("--n", type=int, default=400)
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--tables", help="app tables directory (snufish export-app) instead of the exact solvers")
     p.set_defaults(func=cmd_budget)
+
+    p = sub.add_parser("status", help="which inputs are the state of the art, legacy or approximations")
+    p.set_defaults(func=cmd_status)
 
     p = sub.add_parser("export-app", help="inputs and probability tables of the SNUfish app")
     p.add_argument("--out", default="build/app")
@@ -162,6 +203,10 @@ def main(argv=None):
     p.add_argument("--jobs", type=int, default=None, help="worker processes (default: all cores)")
     p.add_argument("--inputs-only", action="store_true", help="rewrite inputs.json only (the tables are unchanged)")
     p.set_defaults(func=cmd_export_app)
+
+    p = sub.add_parser("export-sections", help="uncertainty and impact of each benchmark, for the web page")
+    p.add_argument("--tables", default="build/app", help="app tables (snufish export-app); sections.json goes there")
+    p.set_defaults(func=cmd_export_sections)
 
     args = parser.parse_args(argv)
     return args.func(args)

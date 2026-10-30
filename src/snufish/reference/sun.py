@@ -18,21 +18,25 @@ from ..solar import electron_density
 from .earth import matter_potential
 
 
-def adiabatic_fractions(spec, model_name, energies_mev, radius_grid):
-    """Array [radius, energy, i] of F_i = |V_ei(r0)|^2."""
+def fractions_at_density(spec, density, energies_mev):
+    """Array [energy, i] of F_i = |V_ei|^2 for production at electron density
+    ``density`` (N_A / cm^3)."""
     from ..spec import pmns
 
     osc = spec["oscillation"]
     U = pmns(osc)
     E = np.asarray(energies_mev, dtype=float) * 1e6
     vacuum = (U * np.array([0.0, osc["dm2_21_eV2"], osc["dm2_31_eV2"]])) @ U.conj().T
-    out = np.empty((len(radius_grid), len(E), 3))
-    for k, r in enumerate(radius_grid):
-        H = vacuum[None] / (2 * E[:, None, None])
-        H[:, 0, 0] += matter_potential(electron_density(model_name, r, spec), 1.0)
-        _, vectors = np.linalg.eigh(H)  # eigenvalues ascending
-        out[k] = np.abs(vectors[:, 0, :]) ** 2
-    return out
+    H = vacuum[None] / (2 * E[:, None, None])
+    H[:, 0, 0] += matter_potential(density, 1.0)
+    _, vectors = np.linalg.eigh(H)  # eigenvalues ascending
+    return np.abs(vectors[:, 0, :]) ** 2
+
+
+def adiabatic_fractions(spec, model_name, energies_mev, radius_grid):
+    """Array [radius, energy, i] of F_i = |V_ei(r0)|^2."""
+    return np.stack([fractions_at_density(spec, electron_density(model_name, r, spec), energies_mev)
+                     for r in radius_grid])
 
 
 def solve_b2(spec, variant="b16_gs98", grid="map"):
