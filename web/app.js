@@ -462,7 +462,7 @@ async function compute() {
                  lines: lineMarks(setup) };
   app.result.official = await officialFigure(check, { inputs: app.inputs, tables: app.tables, setup, set: $("set").value });
   render();
-  setTimeout(thumb, 0); // the all-components example, after the result is on screen
+  if (thumbShown()) setTimeout(thumb, 0); // the all-components example, after the result is on screen
   if (app.rendered.length || !$("plotipus").hidden) renderPlotipus(); // keep the plotipus figures in step
   const notes = [];
   if (app.tables.clamped) notes.push(`${app.tables.clamped} sampled points fell outside the tables and were moved to their edge.`);
@@ -492,11 +492,13 @@ function renderFlux() {
   }
   card.innerHTML = `<div><h4>Flux at Earth</h4><div class="big">${fmt(f.total)} <small>cm⁻² s⁻¹</small></div>
       <div class="sub">${names} (${d.solar_models[r.setup.solar_model].label}); νₑ by day ${(100 * f.nue_day).toFixed(1)} %</div>${per}</div>
-    ${compare}<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>`;
+    ${compare}${thumbShown() ? `<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>` : ""}`;
   card.hidden = false;
-  if (app.thumb && app.thumb.key === thumbKey()) showThumb();
+  if (thumbShown() && app.thumb && app.thumb.key === thumbKey()) showThumb();
 }
 
+// the thumb card belongs to the opening example: shown while the thumb preset is set, gone once any setting changes
+const thumbShown = () => $("preset").value === "thumb";
 const thumbKey = () => `${$("set").value}|${$("solar").value}`;
 
 async function thumb() {
