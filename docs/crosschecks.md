@@ -26,8 +26,8 @@ SNO fig. 10, Borexino table II) as a Plotly preview and a plotipus figure (web/o
 
 JUNO writes the tree-level cross section with g₁ ≈ 0.73, g₂ ≈ 0.23 (sin²θ_W = 0.23). SNUfish's tree level uses
 0.23857 and comes out 2.2 % above JUNO's numbers; with radiative corrections (BKS, the default) it is within
-0.6 %: the two shifts happen to cancel. Super-K's expected asymmetries come from its amplitude fit, which weights
-the zenith-angle shape by energy bin; SNUfish's is the plain rate asymmetry, ~2.5 % smaller in every case.
+0.6 %: the two shifts happen to cancel. SNUfish's Super-K asymmetries are 2.2–2.8 % smaller than
+Super-K's because PREM ends in 3 km of ocean (see Investigated): with rock in its place they agree to −0.7 to +1.9 %.
 
 ## Not reproduced
 
