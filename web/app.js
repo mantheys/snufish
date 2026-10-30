@@ -155,7 +155,8 @@ function buildControls() {
   $("check").replaceChildren(option("", "None: set the steps by hand"), envelope, ...Object.entries(groups).map(([name, list]) => {
     const group = document.createElement("optgroup");
     group.label = name;
-    list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
+    list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}${c.published.measured ? " (measured)" : ""}`
+      + `${c.reproduced === false ? " (not reproduced)" : ""}`)));
     return group;
   }));
   // state-of-the-art choices first; legacy ones (kept to reproduce papers) and approximations apart, and labelled

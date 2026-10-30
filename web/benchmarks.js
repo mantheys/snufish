@@ -440,7 +440,6 @@ async function discrepancies() {
     }).join("")}</tbody></table>`;
 
   const c = colours(), node = $("plot-discrepancies"), ordered = [...shown].reverse(); // the first row at the top
-  const short = (r) => { const t = `${r.check.group}: ${r.check.label}`; return t.length > 58 ? `${t.slice(0, 57)}…` : t; };
   const names = ordered.map((r) => `${r.check.group}: ${r.check.label}`), y = ordered.map((_, i) => i);
   const bars = (kind, values, label) => ({
     type: "bar", orientation: "h", y, x: values, name: label,
@@ -458,7 +457,7 @@ async function discrepancies() {
   return Plotly.react(node, traces, layout(c, node, "Two kinds of divergence, per template", "Relative difference (%)", "",
     { showlegend: false, barmode: "group", bargap: 0.25, bargroupgap: 0.05, margin: { l: 20, r: 60, t: 24, b: 48 },
       xaxis: { range: [-reach, reach] },
-      yaxis: { tickvals: y, ticktext: ordered.map(short), automargin: true, minor: { ticks: "" }, tickfont: { size: 11 } },
+      yaxis: { tickvals: y, ticktext: names, automargin: true, minor: { ticks: "" }, tickfont: { size: 11 } },
       shapes: [{ type: "line", yref: "paper", y0: 0, y1: 1, x0: 0, x1: 0, line: { color: c.muted, width: 1 } }] }), CONFIG);
 }
 
