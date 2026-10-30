@@ -10,10 +10,11 @@ Two kinds of input uncertainty are kept apart:
   set (split-normal for asymmetric errors, independent, as the sources
   publish no correlation). Reported as a standard deviation.
 - model choices: the nu_e-40Ar nuclear model (B4 variants), ES radiative
-  corrections (tree level vs SNOwGLoBES's tables), the Earth model (B3
-  variants) and the solar model (B1). Reported as the range of the
-  alternatives around the nominal, never folded into a sigma: the range
-  depends on which models exist, not on a probability.
+  corrections (BKS vs SNOwGLoBES's tables), the Earth model (B3 variants)
+  and the solar model (B1). Reported as the range of the state-of-the-art
+  alternatives (reference/status.yaml) around the nominal, never folded
+  into a sigma: the range depends on which models exist, not on a
+  probability. Legacy models and approximations are not part of it.
 
 Quantities are daytime 8B rates per kton-year (true neutrino energy, recoil
 threshold for ES, no detector response) and the ES day-night asymmetry.
@@ -26,13 +27,13 @@ import pandas as pd
 
 from . import engine
 from .build import _write_frame
-from .export import B8_MEASURED, ExactProbabilities, collect_inputs  # noqa: F401 (B8_MEASURED re-exported)
+from .export import B8_MEASURED, MARLEY_DEFAULT, ExactProbabilities, collect_inputs  # noqa: F401 (B8_MEASURED re-exported)
 from .paths import build_dir
 from .solar import COMPONENTS
 
 QUANTITIES = {
     # name: engine setup and quantity (rate by day, or the day-night asymmetry)
-    "argon_cc_b8": dict(setup=dict(detector="argon", channel="cc_nue_ar40"), quantity="rate",
+    "argon_cc_b8": dict(setup=dict(detector="argon", channel="cc_nue_ar40", xsec_model=MARLEY_DEFAULT), quantity="rate",
                         label="8B CC on 40Ar"),
     "argon_es_b8_t5": dict(setup=dict(detector="argon", channel="es", threshold=5.0), quantity="rate",
                            label="8B ES in argon, T > 5 MeV"),
@@ -56,7 +57,7 @@ def sample_flux_scales(rng, solar_model, n):
     return engine.sample_fluxes(inputs(), rng, solar_model, list(COMPONENTS), n)
 
 
-def budget(set_name="juno_2025", solar_model="b23_gs98", n=300, seed=1, quantities=None, b8_constraint=False,
+def budget(set_name="juno_2025", solar_model="b23_mb22m", n=300, seed=1, quantities=None, b8_constraint=False,
            probabilities=None):
     """Error budget frames: one row per quantity and source, and the samples.
     ``probabilities``: an engine provider (default: the exact solvers)."""
@@ -76,7 +77,7 @@ def budget(set_name="juno_2025", solar_model="b23_gs98", n=300, seed=1, quantiti
     return {"Budget": pd.DataFrame(rows), "Budget_Samples": pd.DataFrame(samples)}
 
 
-def write_budget(sets, solar_model="b23_gs98", n=300, seed=1, b8_constraint=(False, True), probabilities=None):
+def write_budget(sets, solar_model="b23_mb22m", n=300, seed=1, b8_constraint=(False, True), probabilities=None):
     """Budgets for several parameter sets and both 8B flux treatments, in one frame each."""
     out = build_dir()
     out.mkdir(parents=True, exist_ok=True)

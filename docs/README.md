@@ -11,6 +11,7 @@ asymmetries and uncertainty budgets (command line and web page). The
 | [architecture.md](architecture.md) | see how specs, contributions, the validator, the builder, the engine and the web page fit together |
 | [benchmarks.md](benchmarks.md) | know exactly what each benchmark (B1–B5) fixes, asks for, checks and produces |
 | [methods.md](methods.md) | follow the physics and numerics: MSW in the Sun, Earth crossing, night exposure, cross sections, rate folding, detector response, uncertainty budget, app tables |
+| [status-of-inputs.md](status-of-inputs.md) | know which inputs are the state of the art (and compete), which are legacy and which are approximations, and why |
 | [sources.md](sources.md) | find where every number comes from: solar models, spectra, oscillation parameters, Earth models, sites, cross sections, detectors, measurements, tools |
 | [usage.md](usage.md) | run the command line, call the engine from Python, make plots, use and deploy the calculator |
 | [crosschecks.md](crosschecks.md) | see which published numbers SNUfish reproduces, which it does not, and its predictions for measurements |

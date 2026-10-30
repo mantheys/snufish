@@ -17,6 +17,9 @@
   --range: var(--series-2);
   --measured: #3aa58c;
   --warning-bg: #fff4e0;
+  --legacy: var(--series-4);
+  --current: #2e7d4f;
+  --current-bg: #e8f4ec;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -28,6 +31,8 @@
     --series-3: #e12501; --series-5: #a04bd3; --series-9: #7b7f8b;
     --measured: #92dadd;
     --warning-bg: #3a2a10;
+    --current: #6cc28e;
+    --current-bg: #15281d;
   }
 }
 :root[data-theme="dark"] {
@@ -39,6 +44,8 @@
   --series-3: #e12501; --series-5: #a04bd3; --series-9: #7b7f8b;
   --measured: #92dadd;
   --warning-bg: #3a2a10;
+  --current: #6cc28e;
+  --current-bg: #15281d;
 }
 
 * { box-sizing: border-box; }
@@ -125,6 +132,17 @@ select:disabled { opacity: 0.45; }
 .headline .sub { color: var(--text-secondary); font-size: 0.88rem; }
 .headline .ranges { border-left: 4px solid var(--range); padding-left: 12px; font-size: 0.88rem; }
 .headline .ranges b { display: block; margin-bottom: 2px; }
+.headline .ranges .legacy-ranges { margin-top: 6px; color: var(--text-muted); }
+.headline .currency { border-left: 4px solid var(--current); background: var(--current-bg); padding: 8px 12px; border-radius: 0 8px 8px 0; font-size: 0.88rem; }
+.headline .currency.outdated { border-left-color: var(--series-7); background: var(--warning-bg); }
+.badge {
+  display: inline-block; padding: 0 7px; border: 1px solid currentColor; border-radius: 999px;
+  font-size: 0.72rem; line-height: 1.5; font-weight: 600; white-space: nowrap; vertical-align: 1px;
+}
+.badge.current { color: var(--current); }
+.badge.legacy, .badge.reproduction { color: var(--series-7); }
+.badge.approximation { color: var(--text-muted); }
+.status-note:empty { display: none; }
 .headline .sampled { border-left: 4px solid var(--sampled); padding-left: 12px; }
 .headline .thumb-line { font-size: 0.95rem; color: var(--text-primary); }
 .headline .check-line { font-size: 0.95rem; color: var(--text-primary); border-left: 3px solid var(--measured); padding-left: 10px; }
@@ -214,3 +232,9 @@ label.inline { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; 
 label.inline select { width: auto; margin-top: 0; }
 .plot-legend .kind { color: var(--plot-muted); }
 #b2-tools, #b3-tools, #b5-tools { overflow-x: auto; padding: 0 6px 6px; }
+
+.status-section p { margin: 0 0 10px; font-size: 0.9rem; color: var(--text-secondary); }
+.status-table { overflow-x: auto; }
+.status-table table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.status-table th, .status-table td { text-align: left; vertical-align: top; padding: 5px 8px; border-top: 1px solid var(--border); }
+.status-table td:nth-child(2) { white-space: nowrap; }

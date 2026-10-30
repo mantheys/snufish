@@ -159,7 +159,14 @@ def collect_inputs():
         "parameter_sets": _yaml("reference/oscillation/parameter_sets.yaml"),
         "measurements": _yaml("reference/measurements/solar.yaml"),
         "efficiency_curves": efficiency_curves(),
+        "status": status_table(),
     }
+
+
+def status_table():
+    """reference/status.yaml: which solar models, parameter sets, Earth models and cross sections are the
+    state of the art, which are legacy and which are approximations (see docs/status-of-inputs.md)."""
+    return _yaml("reference/status.yaml")
 
 
 def efficiency_curves():

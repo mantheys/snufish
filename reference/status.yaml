@@ -1,0 +1,188 @@
+# Which inputs are the state of the art, which are legacy, and which are
+# approximations. Read by the engine (model ranges), the web page (labels,
+# warnings) and the docs (docs/status-of-inputs.md, where the literature
+# behind every entry is discussed). Reviewed 2026-10-30.
+#
+#   current        state of the art. Entries of one category marked current
+#                  compete with each other: their spread is the model
+#                  uncertainty, and the only one SNUfish reports as a range.
+#   legacy         superseded by a later calculation or measurement. Kept to
+#                  reproduce published numbers; a difference from a current
+#                  entry is an outdated input, not an uncertainty.
+#   approximation  a simplified version of a current entry (coarser Earth,
+#                  no radiative corrections). A difference is the error of
+#                  the approximation, not an uncertainty.
+#   reproduction   oscillation parameters as a given paper used them (the
+#                  calculator's Result Templates): legacy by construction.
+#
+# Entries not listed count as current. `summary` is shown next to the choice
+# in the calculator; `superseded_by` names the current entry to use instead.
+
+statuses:
+  current: State of the art
+  legacy: Legacy (superseded)
+  approximation: Approximation
+  reproduction: As used in a paper
+
+solar_model:
+  b23_mb22m:
+    status: current
+    summary: "B23 with the Magg et al. 2022 abundances (meteoritic scale); high metallicity, consistent with helioseismology and the Borexino CNO rate. NuFIT 6.0's reference model."
+    refs: [doi:10.5281/zenodo.10174172, arXiv:2203.02255, arXiv:2311.16226, arXiv:2410.05380]
+  b23_mb22p:
+    status: current
+    summary: "B23 with the Magg et al. 2022 abundances (photospheric scale); pp-chain fluxes within 1 % of MB22m, CNO within 1 %."
+    refs: [doi:10.5281/zenodo.10174172, arXiv:2203.02255]
+  b23_aag21:
+    status: current
+    summary: "B23 with the Asplund, Amarsi & Grevesse 2021 abundances; low metallicity. The other side of the open solar composition problem; disfavoured at about 2.5σ by the CNO fluxes, not excluded."
+    refs: [doi:10.5281/zenodo.10174172, arXiv:2105.01661, arXiv:2311.16226]
+  b23_gs98:
+    status: legacy
+    superseded_by: b23_mb22m
+    summary: "B23 physics with the 1998 Grevesse & Sauval abundances. Superseded as the high-metallicity reference by MB22 (similar Z/X); kept in B23 for continuity."
+    refs: [doi:10.5281/zenodo.10174172]
+  b23_agss09:
+    status: legacy
+    superseded_by: b23_aag21
+    summary: "B23 physics with the 2009 Asplund et al. abundances, superseded by the same group's AAG21."
+    refs: [doi:10.5281/zenodo.10174172, arXiv:2105.01661]
+  b23_c11:
+    status: legacy
+    superseded_by: b23_mb22m
+    summary: "B23 physics with the 2011 Caffau et al. abundances (intermediate metallicity), not revised since; the 3D NLTE determinations of MB22 and AAG21 supersede it."
+    refs: [doi:10.5281/zenodo.10174172]
+  b16_gs98:
+    status: legacy
+    superseded_by: b23_mb22m
+    summary: "B16 (2017) with GS98. Superseded by B23 (Solar Fusion III nuclear rates, new abundances); used by Borexino 2018 and Super-K 2024, so kept for their numbers."
+    refs: [arXiv:1611.09867]
+  b16_agss09met:
+    status: legacy
+    superseded_by: b23_aag21
+    summary: "B16 (2017) with AGSS09met. Superseded by B23."
+    refs: [arXiv:1611.09867]
+  bs05_op:
+    status: legacy
+    superseded_by: b23_mb22m
+    summary: "BS05 (2005) with GS98 and OP opacities. Two generations old; SNOwGLoBES's built-in solar flux."
+    refs: [astro-ph/0412440]
+  bs05_agsop:
+    status: legacy
+    superseded_by: b23_aag21
+    summary: "BS05 (2005) with the AGS05 abundances. Two generations old."
+    refs: [astro-ph/0412440]
+
+parameter_set:
+  nufit61_global:
+    status: current
+    summary: "Global fit including the first JUNO data; JUNO dominates θ12 and Δm²21."
+    refs: [arXiv:2601.09791]
+  juno_2025:
+    status: current
+    summary: "The most precise single measurement of Δm²21 and θ12 (reactor, 59 days)."
+    refs: [arXiv:2511.14593]
+  solar_global_2024:
+    status: current
+    summary: "Solar data alone. Its Δm²21 sits about 1.5σ below the reactor value; comparing it with JUNO is physics (solar against reactor), not a choice of input."
+    refs: [arXiv:2312.12907]
+  sk_sno_2024:
+    status: current
+    summary: "Super-K and SNO alone, independent of the solar-model fluxes. Solar side of the solar–reactor comparison."
+    refs: [arXiv:2312.12907]
+  nufit60_global:
+    status: legacy
+    superseded_by: nufit61_global
+    summary: "Global fit before JUNO (2024). Superseded by NuFIT 6.1."
+    refs: [arXiv:2410.05380]
+  kamland_2013:
+    status: legacy
+    superseded_by: juno_2025
+    summary: "KamLAND's final reactor result. Superseded by JUNO, more precise in both parameters after 59 days (Δm²21 ±0.12 against ±0.19, sin²θ12 ±0.009 against ±0.03)."
+    refs: [arXiv:1303.4667, arXiv:2511.14593]
+  solar_kamland_2024:
+    status: legacy
+    superseded_by: nufit61_global
+    summary: "Solar + KamLAND combination; JUNO now dominates the reactor side of any global fit."
+    refs: [arXiv:2312.12907]
+
+earth_model:
+  prem_full:
+    status: current
+    summary: "PREM with its full radial polynomials, the standard reference Earth for neutrino propagation. It ends in 3 km of ocean, which under-predicts A_DN at continental sites by about 5 %; 3D Earth models (up to ~8 % of A_DN) are not included."
+    refs: [Dziewonski & Anderson 1981]
+  prem_four:
+    status: approximation
+    superseded_by: prem_full
+    summary: "PREM polynomials of the four main regions, the mantle extended to the surface: no crust (3.8 g/cm³ under the detector). A_DN of ⁸B comes out about 40 % above prem_full at Kamioka and SURF: the missing crust, not an Earth-model uncertainty."
+  prem_prob3:
+    status: approximation
+    superseded_by: prem_full
+    summary: "Four shells of constant density (Prob3++), no crust. Solvable exactly by every code, which makes it B3's tool comparison; as a model of the Earth it is an approximation (A_DN of ⁸B about 20 % above prem_full)."
+
+es_model:
+  bks:
+    status: current
+    summary: "O(α) electroweak and QED corrections of Bahcall, Kamionkowski & Sirlin (1995), the electron-recoil spectrum used by Super-K, SNO and Borexino."
+    refs: [astro-ph/9502003]
+  snowglobes:
+    status: current
+    summary: "SNOwGLoBES's tables, Marciano & Parsa (2003), radiatively corrected total cross sections (applied as a ratio to the tree level at each threshold). An independent calculation of the same corrections."
+    refs: [doi:10.1088/0954-3899/29/11/013]
+  tree:
+    status: approximation
+    superseded_by: bks
+    summary: "Tree level, no radiative corrections. About 2 % above the corrected cross sections for ⁸B, 4 % at the highest recoil energies."
+    refs: [astro-ph/9502003]
+
+xsec_model:
+  cc_nue_ar40:
+    ar40_marley2_bhattacharya2009:
+      status: current
+      summary: "MARLEY 2 recommended model: HF-CRPA continuum and measured Gamow–Teller strengths from ⁴⁰Ar(p,n) (Bhattacharya 2009)."
+      refs: [doi:10.5281/zenodo.21880925, arXiv:2010.02393]
+    ar40_marley2_liu1998:
+      status: current
+      summary: "MARLEY 2 with the B(GT) from ⁴⁰Ti β decay (Liu 1998). Competes with the (p,n) strengths; the measurements disagree."
+      refs: [doi:10.5281/zenodo.21880925]
+    ar40_marley2_bhattacharya1998:
+      status: current
+      summary: "MARLEY 2 with the B(GT) from ⁴⁰Ti β decay (Bhattacharya 1998). Competes with the (p,n) strengths."
+      refs: [doi:10.5281/zenodo.21880925]
+    ar40_marley1_bhattacharya2009:
+      status: legacy
+      superseded_by: ar40_marley2_bhattacharya2009
+      summary: "MARLEY's v1 model (allowed approximation over all levels). Superseded by MARLEY 2's HF-CRPA continuum."
+      refs: [arXiv:2010.02393]
+    ar40_marley:
+      status: legacy
+      superseded_by: ar40_marley2_bhattacharya2009
+      summary: "SNOwGLoBES's 2018 MARLEY table (allowed approximation), zero below 5 MeV. Superseded by MARLEY 2."
+    ar40_marley1:
+      status: legacy
+      superseded_by: ar40_marley2_liu1998
+      summary: "SNOwGLoBES's 2018 MARLEY table with ⁴⁰Ti strengths, zero below 5 MeV. Superseded by MARLEY 2."
+    ar40_klmv:
+      status: legacy
+      superseded_by: ar40_marley2_bhattacharya2009
+      summary: "Kolbe, Langanke, Martínez-Pinedo & Vogel (2003), RPA. Predates the measured Gamow–Teller strengths that dominate at solar energies."
+      refs: [nucl-th/0311022]
+    default:
+      status: legacy
+      superseded_by: ar40_marley2_bhattacharya2009
+      summary: "SNOwGLoBES's default table (Gil-Botella & Rubbia 2004 / KLMV 2003 era). Predates the measured Gamow–Teller strengths."
+  cc_nue_o16:
+    default:
+      status: current
+      summary: "Kolbe, Langanke & Vogel (2002), as tabulated by SNOwGLoBES. The only ¹⁶O model here, so no range can be given."
+      refs: [doi:10.1103/PhysRevD.66.013007]
+  cc_nue_d:
+    default:
+      status: current
+      summary: "Nakamura et al. (2002), AV18 potential, ±1 %; the effective-field-theory calculation of Butler, Chen & Kong agrees to about 1 %."
+      refs: [nucl-th/0201062]
+  nc_d:
+    default:
+      status: current
+      summary: "Nakamura et al. (2002), ±1 %."
+      refs: [nucl-th/0201062]

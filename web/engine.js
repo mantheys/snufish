@@ -162,7 +162,7 @@ export function sampleFluxes(inputs, rng, solarModel, components, n, b8Flux = "m
 // ------------------------------------------------------------------ setup and checks
 
 export const DEFAULT_SETUP = {
-  solar_model: "b23_gs98", components: ["B8"], b8_flux: "model", earth_model: "prem_full", site: "Kamioka",
+  solar_model: "b23_mb22m", components: ["B8"], b8_flux: "model", earth_model: "prem_full", site: "Kamioka",
   detector: "water", channel: "es", xsec_model: "default", es_model: "bks", period: "day",
   // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
   threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,
@@ -645,15 +645,48 @@ export const ES_RANGE = ["bks", "snowglobes"]; // the radiatively corrected calc
 export const RANGE_LABELS = { xsec_model: "cross-section model", es_model: "ES radiative corrections",
                               earth_model: "Earth model", solar_model: "solar model" };
 
-export function alternatives(inputs, setup, choice) {
+// reference/status.yaml: current (state of the art; current entries compete, their spread is the model
+// uncertainty), legacy (superseded), approximation (a simplified current entry), reproduction (a paper's inputs)
+export const STATUSES = ["current", "legacy", "approximation", "reproduction"];
+
+export function status(inputs, category, name, channel = null) {
+  // {status, summary, superseded_by} of one choice; unlisted: current; a "paper" parameter set: reproduction
+  let table = (inputs.data.status || {})[category] || {};
+  if (category === "xsec_model") table = table[channel] || {};
+  let found = { ...(table[name] || {}) };
+  if (!Object.keys(found).length && category === "parameter_set") {
+    const info = inputs.data.parameter_sets.sets[name] || {};
+    if (info.kind === "paper") found = { status: "reproduction", summary: `As used in ${info.source || "a paper"}.` };
+  }
+  return { status: found.status || "current", summary: found.summary || "", superseded_by: found.superseded_by ?? null };
+}
+
+export const isCurrent = (inputs, category, name, channel = null) => status(inputs, category, name, channel).status === "current";
+
+export function notCurrent(inputs, setup, quantity = "rate", setName = null) {
+  // [{category, name, status, summary, superseded_by}] of the choices that are not state of the art and matter
+  // here: the parameter set, the solar model, the Earth model at night, the ES model for ES, the CC/NC model otherwise
+  const night = needsNight(quantity, setup.period);
+  const onlyMeasured = setup.components.length === 1 && setup.components[0] === "B8" && setup.b8_flux === "sno_nc";
+  const choices = [setName ? ["parameter_set", setName, null] : null,
+                   onlyMeasured && quantity === "rate" ? null : ["solar_model", setup.solar_model, null],
+                   night ? ["earth_model", setup.earth_model, null] : null,
+                   setup.channel === "es" ? ["es_model", setup.es_model, null] : ["xsec_model", setup.xsec_model, setup.channel]];
+  return choices.filter(Boolean).map(([category, name, channel]) => ({ category, name, ...status(inputs, category, name, channel) }))
+    .filter((c) => c.status !== "current");
+}
+
+export function alternatives(inputs, setup, choice, scope = "current") {
+  // the models a range of `choice` runs over: the state-of-the-art ones ("current"), or every selectable one ("all")
+  let options;
   if (choice === "xsec_model") { // without the tables that are incomplete (zero below 5 MeV)
     const incomplete = (inputs.data.xsec_incomplete || {})[setup.channel] || [];
-    return setup.channel !== "es" ? inputs.xsecModels(setup.channel).filter((m) => !incomplete.includes(m)) : [];
-  }
-  if (choice === "es_model") return setup.channel === "es" ? [...ES_RANGE] : [];
-  if (choice === "earth_model") return [...inputs.data.earth_models];
-  if (choice === "solar_model") return Object.keys(inputs.data.solar_models);
-  throw new Error(choice);
+    options = setup.channel !== "es" ? inputs.xsecModels(setup.channel).filter((m) => !incomplete.includes(m)) : [];
+  } else if (choice === "es_model") options = setup.channel === "es" ? [...(scope === "current" ? ES_RANGE : ES_MODELS)] : [];
+  else if (choice === "earth_model") options = [...inputs.data.earth_models];
+  else if (choice === "solar_model") options = Object.keys(inputs.data.solar_models);
+  else throw new Error(choice);
+  return scope === "all" ? options : options.filter((o) => isCurrent(inputs, choice, o, setup.channel));
 }
 
 export function fluxLabel(setup) {
@@ -716,8 +749,10 @@ export function draws(inputs, setup, params, n, seed) {
 
 export function budget(inputs, probabilities, setup, params, quantity = "rate",
                        { n = 400, seed = 1, ranges = ["xsec_model", "es_model", "earth_model", "solar_model"],
-                         solarRange = "full", given = null } = {}) {
-  // {rows, samples}: rows {Source, Kind, Central, Sigma, Relative, Low, High}; `given` = {osc, flux, statNoise?}
+                         solarRange = "full", given = null, legacy = false } = {}) {
+  // {rows, samples}: rows {Source, Kind, Central, Sigma, Relative, Low, High}; `given` = {osc, flux, statNoise?}.
+  // Model ranges run over the state-of-the-art models; `legacy` adds a "legacy spread" row per choice over every
+  // selectable model where that is wider: context, not an uncertainty.
   check(inputs, setup, quantity);
   const night = needsNight(quantity, setup.period), comps = setup.components;
   const valueOf = (s, osc = oscillation(params), m = null) =>
@@ -751,17 +786,20 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
     total = total.map((t, i) => t + sigma * z[i]);
   }
   sampled("total sampled", total);
-  for (const choice of ranges) {
-    let options = alternatives(inputs, setup, choice);
-    if (choice === "earth_model" && !night) options = [];
-    if (options.length < 2) continue;
-    const fixed = choice === "solar_model" && solarRange === "fluxes" ? { profile_model: setup.solar_model } : {};
-    const values = options.map((o) => valueOf({ ...setup, [choice]: o, ...fixed }));
-    const low = Math.min(...values), high = Math.max(...values);
-    if (high - low <= 1e-12 * Math.abs(central)) continue; // e.g. the solar model when the only flux is measured
-    const label = choice === "xsec_model" && setup.channel === "cc_nue_ar40" ? "40Ar nuclear model" : RANGE_LABELS[choice];
-    rows.push({ Source: label, Kind: "model range", Central: central, Sigma: NaN,
-                Relative: relative(Math.max(high - central, central - low), central), Low: low, High: high });
+  for (const [scope, kind] of [["current", "model range"], ["all", "legacy spread"]].slice(0, legacy ? 2 : 1)) {
+    for (const choice of ranges) {
+      let options = alternatives(inputs, setup, choice, scope);
+      if (choice === "earth_model" && !night) options = [];
+      if (options.length < 2 || (scope === "all" && options.join() === alternatives(inputs, setup, choice).join())) continue;
+      const fixed = choice === "solar_model" && solarRange === "fluxes" ? { profile_model: setup.solar_model } : {};
+      const values = options.map((o) => valueOf({ ...setup, [choice]: o, ...fixed }));
+      const low = Math.min(...values), high = Math.max(...values);
+      // e.g. the solar model when the only flux is measured; the Earth model for a rate
+      if (high - low <= (scope === "current" ? 1e-12 : 1e-5) * Math.abs(central)) continue;
+      const label = choice === "xsec_model" && setup.channel === "cc_nue_ar40" ? "40Ar nuclear model" : RANGE_LABELS[choice];
+      rows.push({ Source: label, Kind: kind, Central: central, Sigma: NaN,
+                  Relative: relative(Math.max(high - central, central - low), central), Low: low, High: high });
+    }
   }
   return { rows, samples };
 }

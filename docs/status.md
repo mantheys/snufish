@@ -31,6 +31,9 @@ an issue.
 | SNUfish reference | no repository URL in its catalogue entry until the repository is public |
 | Full-chain rate tools other than SNOwGLoBES | none yet |
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; no NC on ⁴⁰Ar or ¹⁶O |
+| Independent state-of-the-art ⁴⁰Ar models | the state-of-the-art ⁴⁰Ar range is MARLEY 2 alone (three B(GT) sets, one continuum model); the shell-model calculations of Kostensalo & Suhonen (2018) and Suzuki & Shimizu (2023) would make it a range between calculations ([status-of-inputs.md](status-of-inputs.md)) |
+| Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %); BKS and Marciano & Parsa bound it at the solar precision |
+| Earth beyond PREM | a continental crust in place of PREM's ocean and 3D Earth models, the real Earth-model uncertainty of A_DN; the current Earth range is empty (one state-of-the-art model) |
 
 ### Physics scope
 

@@ -145,13 +145,15 @@ def test_web_engine_matches_python(tmp_path):
         state = rng.bit_generator.state
         noise = [rng.standard_normal(n) for _ in range(extra)]
         rng.bit_generator.state = state
-        rows, _ = engine.budget(inputs, tables, setup, params, quantity, n=n, seed=seed, solar_range=solar_range)
+        rows, _ = engine.budget(inputs, tables, setup, params, quantity, n=n, seed=seed, solar_range=solar_range,
+                                legacy=True)
         night = engine.needs_night(quantity, setup.period)
         spec = engine.spectra(inputs, tables, setup, params, n=n, seed=seed, night=night)
         electron_b = None if electron is None else float(electron.id.rsplit(":", 1)[1])
         cases.append(dict(name=name, inject=inject, electron=electron_b,
                           setup={**changes, "components": list(setup.components)}, quantity=quantity,
-                          params=params, solar_range=solar_range, rows=rows,
+                          params=params, solar_range=solar_range, rows=rows, set_name=set_name,
+                          not_current=engine.not_current(inputs, setup, quantity, set_name),
                           draws=dict(osc=osc_draws, flux=flux_draws, noise=noise),
                           flux=engine.flux_summary(inputs, tables, setup, engine.oscillation(params)),
                           spectra=dict(edges=spec["edges"], day=spec["day"], night=spec["night"],

@@ -57,7 +57,7 @@ function officialCommand(f) {
 // plotipus colour registry: the same palette slots as the page (style.css), so a component keeps its colour
 const COLOURS = {
   Component: { pp: "C0", pep: "C1", hep: "C2", "7Be": "C3", "8B": "C4", "13N": "C5", "15O": "C6", "17F": "C7", total: "role:ink" },
-  Kind: { sampled: "C0", "model range": "C1" },
+  Kind: { sampled: "C0", "model range": "C1", "legacy spread": "C9" },
 };
 
 export async function plotipusProject(result, description, link) {

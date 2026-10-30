@@ -24,6 +24,9 @@ const XSEC = {
 const NOMINAL_XSEC = ["ar40_marley2_bhattacharya2009", "default"]; // the first available is selected by default
 const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
+const ES = { bks: "Radiative corrections (BKS)", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
+// reference/status.yaml, via engine.status: what is the state of the art, what is legacy, what is an approximation
+const STATUS_LABEL = { current: "state of the art", legacy: "legacy", approximation: "approximation", reproduction: "as used in a paper" };
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
 const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
@@ -132,6 +135,47 @@ function fillSelect(select, entries, value) {
   if (!entries.some(([v]) => v === value) && entries.length) select.value = entries[0][0];
 }
 
+// ------------------------------------------------------------------ state of the art
+
+const statusOf = (category, name, channel = null) => engine.status(app.inputs, category, name, channel);
+const suffix = (s) => (s.status === "current" ? "" : ` · ${STATUS_LABEL[s.status]}`);
+const badge = (status) => `<span class="badge ${status}">${STATUS_LABEL[status]}</span>`;
+
+function nameOf(category, name, channel = null) {
+  const d = app.inputs.data;
+  return { parameter_set: () => d.parameter_sets.sets[name]?.label, solar_model: () => d.solar_models[name]?.label,
+           earth_model: () => EARTH[name], es_model: () => ES[name], xsec_model: () => XSEC[name] }[category]?.() || name;
+}
+
+function group(label, options) {
+  const g = document.createElement("optgroup");
+  g.label = label;
+  g.append(...options);
+  return g;
+}
+
+function statusNote(id, category, name, channel = null) {
+  // the status of the selected choice under its control: badge, why, and what to use instead
+  const s = statusOf(category, name, channel);
+  const instead = s.superseded_by ? ` State of the art instead: ${nameOf(category, s.superseded_by, channel)}.` : "";
+  $(id).innerHTML = `${badge(s.status)} ${s.summary}${instead}`;
+}
+
+function currencyLine(r) {
+  // which inputs of this result are not the state of the art, and what that means for its ranges
+  const flagged = engine.notCurrent(app.inputs, r.setup, r.quantity, r.set);
+  if (!flagged.length)
+    return `<div class="currency">${badge("current")} Every input that enters this result is the state of the art. The model ranges
+      compare the competing state-of-the-art models; with the sampled σ, that is the uncertainty.</div>`;
+  const items = flagged.map((c) => `${nameOf(c.category, c.name, r.setup.channel)} (${STATUS_LABEL[c.status]}${c.superseded_by
+    ? `; state of the art: ${nameOf(c.category, c.superseded_by, r.setup.channel)}` : ""})`);
+  const outside = r.rows.filter((x) => x.Kind === "model range" && (x.Central < x.Low || x.Central > x.High)).map((x) => x.Source);
+  return `<div class="currency outdated">${badge(flagged.some((c) => c.status !== "approximation") ? "legacy" : "approximation")}
+    <b>Not the state of the art:</b> ${items.join("; ")}. Use it to reproduce published work: its difference from a
+    state-of-the-art result comes from outdated inputs or approximations, not from an uncertainty.${outside.length
+    ? ` The central value lies outside the state-of-the-art range of the ${outside.join(" and the ")}.` : ""}</div>`;
+}
+
 function buildControls() {
   const d = app.inputs.data;
   Object.assign(d.parameter_sets.sets, PAPER_SETS); // the papers' own values, for the published checks
@@ -146,23 +190,24 @@ function buildControls() {
     list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
     return group;
   }));
-  const set = $("set");
-  for (const [kind, label] of Object.entries(KINDS)) {
-    const group = document.createElement("optgroup");
-    group.label = label;
-    for (const [name, info] of Object.entries(d.parameter_sets.sets)) if (info.kind === kind) group.append(option(name, info.label));
-    if (group.children.length) set.append(group);
+  // state-of-the-art choices first; legacy ones (kept to reproduce papers) and approximations apart, and labelled
+  const sets = Object.entries(d.parameter_sets.sets).map(([name, info]) => [name, info, statusOf("parameter_set", name)]);
+  $("set").replaceChildren(...[
+    ...Object.entries(KINDS).filter(([kind]) => kind !== "paper").map(([kind, label]) => group(`State of the art: ${label.toLowerCase()}`,
+      sets.filter(([, info, s]) => info.kind === kind && s.status === "current").map(([name, info]) => option(name, info.label)))),
+    group("Legacy (superseded)", sets.filter(([, , s]) => s.status === "legacy").map(([name, info, s]) => option(name, info.label + suffix(s)))),
+    group(KINDS.paper, sets.filter(([, , s]) => s.status === "reproduction").map(([name, info]) => option(name, info.label))),
+  ].filter((g) => g.children.length));
+  $("set").value = "juno_2025";
+  const solar = $("solar"), families = {}, current = [];
+  for (const [name, info] of Object.entries(d.solar_models)) {
+    const s = statusOf("solar_model", name);
+    if (s.status === "current") current.push(option(name, info.label));
+    else (families[info.label.split(" ")[0]] ||= []).push(option(name, info.label + suffix(s)));
   }
-  set.value = "juno_2025";
-  const solar = $("solar"), families = {};
-  for (const [name, info] of Object.entries(d.solar_models)) (families[info.label.split(" ")[0]] ||= []).push([name, info.label]);
-  for (const [family, models] of Object.entries(families)) {
-    const group = document.createElement("optgroup");
-    group.label = family;
-    models.forEach(([name, label]) => group.append(option(name, label)));
-    solar.append(group);
-  }
-  solar.value = "b23_gs98";
+  solar.replaceChildren(group("State of the art", current),
+                        ...Object.entries(families).map(([family, options]) => group(`Legacy: ${family}`, options)));
+  solar.value = "b23_mb22m"; // NuFIT 6.0's reference model (arXiv:2410.05380)
   $("components").replaceChildren(...ORDER.map((c, i) => {
     const label = document.createElement("label");
     label.style.setProperty("--dot", `var(--series-${i + 1})`);
@@ -170,7 +215,8 @@ function buildControls() {
     return label;
   }));
   fillSelect($("site"), Object.entries(d.sites).map(([s, info]) => [s, `${s} (${info.latitude_deg.toFixed(1)}° N)`]), "Kamioka");
-  fillSelect($("earth"), d.earth_models.map((e) => [e, EARTH[e] || e]), "prem_full");
+  const earth = d.earth_models.map((e) => [e, statusOf("earth_model", e)]).sort(([, a], [, b]) => (a.status !== "current") - (b.status !== "current"));
+  fillSelect($("earth"), earth.map(([e, s]) => [e, (EARTH[e] || e) + suffix(s)]), "prem_full");
   fillSelect($("detector"), Object.keys(d.detectors).map((k) => [k, DETECTORS[k] || k]), "water");
 }
 
@@ -219,6 +265,8 @@ function sync() {
   fillSelect($("channel"), channels.map((c) => [c, CHANNELS[c] || c]), $("channel").value);
   const es = $("channel").value === "es";
   $("es-row").hidden = !es;
+  $("es-status").hidden = !es;
+  $("xsec-status").hidden = es;
   $("res-ab").hidden = $("res-model").value !== "quadrature";
   $("smear-import").hidden = $("res-model").value !== "import";
   const effImport = $("eff-model").value === "import", effCurve = $("eff-model").value.startsWith("curve:");
@@ -236,7 +284,14 @@ function sync() {
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
   const keep = models.includes($("xsec").value) ? $("xsec").value : NOMINAL_XSEC.find((m) => models.includes(m)) || models[0];
   const ordered = [...Object.keys(XSEC).filter((m) => models.includes(m)), ...models.filter((m) => !(m in XSEC))];
-  fillSelect($("xsec"), ordered.map((m) => [m, XSEC[m] || m]), keep);
+  const channel = $("channel").value, xsecStatus = (m) => statusOf("xsec_model", m, channel);
+  $("xsec").replaceChildren(...[
+    group("State of the art", ordered.filter((m) => xsecStatus(m).status === "current").map((m) => option(m, XSEC[m] || m))),
+    group("Legacy (superseded)", ordered.filter((m) => xsecStatus(m).status !== "current").map((m) => option(m, (XSEC[m] || m) + suffix(xsecStatus(m))))),
+  ].filter((g) => g.children.length));
+  $("xsec").value = keep;
+  if (!es && models.length) statusNote("xsec-status", "xsec_model", $("xsec").value, channel);
+  if (es) statusNote("es-status", "es_model", radio("es"));
   $("xsec-row").hidden = models.length < 2;
   const comps = [...document.querySelectorAll('input[name="components"]:checked')].map((x) => x.value);
   $("b8-row").hidden = !comps.includes("B8");
@@ -251,6 +306,10 @@ function sync() {
     : $("orbit").checked
       ? `Rates at the real Earth–Sun distance: × ${g.orbit_day.toFixed(4)} by day, × ${g.orbit_night.toFixed(4)} by night at ${$("site").value} (mean (1 AU/R)² over its days and nights). This adds ${(200 * (g.orbit_night - g.orbit_day) / (g.orbit_night + g.orbit_day)).toFixed(2)} percentage points to the day-night asymmetry.`
       : "Off: fluxes at 1 AU, the convention of published day-night asymmetries (experiments correct each event for the Earth–Sun distance).";
+  statusNote("set-status", "parameter_set", $("set").value);
+  statusNote("solar-status", "solar_model", $("solar").value);
+  statusNote("earth-status", "earth_model", $("earth").value);
+  $("earth-status").hidden = !night;
   $("earth-note").textContent = night
     ? "Neutrinos cross the Earth at night; the site's latitude sets the path lengths through it."
     : "Not used: daytime neutrinos do not cross the Earth. Choose a night or annual rate, or the day-night asymmetry.";
@@ -259,7 +318,7 @@ function sync() {
     sin²θ₁₂ = ${s.value.toFixed(4)} (−${s.error[0].toFixed(4)} +${s.error[1].toFixed(4)})<br>
     ${p.sin2_theta13 ? `sin²θ₁₃ = ${p.sin2_theta13.value}; θ₂₃, δ, Δm²₃₁` : "θ₁₃, θ₂₃, δ, Δm²₃₁"}: NuFIT 6.0 · ${p.source}`;
   const check = CHECKS.find((c) => c.id === $("check").value);
-  $("check-note").innerHTML = check ? `${sourceLink(check)}.${check.note ? ` ${check.note}` : ""} Change any setting to leave the check.`
+  $("check-note").innerHTML = check ? `${sourceLink(check)}.${check.note ? ` ${check.note}` : ""} The paper's own inputs are often legacy ones: the result says which. Change any setting to leave the check.`
     : $("check").value === "thumb" ? PRESET_NOTES.thumb
     : "Sets every step to a paper's inputs and shows its number next to SNUfish's, with the paper's figure recreated.";
 }
@@ -460,7 +519,7 @@ async function compute() {
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
   app.tables.clamped = 0;
-  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange });
+  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange, legacy: true });
   const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
   const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
   const ms = performance.now() - t0;
@@ -557,9 +616,10 @@ function render() {
   const { setup, quantity, rows, scale, unit, live } = r;
   const total = rows.find((x) => x.Source === "total sampled"), central = total.Central;
   const sampled = rows.filter((x) => x.Kind === "sampled" && x.Source !== "total sampled").map((x) => x.Source);
-  const ranges = rows.filter((x) => x.Kind === "model range").map((x) => quantity !== "adn"
+  const range = (x) => (quantity !== "adn"
     ? `${x.Source}: ${fmt(x.Low * scale)} to ${fmt(x.High * scale)} (${signed(100 * (x.Low / central - 1))} % / ${signed(100 * (x.High / central - 1))} %)`
     : `${x.Source}: ${(x.Low * scale).toFixed(3)} to ${(x.High * scale).toFixed(3)} %`);
+  const ranges = rows.filter((x) => x.Kind === "model range").map(range), legacy = rows.filter((x) => x.Kind === "legacy spread").map(range);
   const events = live && quantity === "rate"
     ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
@@ -567,7 +627,9 @@ function render() {
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
-    <div class="ranges"><b>Model ranges</b>${ranges.join("<br>") || "none for this setup"}</div>${thumbLine(r)}${publishedLine(r)}${measuredLine(r)}`;
+    <div class="ranges"><b>Model ranges: the competing state-of-the-art models</b>${ranges.join("<br>") || "none: one state-of-the-art model per choice here"}${
+      legacy.length ? `<div class="legacy-ranges">With legacy models and approximations too (context, not an uncertainty):<br>${legacy.join("<br>")}</div>` : ""}</div>
+    ${currencyLine(r)}${thumbLine(r)}${publishedLine(r)}${measuredLine(r)}`;
   renderFlux();
   spectrumPlot($("plot-spectrum"), r);
   distributionPlot($("plot-distribution"), r, checkBand(r) || measuredBand(setup, quantity));
@@ -576,7 +638,9 @@ function render() {
   const cell = (v) => (Number.isFinite(v) ? fmt(v * scale) : "–");
   $("table").innerHTML = `<table><thead><tr><th>Source</th><th>Kind</th><th class="num">σ or range</th><th class="num">Relative</th></tr></thead><tbody>${
     rows.map((x) => `<tr><td>${x.Source}</td><td>${x.Kind}</td><td class="num">${x.Kind === "sampled" ? cell(x.Sigma) : `${cell(x.Low)} to ${cell(x.High)}`}</td><td class="num">${Number.isFinite(x.Relative) ? (100 * x.Relative).toFixed(2) + " %" : "–"}</td></tr>`).join("")
-  }</tbody></table>`;
+  }</tbody></table><p class="hint">Sampled: a 1σ from random draws. Model range: the spread of the state-of-the-art models
+  of one choice, never folded into the σ. Legacy spread: the same choice over every model, legacy ones and approximations
+  included; context for reading published numbers, not an uncertainty. <a href="index.html#status">Which inputs are which</a>.</p>`;
 }
 
 // ------------------------------------------------------------------ theme, share, download

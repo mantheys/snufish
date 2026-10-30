@@ -24,6 +24,9 @@ Uncertainties are kept in two kinds, as in ``snufish budget``: sampled
 for an exposure), reported as a standard deviation; and model choices
 (cross-section model, ES radiative corrections, Earth model, solar model),
 reported as the range of the alternatives and never folded into a sigma.
+Ranges run over the state-of-the-art alternatives only (``status``, from
+reference/status.yaml): a legacy model or an approximation is selectable,
+but its difference from the current ones is not an uncertainty.
 """
 
 import json
@@ -192,7 +195,7 @@ def electron_smearing(inputs, channel, xsec_model, b, step=0.1, top=25.0):
 @dataclass(frozen=True)
 class Setup:
     """Everything but the oscillation parameters."""
-    solar_model: str = "b23_gs98"
+    solar_model: str = "b23_mb22m"
     components: tuple = ("B8",)
     b8_flux: str = "model"          # "model" or "sno_nc" (measured total 8B flux)
     earth_model: str = "prem_full"
@@ -675,19 +678,67 @@ ES_MODELS = ("bks", "tree", "snowglobes")
 ES_RANGE = ("bks", "snowglobes")  # the radiatively corrected calculations; tree level is selectable, not a model
 RANGE_LABELS = {"xsec_model": "cross-section model", "es_model": "ES radiative corrections",
                 "earth_model": "Earth model", "solar_model": "solar model"}
+# reference/status.yaml: current (state of the art; current entries compete, their spread is the model
+# uncertainty), legacy (superseded), approximation (a simplified current entry), reproduction (a paper's inputs)
+STATUSES = ("current", "legacy", "approximation", "reproduction")
 
 
-def alternatives(inputs, setup, choice):
+def status(inputs, category, name, channel=None):
+    """dict(status, summary, superseded_by) of one choice (``category``: solar_model, parameter_set,
+    earth_model, es_model or xsec_model, which takes the ``channel``). Unlisted: current; a parameter
+    set of kind "paper" (the calculator's published checks): reproduction."""
+    table = inputs.data.get("status", {}).get(category, {})
+    if category == "xsec_model":
+        table = table.get(channel, {})
+    found = dict(table.get(name) or {})
+    if not found and category == "parameter_set":
+        info = inputs["parameter_sets"]["sets"].get(name, {})
+        if info.get("kind") == "paper":
+            found = dict(status="reproduction", summary=f"As used in {info.get('source', 'a paper')}.")
+    return dict(status=found.get("status", "current"), summary=found.get("summary", ""),
+                superseded_by=found.get("superseded_by"))
+
+
+def is_current(inputs, category, name, channel=None):
+    return status(inputs, category, name, channel)["status"] == "current"
+
+
+def not_current(inputs, setup, quantity="rate", set_name=None):
+    """[dict(category, name, status, summary, superseded_by)] of the choices of ``setup`` (and the
+    parameter set) that are not state of the art and matter for ``quantity``: the solar model, the
+    Earth model at night, the ES model for ES, the cross-section model otherwise."""
+    night = needs_night(quantity, setup.period)
+    flux_only_measured = list(setup.components) == ["B8"] and setup.b8_flux == "sno_nc"
+    choices = [("parameter_set", set_name, None) if set_name else None,
+               ("solar_model", setup.solar_model, None) if not (flux_only_measured and quantity == "rate") else None,
+               ("earth_model", setup.earth_model, None) if night else None,
+               ("es_model", setup.es_model, None) if setup.channel == "es" else
+               ("xsec_model", setup.xsec_model, setup.channel)]
+    out = []
+    for category, name, channel in filter(None, choices):
+        found = status(inputs, category, name, channel)
+        if found["status"] != "current":
+            out.append(dict(category=category, name=name, **found))
+    return out
+
+
+def alternatives(inputs, setup, choice, scope="current"):
+    """The models a range of ``choice`` runs over: the state-of-the-art ones (``scope`` "current"), or
+    every selectable one, legacy and approximations included ("all")."""
     if choice == "xsec_model":  # without the tables that are incomplete (zero below 5 MeV)
         incomplete = inputs.data.get("xsec_incomplete", {}).get(setup.channel, [])
-        return [m for m in inputs.xsec_models(setup.channel) if m not in incomplete] if setup.channel != "es" else []
-    if choice == "es_model":
-        return list(ES_RANGE) if setup.channel == "es" else []
-    if choice == "earth_model":
-        return list(inputs["earth_models"])
-    if choice == "solar_model":
-        return list(inputs["solar_models"])
-    raise KeyError(choice)
+        options = [m for m in inputs.xsec_models(setup.channel) if m not in incomplete] if setup.channel != "es" else []
+    elif choice == "es_model":
+        options = list(ES_RANGE if scope == "current" else ES_MODELS) if setup.channel == "es" else []
+    elif choice == "earth_model":
+        options = list(inputs["earth_models"])
+    elif choice == "solar_model":
+        options = list(inputs["solar_models"])
+    else:
+        raise KeyError(choice)
+    if scope == "all":
+        return options
+    return [o for o in options if is_current(inputs, choice, o, setup.channel)]
 
 
 def flux_label(setup):
@@ -698,13 +749,16 @@ def flux_label(setup):
 
 
 def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
-           ranges=("xsec_model", "es_model", "earth_model", "solar_model"), solar_range="full"):
+           ranges=("xsec_model", "es_model", "earth_model", "solar_model"), solar_range="full", legacy=False):
     """(rows, samples) of the error budget of one quantity ("rate" in
     ``setup.period``, or "adn"). Rows: dict(Source, Kind, Central, Sigma,
     Relative, Low, High); samples: {source: array}. ``solar_range``
     "fluxes" takes the solar-model range from the fluxes alone, with the
     day fractions of ``setup.solar_model`` (one table instead of all; the
-    density profile moves F_i by ~1e-3, the fluxes by ~10%)."""
+    density profile moves F_i by ~1e-3, the fluxes by ~10%). Model ranges
+    run over the state-of-the-art models only (reference/status.yaml);
+    ``legacy`` adds a "legacy spread" row per choice over every selectable
+    model, where that is wider: context, not an uncertainty."""
     check(inputs, setup, quantity)
     night = needs_night(quantity, setup.period)
     comps = list(setup.components)
@@ -747,21 +801,22 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         total = total + sigma * z
     sampled("total sampled", total)
 
-    for choice in ranges:
-        options = alternatives(inputs, setup, choice)
-        if choice == "earth_model" and not night:
-            options = []
-        if len(options) < 2:
-            continue
-        fixed = {"profile_model": setup.solar_model} if choice == "solar_model" and solar_range == "fluxes" else {}
-        values = [value(s=setup.replace(**{choice: o}, **fixed)) for o in options]
-        low, high = min(values), max(values)
-        if high - low <= 1e-12 * abs(central):
-            continue  # e.g. the solar model, when the only component's flux is measured
-        label = "40Ar nuclear model" if choice == "xsec_model" and setup.channel == "cc_nue_ar40" \
-            else RANGE_LABELS[choice]
-        rows.append(dict(Source=label, Kind="model range", Central=central, Sigma=np.nan,
-                         Relative=_relative(max(high - central, central - low), central), Low=low, High=high))
+    for scope, kind in (("current", "model range"), ("all", "legacy spread"))[:2 if legacy else 1]:
+        for choice in ranges:
+            options = alternatives(inputs, setup, choice, scope)
+            if choice == "earth_model" and not night:
+                options = []
+            if len(options) < 2 or (scope == "all" and options == alternatives(inputs, setup, choice)):
+                continue
+            fixed = {"profile_model": setup.solar_model} if choice == "solar_model" and solar_range == "fluxes" else {}
+            values = [value(s=setup.replace(**{choice: o}, **fixed)) for o in options]
+            low, high = min(values), max(values)
+            if high - low <= (1e-12 if scope == "current" else 1e-5) * abs(central):
+                continue  # e.g. the solar model when the only flux is measured; the Earth model for a rate
+            label = "40Ar nuclear model" if choice == "xsec_model" and setup.channel == "cc_nue_ar40" \
+                else RANGE_LABELS[choice]
+            rows.append(dict(Source=label, Kind=kind, Central=central, Sigma=np.nan,
+                             Relative=_relative(max(high - central, central - low), central), Low=low, High=high))
     return rows, samples
 
 

@@ -48,7 +48,8 @@
       <h3 class="plot-title">Largest effect of each step, relative to the central value</h3>
       <div id="matrix" class="matrix"></div>
       <p class="hint official-caption">Sampled: the 1σ spread from published uncertainties. Model range: the largest
-        deviation from the nominal among the published alternatives (not a σ). Approximation: the shift a common
+        deviation from the nominal among the competing state-of-the-art alternatives (not a σ); legacy models are
+        plotted and labelled on each step's page but never counted here. Approximation: the shift a common
         simplification makes, a bias of a tool rather than an uncertainty. The oscillation parameters enter B2 and B3
         and are shown on their own.</p>
     </section>
@@ -65,7 +66,10 @@
         flux of every component with its uncertainty, the electron density n<sub>e</sub>(r) and where each component
         is produced. B1 sets the normalisation of every rate: the flux uncertainty (sampled, with the B23 correlations)
         and the spread between models (the composition problem) are the largest inputs to most rates. The density
-        and production profiles enter through B2.</p>
+        and production profiles enter through B2. Three of the ten are the state of the art: B23 with the MB22
+        abundances (meteoritic and photospheric scales; high metallicity, favoured by helioseismology and the Borexino
+        CNO rate) and B23 with AAG21 (low metallicity). Their spread is the composition problem as it stands; the other
+        seven are legacy, labelled so, and kept to reproduce published numbers.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b1-impact" class="plot"></div></section>
     <div class="trio">
@@ -124,9 +128,11 @@
     <section class="hero">
       <h2>B4 · Cross sections</h2>
       <p>Elastic scattering on electrons is known to well under 1 %: radiative corrections (Bahcall, Kamionkowski &amp;
-        Sirlin) and SNOwGLoBES's tables differ by a few per mille. ν<sub>e</sub> CC on ⁴⁰Ar is not: the nuclear
-        models disagree by tens of per cent, and within MARLEY the measured Gamow-Teller strengths of each ⁴⁰K level
-        give a sampled uncertainty of several per cent. For argon detectors B4 is the largest uncertainty after the
+        Sirlin) and SNOwGLoBES's tables differ by a per mille or less; tree level, an approximation, is 2–4 % high.
+        ν<sub>e</sub> CC on ⁴⁰Ar is not: the state-of-the-art MARLEY 2 calculations, one per set of measured
+        Gamow–Teller strengths, differ by about 11 % for ⁸B above 5 MeV, and the strengths of each ⁴⁰K level give a
+        sampled uncertainty of several per cent. The older tables (KLMV, SNOwGLoBES's, MARLEY v1) are legacy and
+        differ by up to 37 %; they are plotted for reference, not counted. For argon detectors B4 is the largest uncertainty after the
         flux.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-impact" class="plot"></div></section>

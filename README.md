@@ -35,7 +35,13 @@ plotipus.)
    scale and resolution) are reported as a σ; model choices (nuclear model,
    radiative corrections, Earth model, solar model) are reported as ranges
    and never folded into a σ.
-5. **Open and cheap to use.** Contributions and products are Parquet (data
+5. **Current and legacy kept apart.** Every solar model, parameter set,
+   Earth model and cross section is labelled state of the art, legacy
+   (superseded, kept to reproduce papers) or approximation, from the
+   literature ([docs/status-of-inputs.md](docs/status-of-inputs.md)).
+   Model ranges compare the competing state-of-the-art inputs only; a
+   result that uses a legacy input says so.
+6. **Open and cheap to use.** Contributions and products are Parquet (data
    only); the calculator is a static page that runs the same engine in the
    browser, with no server.
 
@@ -90,8 +96,8 @@ predictions come from the inputs, not the solvers.
   <img src="docs/images/light/b23_adn.png" alt="8B day-night asymmetry at SURF against energy for three Earth models.">
 </picture>
 <b>B2 × B3 · Day-night asymmetry.</b> <sup>8</sup>B at SURF (DUNE), 10 MeV:
-2.8 % with full PREM, 3.4–3.9 % with the crustless models: the density under
-the detector matters most.
+2.8 % with full PREM, 3.4–3.9 % with the crustless approximations: the
+error of leaving out the crust, not an Earth-model uncertainty.
 </td>
 </tr>
 <tr>
@@ -112,6 +118,9 @@ factor) is 30 % low at 10 MeV, KLMV 66 % high at 6 MeV.
 <b>B5 · Rates.</b> <sup>8</sup>B CC on <sup>40</sup>Ar per kt·yr: the solar
 model moves it by ±16 % (MARLEY 2: 1,757 to 2,409), the nuclear model by
 up to 47 % (1,581 to 2,321 for B16-GS98).
+Counting state-of-the-art inputs only (B23 MB22 against AAG21; MARLEY 2
+with each measured B(GT) set) the spreads are about 16 % and 11 %; the rest
+comes from legacy models.
 </td>
 </tr>
 </table>
@@ -191,6 +200,7 @@ list. `web/engine.js` agrees with `snufish.engine` to ~1e-14
 | [docs/architecture.md](docs/architecture.md) | How the pieces fit: specs, contributions, validation, build, engine, web page |
 | [docs/benchmarks.md](docs/benchmarks.md) | B1–B5 in detail: inputs, grids, quantities, variants, checks, products |
 | [docs/methods.md](docs/methods.md) | The physics and numerics: Sun, Earth, exposure, cross sections, rates, detector response, uncertainties, interpolation tables |
+| [docs/status-of-inputs.md](docs/status-of-inputs.md) | Which inputs are the state of the art, which are legacy or approximations, and why (literature as of 2026) |
 | [docs/sources.md](docs/sources.md) | Every input with its source: solar models, spectra, oscillation sets, Earth models, sites, cross sections, detectors, measurements, tools |
 | [docs/usage.md](docs/usage.md) | Command line, Python API, plotipus lists, output frames, the calculator, deployment |
 | [docs/crosschecks.md](docs/crosschecks.md) | Published numbers recomputed: reproduced, not reproduced, measurements |

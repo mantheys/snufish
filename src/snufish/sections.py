@@ -30,7 +30,7 @@ from .scan import _with_oscillation
 from .solar import COMPONENTS, electron_density, production_weights, table
 from .spec import load_spec, pmns
 
-SET, SOLAR_MODEL = "juno_2025", "b23_gs98"
+SET, SOLAR_MODEL = "juno_2025", "b23_mb22m"  # state of the art (reference/status.yaml)
 N_DRAWS, SEED = 300, 1
 OBSERVABLES = {
     "water_es_b8": dict(label="8B + hep ES in water, T > 3.49 MeV, Kamioka", quantity="rate",
@@ -120,7 +120,7 @@ def impacts(inputs, tables, params):
             return engine.quantity_value(q, s.period, *engine.combine(per, list(s.components)))
 
         # the solar model's density and production profiles, its fluxes fixed
-        profiles = [value(tables, setup.replace(profile_model=m)) for m in models]
+        profiles = [value(tables, setup.replace(profile_model=m)) for m in models if engine.is_current(inputs, "solar_model", m)]
         rows.append(dict(section="B2", source="density and production profiles (solar models, fluxes fixed)",
                          kind="model range", low=min(profiles), high=max(profiles)))
         own = value(ProductionTreatment("own", tables))

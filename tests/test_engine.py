@@ -330,8 +330,41 @@ def test_measured_strengths_propagate_in_quadrature(inputs):
 
 def test_incomplete_tables_stay_out_of_the_model_range(inputs):
     data = dict(inputs.data, xsec_incomplete={"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]})
-    options = engine.alternatives(engine.Inputs(data), engine.Setup(detector="argon", channel="cc_nue_ar40"), "xsec_model")
+    options = engine.alternatives(engine.Inputs(data), engine.Setup(detector="argon", channel="cc_nue_ar40"), "xsec_model",
+                                  scope="all")
     assert "ar40_marley" not in options and "ar40_klmv" in options
+
+
+def test_model_ranges_compare_the_state_of_the_art_only(inputs):
+    """reference/status.yaml: ranges run over the current models; legacy ones and approximations are selectable,
+    and their spread is reported apart ("legacy spread") on request."""
+    argon, water = engine.Setup(detector="argon", channel="cc_nue_ar40"), engine.Setup(threshold=3.49)
+    assert set(engine.alternatives(inputs, argon, "xsec_model")) == {
+        "ar40_marley2_bhattacharya2009", "ar40_marley2_liu1998", "ar40_marley2_bhattacharya1998"}
+    assert set(engine.alternatives(inputs, argon, "solar_model")) == {"b23_mb22m", "b23_mb22p", "b23_aag21"}
+    assert engine.alternatives(inputs, water, "earth_model") == ["prem_full"]
+    assert engine.alternatives(inputs, water, "es_model") == ["bks", "snowglobes"]
+    assert "tree" in engine.alternatives(inputs, water, "es_model", scope="all")
+    assert engine.status(inputs, "solar_model", "b16_gs98")["superseded_by"] == "b23_mb22m"
+    assert engine.status(inputs, "parameter_set", "nufit61_global")["status"] == "current"
+    assert engine.status(inputs, "earth_model", "prem_prob3")["status"] == "approximation"
+    assert engine.status(inputs, "solar_model", "no_such_model")["status"] == "current"  # unlisted
+    legacy = engine.Setup(detector="argon", channel="cc_nue_ar40", solar_model="b16_gs98", xsec_model="ar40_klmv",
+                          earth_model="prem_prob3", period="night")
+    found = {c["category"]: c["status"] for c in engine.not_current(inputs, legacy, "rate", "kamland_2013")}
+    assert found == {"parameter_set": "legacy", "solar_model": "legacy", "earth_model": "approximation",
+                     "xsec_model": "legacy"}
+    by_day = engine.not_current(inputs, legacy.replace(period="day"), "rate")
+    assert "earth_model" not in {c["category"] for c in by_day}  # the Earth does not enter by day
+    assert engine.not_current(inputs, engine.Setup(solar_model="b23_mb22m"), "rate", "juno_2025") == []
+    params = engine.parameters(inputs, "juno_2025")
+    rows, _ = engine.budget(inputs, Vacuum(), argon, params, "rate", n=5, legacy=True)
+    current = {r["Source"]: r for r in rows if r["Kind"] == "model range"}
+    spread = {r["Source"]: r for r in rows if r["Kind"] == "legacy spread"}
+    assert {"40Ar nuclear model", "solar model"} <= set(current) and set(spread) == set(current)
+    for source in current:
+        assert spread[source]["Low"] <= current[source]["Low"] and spread[source]["High"] >= current[source]["High"]
+    assert not [r for r in engine.budget(inputs, Vacuum(), argon, params, "rate", n=5)[0] if r["Kind"] == "legacy spread"]
 
 
 @needs_tables

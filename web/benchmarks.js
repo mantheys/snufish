@@ -347,6 +347,11 @@ async function main() {
     $("status").classList.add("error");
     return;
   }
+  // label every legacy model and approximation (reference/status.yaml) wherever it is named on these pages
+  const status = page.inputs.status || {}, tag = (s) => (s && s.status !== "current" ? ` · ${s.status}` : "");
+  for (const [m, info] of Object.entries(page.inputs.solar_models)) info.label += tag(status.solar_model?.[m]);
+  for (const m of Object.keys(EARTH)) EARTH[m] += tag(status.earth_model?.[m]);
+  for (const m of Object.keys(XSEC)) XSEC[m] += tag(status.xsec_model?.cc_nue_ar40?.[m]);
   const s = page.sections, set = page.inputs.parameter_sets.sets[s.set];
   $("reference-note").textContent = `Reference: ${set?.label || s.set} oscillation parameters, ${page.inputs.solar_models[s.solar_model].label} `
     + `fluxes and profiles, PREM (ten regions), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages without `

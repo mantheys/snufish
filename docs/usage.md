@@ -28,6 +28,7 @@ make -C contributions/nufast-earth/scripts     # builds b2_driver and b3_driver
 | `snufish build` | validate, then write plotipus frames to `build/data/` | — |
 | `snufish reference <B2_sun\|B3_earth\|B4_xsec>` | recompute the SNUfish reference contribution | — |
 | `snufish scan` | solar observables against Δm²₂₁ and at each parameter set | NuFast-Earth driver |
+| `snufish status` | which inputs are the state of the art, legacy or approximations (`reference/status.yaml`) | — |
 | `snufish budget` | error budgets of the ⁸B rates and A_DN | `build`, NuFast-Earth driver (or `--tables`) |
 | `snufish export-app` | inputs and probability tables of the web page | `build`, NuFast-Earth driver |
 | `snufish export-sections` | `sections.json` of the benchmark pages: what each benchmark contributes to the uncertainty | `export-app`, `build` |
@@ -69,13 +70,15 @@ plotipus run scan
 ### `snufish budget`
 
 ```bash
-snufish budget --sets juno_2025 solar_global_2024 --solar_model b23_gs98 --n 400 --seed 1
+snufish budget --sets juno_2025 solar_global_2024 --solar_model b23_mb22m --n 400 --seed 1
 snufish budget --tables build/app            # the app tables instead of the exact solvers
 plotipus run budget
 ```
 
 Writes `Budget`, `Budget_Samples` and `Budget_Predictions`
-([methods.md](methods.md#snufish-budget)).
+([methods.md](methods.md#snufish-budget)). Model ranges run over the
+state-of-the-art models; a legacy solar model or parameter set is
+accepted, with a note.
 
 ### `snufish export-app`
 
@@ -220,7 +223,9 @@ Lower-level pieces: `snufish.reference.sun.adiabatic_fractions`,
 [mantheys.github.io/snufish/rates.html](https://mantheys.github.io/snufish/rates.html).
 
 **Steps.** Each step has an "i" button with the sources of what is
-selected.
+selected. Every choice is labelled state of the art, legacy or
+approximation, with the reason under the control; the result says
+whether every input is current ([status-of-inputs.md](status-of-inputs.md)).
 
 0. **Result**: interaction rate, day-night asymmetry, or the rate over the
    rate without oscillations (SNO's φ_CC/φ_NC for CC on deuterium); day,

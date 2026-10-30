@@ -6,6 +6,9 @@ checksums); this page collects it. The web page shows the sources of each
 calculator step behind its "i" button (`web/sources.js`) and lists them all
 on its home page.
 
+Which of these inputs are the state of the art, which are legacy and which
+are approximations: [status-of-inputs.md](status-of-inputs.md).
+
 Rules for adding data ([reference/README.md](../reference/README.md)):
 every file has a source (DOI or arXiv id), the table or figure, the
 retrieval date, the method (`table` or `digitised`) and a licence.
@@ -51,6 +54,7 @@ uncertainties only; BS05 neither.
 | Set | Δm²₂₁ (10⁻⁵ eV²) | sin²θ₁₂ | Source |
 |---|---|---|---|
 | defaults (θ₁₃, θ₂₃, δ, Δm²₃₁) | — | — | NuFIT 6.0, [arXiv:2410.05380](https://arxiv.org/abs/2410.05380), table 1 (IC19 w/o SK-atm, NO) |
+| `nufit61_global` | 7.530 −0.097 +0.096 | 0.3096 −0.0073 +0.0057 | NuFIT 6.1 with the first JUNO data, [arXiv:2601.09791](https://arxiv.org/abs/2601.09791), eq. 3.1 |
 | `nufit60_global` | 7.49 ± 0.19 | 0.307 −0.011 +0.012 | NuFIT 6.0 |
 | `juno_2025` | 7.50 ± 0.12 | 0.3092 ± 0.0087 | JUNO, [arXiv:2511.14593](https://arxiv.org/abs/2511.14593) (59 days) |
 | `kamland_2013` | 7.54 −0.18 +0.19 | 0.316 −0.026 +0.034 | KamLAND, Phys. Rev. D 88, 033001 (2013), as quoted in arXiv:2312.12907 fig. 47 |

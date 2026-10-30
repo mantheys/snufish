@@ -120,7 +120,7 @@ and u (`ratio_table`), and reproduces the paper's averaged cross sections
 The engine offers three ES models: `bks` (default), `tree`, and
 `snowglobes` (SNOwGLoBES's tables, as their ratio to tree level; BKS below
 their 0.5 MeV start). The ES model range of a budget is BKS against
-SNOwGLoBES; tree level is selectable but not a model of the range.
+SNOwGLoBES; tree level is selectable but, as an approximation, not a model of the range.
 
 ### Charged current and neutral current
 
@@ -225,10 +225,13 @@ reported as a standard deviation and combined in "total sampled":
   Each is applied as one Gaussian draw per sample.
 - **Measured nuclear strengths** (MARLEY 2 models): see below.
 
-**Model ranges**, reported as [min, max] over the alternatives and never
-folded into a σ (the range depends on which models exist, not on a
-probability): cross-section model (CC), ES radiative corrections (ES),
-Earth model (night quantities only), solar model. A range that does not
+**Model ranges**, reported as [min, max] over the state-of-the-art
+alternatives and never folded into a σ (the range depends on which models
+exist, not on a probability): cross-section model (CC), ES radiative
+corrections (ES), Earth model (night quantities only), solar model. Legacy
+models and approximations ([status-of-inputs.md](status-of-inputs.md),
+`reference/status.yaml`) are left out; `budget(..., legacy=True)` adds a
+`legacy spread` row per choice over every model, as context. A range that does not
 move the quantity (e.g. the solar model when the only component's flux is
 the measured one) is dropped.
 
