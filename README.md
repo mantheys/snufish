@@ -51,54 +51,75 @@ plotipus.)
 
 ## Results so far
 
+One figure per stage of the chain, from the solar model to the rate in a
+detector.
+
 <table>
 <tr>
 <td width="50%">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/components.png">
-  <img src="docs/images/light/components.png" alt="Daytime electron-neutrino survival probability against energy for each solar flux component, falling from 0.55 to 0.30.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b1_fluxes.png">
+  <img src="docs/images/light/b1_fluxes.png" alt="pp, 7Be, 8B and 15O fluxes of ten solar models relative to B16-GS98, with each model's published uncertainty.">
 </picture>
-<b>MSW in the Sun (B2).</b> Daytime P<sub>ee</sub> for each flux component of
-B16-GS98, averaged over its production region: 0.544 for pp, 0.326 for
-<sup>8</sup>B at 10 MeV.
+<b>B1 · Solar models.</b> The composition moves the <sup>8</sup>B flux from
+0.76 to 1.04 × B16-GS98 and CNO by −30 % to +14 %; pp stays within 1.5 %.
 </td>
 <td width="50%">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/adn_models.png">
-  <img src="docs/images/light/adn_models.png" alt="8B day-night asymmetry at SURF against energy for four Earth models.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b2_pee.png">
+  <img src="docs/images/light/b2_pee.png" alt="Daytime electron-neutrino survival probability against energy for each flux component, falling from 0.54 to about 0.33.">
 </picture>
-<b>Day-night asymmetry (B2 × B3).</b> <sup>8</sup>B at SURF (DUNE),
-2(N−D)/(N+D): 2.9 % to 4.0 % over 5–15 MeV depending on the Earth model.
+<b>B2 · MSW in the Sun.</b> Daytime P<sub>ee</sub> per component, averaged over
+where it is produced: 0.54 at low energy; at 10 MeV 0.326 for <sup>8</sup>B,
+0.386 for hep (made further out, at lower density).
 </td>
 </tr>
 <tr>
 <td width="50%">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/ar40_b8_models.png">
-  <img src="docs/images/light/ar40_b8_models.png" alt="8B charged-current interaction spectrum on argon for four nuclear models with the ratio to the default.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b3_tools.png">
+  <img src="docs/images/light/b3_tools.png" alt="P(nu2 -> nue) through the Earth's core for NuFast-Earth and the SNUfish reference, with their difference at the 1e-8 level.">
 </picture>
-<b>Rates (B4 → B5).</b> <sup>8</sup>B ν<sub>e</sub> CC interactions on
-<sup>40</sup>Ar per kton-year for four nuclear models: 1,566 to 1,922;
-the cross sections differ by a factor 5–7 at 5 MeV.
+<b>B3 · Earth crossing.</b> NuFast-Earth against the exact SNUfish
+reference through the core: they agree to a few 10<sup>−8</sup>. Differences in
+predictions come from the inputs, not the solvers.
 </td>
 <td width="50%">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/tools.png">
-  <img src="docs/images/light/tools.png" alt="P2e through the Earth's core for NuFast-Earth and the SNUfish reference; the difference panel is at the 1e-8 level.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b23_adn.png">
+  <img src="docs/images/light/b23_adn.png" alt="8B day-night asymmetry at SURF against energy for three Earth models.">
 </picture>
-<b>Tool comparison (B3).</b> NuFast-Earth against the SNUfish reference
-through the core: they agree to 6 × 10<sup>−8</sup>. The spread in
-predictions comes from the inputs, not the solvers.
+<b>B2 × B3 · Day-night asymmetry.</b> <sup>8</sup>B at SURF (DUNE), 10 MeV:
+2.8 % with full PREM, 3.4–3.9 % with the crustless models: the density under
+the detector matters most.
+</td>
+</tr>
+<tr>
+<td width="50%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b4_ar40.png">
+  <img src="docs/images/light/b4_ar40.png" alt="Charged-current cross section on argon-40 for five nuclear models, with the ratio to MARLEY 2.">
+</picture>
+<b>B4 · Cross sections.</b> ν<sub>e</sub> CC on <sup>40</sup>Ar: the measured
+B(GT) set moves MARLEY 2 by 8–23 %; SNOwGLoBES's MARLEY table (no Coulomb
+factor) is 30 % low at 10 MeV, KLMV 66 % high at 6 MeV.
+</td>
+<td width="50%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b5_rates.png">
+  <img src="docs/images/light/b5_rates.png" alt="8B charged-current interactions on argon per kiloton-year for ten solar models and four nuclear models.">
+</picture>
+<b>B5 · Rates.</b> <sup>8</sup>B CC on <sup>40</sup>Ar per kt·yr: the solar
+model moves it by ±16 % (MARLEY 2: 1,757 to 2,409), the nuclear model by
+up to 47 % (1,581 to 2,321 for B16-GS98).
 </td>
 </tr>
 </table>
 
-Across the ten solar models the <sup>8</sup>B CC rate on argon spans ±16 %,
-comparable to the spread between nuclear models of the cross section. As a
-check against data: the folded pp elastic-scattering rate (B16-GS98) is 136
-interactions per day per 100 t of scintillator electrons; Borexino measured
-134 ± 10. Figures are regenerated with `python scripts/readme_images.py`
-after `snufish build`.
+As a check against data: the folded pp elastic-scattering rate (B16-GS98) is
+136 interactions per day per 100 t of scintillator electrons; Borexino
+measured 134 ± 10 ([more cross-checks](docs/crosschecks.md)). Figures are
+regenerated with `python scripts/readme_images.py` after `snufish build`.
 
 ## Benchmarks
 
