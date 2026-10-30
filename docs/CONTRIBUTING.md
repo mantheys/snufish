@@ -1,5 +1,8 @@
 # Contributing results
 
+What each benchmark asks for is in [benchmarks.md](benchmarks.md); open work
+that needs a contributor is listed in [status.md](status.md).
+
 1. Add or update your tool in `catalogue/tools/<tool>.yaml`.
 2. Run your tool on the benchmark exactly as `benchmarks/<id>/spec.yaml`
    defines it (grid, parameters, matter model). Use the `native` variant,

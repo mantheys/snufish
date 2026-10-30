@@ -12,5 +12,5 @@ status: verified        # B4 wrapper: contributions/snowglobes/scripts/run_b4.py
 notes: >
   Cross-section files: log10(E/GeV) and sigma/E in 1e-38 cm^2/GeV per target, as their headers
   state (checked: nu_e-e gives 8.9e-44 cm^2 at 10 MeV). ES tables start at 0.5 MeV (no pp, no
-  384 keV 7Be line); deuteron and MARLEY argon tables at 5 MeV. Full-chain B5 contribution
-  (supernova.pl with solar fluxes) still to do.
+  384 keV 7Be line); deuteron and MARLEY argon tables at 5 MeV. Full-chain B5 contribution:
+  contributions/snowglobes/scripts/run_b5.py (supernova.pl with solar fluxes).
