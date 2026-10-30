@@ -105,9 +105,6 @@ From [crosschecks.md](crosschecks.md):
 
 ## Housekeeping
 
-- `pyproject.toml` does not declare SciPy, which
-  `snufish.reference.radiative` imports (BKS; used by `export-app`, the
-  engine tests and `scripts/crosscheck.py`).
 - CI runs the tests, validation, build and the `b1`, `b2`, `b3`, `b45`
   plots. It does not build the NuFast-Earth driver, so the tests that need
   it or the app tables (`test_engine.py` table tests, the scan,

@@ -8,11 +8,8 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,plots]"          # plots: plotipus; dev: pytest
 ```
 
-Python ≥ 3.10; the package declares NumPy, pandas, PyArrow and PyYAML.
-The BKS radiative corrections (`snufish.reference.radiative`, used by
-`export-app`, the engine tests and `crosscheck.py`) also import SciPy,
-which is not yet declared ([status.md](status.md)): `pip install scipy` if
-plotipus has not brought it in. The repository root is found by
+Python ≥ 3.10; the package needs NumPy, pandas, PyArrow, PyYAML and SciPy
+(for the BKS radiative corrections). The repository root is found by
 walking up from the working directory to the folder holding `benchmarks/`,
 or set with `SNUFISH_ROOT`.
 
@@ -33,6 +30,7 @@ make -C contributions/nufast-earth/scripts     # builds b2_driver and b3_driver
 | `snufish scan` | solar observables against Δm²₂₁ and at each parameter set | NuFast-Earth driver |
 | `snufish budget` | error budgets of the ⁸B rates and A_DN | `build`, NuFast-Earth driver (or `--tables`) |
 | `snufish export-app` | inputs and probability tables of the web page | `build`, NuFast-Earth driver |
+| `snufish export-sections` | `sections.json` of the benchmark pages: what each benchmark contributes to the uncertainty | `export-app`, `build` |
 
 ### `snufish validate`
 
@@ -91,6 +89,27 @@ snufish export-app --jobs 4
 Writes `inputs.json`, `day_<solar model>.{json,bin}`,
 `night_<Earth model>.{json,bin}` and a manifest
 ([methods.md](methods.md#app-tables)).
+
+### `snufish export-sections`
+
+```bash
+snufish export-sections --tables build/app   # a few seconds; writes build/app/sections.json
+```
+
+The data of `benchmarks.html`, one page per benchmark. For five reference
+observables (⁸B ES in water, ⁸B and hep CC on ⁴⁰Ar, ⁷Be ES in scintillator,
+the ES day-night asymmetry; `sections.OBSERVABLES`) it runs the error budget
+on the app tables and assigns every source to the benchmark it comes from:
+B1 the fluxes (sampled, and the range between models with the production
+profiles fixed), B2 the density and production profiles (the range between
+models with the fluxes fixed), B3 the Earth model, B4 the cross sections; the
+oscillation parameters are shown apart. B2 also gets the shift of three
+production-region approximations, computed with the exact B2 solver: every
+component on ⁸B's profile, every component at the centre, and one density
+for every component (n_e = 66.7 N_A/cm³, as in NuFast-Earth's examples).
+With them: the curves each page plots and the agreement between tools (B2,
+B3: largest difference from the reference; B5: full-chain rates over
+SNUfish's folding).
 
 ## Scripts
 
