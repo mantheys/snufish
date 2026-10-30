@@ -12,10 +12,10 @@ const SECTIONS = { oscillation: "Oscillation parameters", B1: "B1 solar models",
 const SECTION_SERIES = { oscillation: 9, B1: 2, B2: 1, B3: 6, B4: 5 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
                 scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A_DN, water" };
-const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
-               ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_marley1_bhattacharya2009: "MARLEY v1 model",
+               ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model (Kostensalo 2018)", ar40_marley1_bhattacharya2009: "MARLEY v1 model",
                default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES KLMV" };
 const CHANNELS = { es: "ES", cc_nue_ar40: "CC ⁴⁰Ar", cc_nue_o16: "CC ¹⁶O" };
 
@@ -44,6 +44,10 @@ const pct = (v) => {
 };
 const FLOOR = 1e-4; // per cent: the left end of the log axes
 
+// the overview counts state-of-the-art contributions only: sampled uncertainties and ranges over current models
+// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page
+const stateOfTheArt = (r) => r.kind === "sampled" || r.kind === "model range";
+
 function largest(rows, central, keep) {
   let best = null;
   for (const r of rows.filter(keep)) {
@@ -57,9 +61,8 @@ function largest(rows, central, keep) {
 
 function matrix() {
   const obs = page.sections.observables, accent = colours().sampled;
-  const columns = [...Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && r.kind !== "approximation"]),
-                   ["approx", "B2 approximations", (r) => r.kind === "approximation"]];
-  const heads = { oscillation: "Oscillation", B1: "B1", B2: "B2", B3: "B3", B4: "B4", approx: "B2 approx." };
+  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && stateOfTheArt(r)]);
+  const heads = { oscillation: "Oscillation", B1: "B1", B2: "B2", B3: "B3", B4: "B4" };
   const cell = (best) => {
     if (!best) return `<td class="num empty">–</td>`;
     const strength = Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5));
@@ -74,17 +77,17 @@ const central = (o) => (o.quantity === "adn" ? `${(100 * o.central).toFixed(2)} 
 
 function overviewPlot() {
   const c = colours(), id = $("overview-observable").value, o = page.sections.observables[id], node = $("plot-overview");
-  const rows = [...o.rows].sort((a, b) => Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
+  const rows = o.rows.filter(stateOfTheArt).sort((a, b) => Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
   const traces = Object.keys(SECTIONS).map((s) => {
     const mine = rows.filter((r) => r.section === s);
     return { type: "bar", orientation: "h", name: SECTIONS[s], y: mine.map((r) => sup(r.source)),
              x: mine.map((r) => Math.max(Math.abs(size(r, o.central)), FLOOR)),
              text: mine.map((r) => `${pct(size(r, o.central))} · ${r.kind}`), textposition: "outside", cliponaxis: false,
              textfont: { size: 11, color: c.secondary }, hovertemplate: "%{y}: %{text}<extra></extra>",
-             marker: { color: mine.map((r) => alpha(seriesColour(s), r.kind === "approximation" ? 0.45 : 1)) } };
+             marker: { color: seriesColour(s) } };
   });
   htmlLegend(node, Object.keys(SECTIONS).map((s) => ({ label: SECTIONS[s], colour: seriesColour(s), fill: true })),
-             "Pale bars: approximations (signed shift in the label).");
+             "State-of-the-art inputs only: approximations and legacy models are on each benchmark's page.");
   node.style.height = `${Math.max(360, 34 * rows.length + 90)}px`;
   return Plotly.react(node, traces, layout(c, node, sup(o.label), "Relative to the central value (%), log scale", "",
     { showlegend: false, barmode: "overlay", margin: { l: 20, r: 90, t: 24, b: 48 },
@@ -519,7 +522,7 @@ async function main() {
   for (const m of Object.keys(XSEC)) XSEC[m] += tag(status.xsec_model?.cc_nue_ar40?.[m]);
   const s = page.sections, set = page.inputs.parameter_sets.sets[s.set];
   $("reference-note").textContent = `Reference: ${set?.label || s.set} oscillation parameters, ${page.inputs.solar_models[s.solar_model].label} `
-    + `fluxes and profiles, PREM (ten regions), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages without `
+    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages without `
     + `detector response, ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
   fill($("overview-observable"), Object.entries(s.observables).map(([id, o]) => [id, sup(o.label)]), "argon_cc_hep");
   fill($("b1-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);

@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from . import crust
 from .exposure import cell_weights, orbital_factors
 from .fluxes import components
 from .paths import build_dir, repo_root
@@ -124,6 +125,10 @@ def collect_inputs():
             entries.append({"name": name, "level_MeV": row.Level, "kind": row.Kind, "strength": row.Strength,
                             "error": row.Error})
         levels = {"cc_nue_ar40": {MARLEY_DEFAULT: entries}}
+    # 40Ar: the shell model of Kostensalo, Suhonen & Zuber 2018, a published table, on the B4 grid
+    if "cc_nue_ar40" in xsec:
+        grid = np.asarray(next(iter(xsec["cc_nue_ar40"].values()))["energy"])
+        xsec["cc_nue_ar40"]["ar40_ksz2018"] = {"energy": grid.tolist(), "sigma": kostensalo2018(grid).tolist()}
     # deuteron: Nakamura et al. 2002 down to threshold (SNOwGLoBES has the same table from 5 MeV), and NC
     nakamura = _yaml("reference/xsec/nakamura2002.yaml")
     for channel in ("cc_nue_d", "nc_d"):
@@ -152,7 +157,7 @@ def collect_inputs():
         "xsec_levels": levels,
         "es_radiative_ratio": ratio,
         "es_bks": ratio_table(load_spec("B4_xsec")["constants"]),
-        "earth_models": list(b3["earth_models"]),
+        "earth_models": list(b3["earth_models"]) + crust.available(),  # + site-dependent models (crust.py)
         "sites": {site: {**info, **dict(zip(("orbit_day", "orbit_night"),
                                             orbital_factors(np.radians(info["latitude_deg"]))))}
                   for site, info in b3["sites"].items()},
@@ -161,6 +166,20 @@ def collect_inputs():
         "efficiency_curves": efficiency_curves(),
         "status": status_table(),
     }
+
+
+def kostensalo2018(energy):
+    """nu_e 40Ar CC cross section (cm^2) of Kostensalo, Suhonen & Zuber 2018 (reference/xsec/kostensalo2018.yaml):
+    log(sigma) linear in log(E - Q) between the table's points, the first segment continued to the threshold,
+    the last beyond the table."""
+    table = _yaml("reference/xsec/kostensalo2018.yaml")
+    q, e = table["threshold_MeV"], np.asarray(energy, dtype=float)
+    x, y = np.log(np.asarray(table["energy_MeV"]) - q), np.log(np.asarray(table["total_1e-42cm2"]) * 1e-42)
+    u = np.log(np.clip(e - q, 1e-12, None))
+    slope_low, slope_high = (y[1] - y[0]) / (x[1] - x[0]), (y[-1] - y[-2]) / (x[-1] - x[-2])
+    log_sigma = np.where(u < x[0], y[0] + slope_low * (u - x[0]),
+                         np.where(u > x[-1], y[-1] + slope_high * (u - x[-1]), np.interp(u, x, y)))
+    return np.where(e > q, np.exp(log_sigma), 0.0)
 
 
 def status_table():
@@ -189,7 +208,7 @@ class ExactProbabilities:
         return day_fractions(osc, solar_model, energies, component)
 
     def night(self, osc, earth_model, site):
-        return night_probabilities(osc, earth_model, site_latitude(site))
+        return night_probabilities(osc, earth_model, site_latitude(site), site)
 
 
 def write_table(directory, name, values):
@@ -240,9 +259,11 @@ def _point(args):
                     for c in COMPONENTS})
     night = []
     for earth in earth_models:
-        energies, cosines, P = night_grid(osc, earth)
-        night.append([np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(sites[s]["latitude_deg"])))
+        grids = {s: night_grid(osc, earth, s) for s in sites} if earth in crust.SITE_MODELS \
+            else dict.fromkeys(sites, night_grid(osc, earth))
+        night.append([np.einsum("eci,c->ei", grids[s][2], cell_weights(grids[s][1], np.radians(sites[s]["latitude_deg"])))
                       for s in sites])
+        energies = grids[next(iter(sites))][0]
     return day, np.array(night), energies
 
 

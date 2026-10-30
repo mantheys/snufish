@@ -107,17 +107,22 @@ parameter_set:
     refs: [arXiv:2312.12907]
 
 earth_model:
-  prem_full:
+  prem_crust1:
     status: current
-    summary: "PREM with its full radial polynomials, the standard reference Earth for neutrino propagation. It ends in 3 km of ocean, which under-predicts A_DN at continental sites by about 5 %; 3D Earth models (up to ~8 % of A_DN) are not included."
+    summary: "PREM under the Moho, the CRUST1.0 column of the detector's 1 × 1 degree cell above it (Laske et al. 2013): the continental crust the night neutrinos cross last, in place of PREM's ocean and average crust. Still radial: the crust where a chord enters the Earth and the 3D mantle are not included."
+    refs: [https://igppweb.ucsd.edu/~gabi/crust1.html]
+  prem_full:
+    status: approximation
+    superseded_by: prem_crust1
+    summary: "PREM with its full radial polynomials (Dziewonski & Anderson 1981), the standard reference Earth and B3's. Its top 24 km are an average crust ending in 3 km of ocean, which describes none of the continental sites: A_DN of ⁸B moves by −2 % (SURF) to +4 % (SNOLAB) with the local crust."
     refs: [Dziewonski & Anderson 1981]
   prem_four:
     status: approximation
-    superseded_by: prem_full
+    superseded_by: prem_crust1
     summary: "PREM polynomials of the four main regions, the mantle extended to the surface: no crust (3.8 g/cm³ under the detector). A_DN of ⁸B comes out about 40 % above prem_full at Kamioka and SURF: the missing crust, not an Earth-model uncertainty."
   prem_prob3:
     status: approximation
-    superseded_by: prem_full
+    superseded_by: prem_crust1
     summary: "Four shells of constant density (Prob3++), no crust. Solvable exactly by every code, which makes it B3's tool comparison; as a model of the Earth it is an approximation (A_DN of ⁸B about 20 % above prem_full)."
 
 es_model:
@@ -145,6 +150,10 @@ xsec_model:
       status: current
       summary: "MARLEY 2 with the B(GT) from ⁴⁰Ti β decay (Liu 1998). Competes with the (p,n) strengths; the measurements disagree."
       refs: [doi:10.5281/zenodo.21880925]
+    ar40_ksz2018:
+      status: current
+      summary: "Kostensalo, Suhonen & Zuber (2018): shell model for all transitions (sd-pf, multipoles to J = 3), quenched g_A = 1.00(5), ±13 %. Independent of MARLEY; folded over ⁸B it is 27–35 % below the MARLEY 2 calculations (with the free g_A = 1.27 the authors get 2.64 × 10⁻⁴² cm², inside the MARLEY 2 spread): the quenching of the Gamow–Teller strength is the open question."
+      refs: [doi:10.1103/PhysRevC.97.034309]
     ar40_marley2_bhattacharya1998:
       status: current
       summary: "MARLEY 2 with the B(GT) from ⁴⁰Ti β decay (Bhattacharya 1998). Competes with the (p,n) strengths."

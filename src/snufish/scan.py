@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
+from . import crust
 from .exposure import cell_weights
 from .fluxes import components
 from .paths import repo_root
@@ -84,18 +85,23 @@ def _nufast_driver():
     return path
 
 
-def night_probabilities(osc, earth_model, latitude_deg):
+def night_probabilities(osc, earth_model, latitude_deg, site=None):
     """(energies MeV, array [E, 3] of P(nu_i -> nu_e) averaged over the night at
-    the given latitude), on the B3 exposure grid."""
-    energies, cosines, P = night_grid(osc, earth_model)
+    the given latitude), on the B3 exposure grid. ``site``: for the site-dependent
+    Earth models (:mod:`snufish.crust`)."""
+    energies, cosines, P = night_grid(osc, earth_model, site)
     return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude_deg)))
 
 
-def night_grid(osc, earth_model):
+def night_grid(osc, earth_model, site=None):
     """(energies MeV, cos nadir, array [E, cos, 3] of P(nu_i -> nu_e)) on the
     B3 exposure grid, before averaging over a site's night."""
     spec = load_spec("B3_earth")
     grid = spec["grids"]["exposure"]
+    if earth_model in crust.SITE_MODELS:
+        if site is None:
+            raise ValueError(f"{earth_model} depends on the site")
+        earth_model = f"regions:{crust.regions_file(earth_model, site)}"
     argv = [earth_model, *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
                                                  "dm2_21_eV2", "dm2_31_eV2")),
             str(spec["earth"]["detector_depth_km"]),
@@ -124,7 +130,7 @@ def observables(osc, solar_model="b16_gs98", earth_model="prem_full", site="Kami
 
     F = day_fractions(osc, solar_model, energy)
     pee_day = F @ U2[0]
-    night_e, night_p = night_probabilities(osc, earth_model, site_latitude(site))
+    night_e, night_p = night_probabilities(osc, earth_model, site_latitude(site), site)
     P_night = np.stack([np.interp(energy, night_e, night_p[:, i], left=U2[0, i]) for i in range(3)], axis=-1)
     pee_night = np.sum(F * P_night, axis=1)
 

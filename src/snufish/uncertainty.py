@@ -42,7 +42,7 @@ QUANTITIES = {
     "kamioka_adn_es": dict(setup=dict(detector="water", channel="es", threshold=3.49, site="Kamioka"),
                            quantity="adn", label="ES day-night asymmetry at Kamioka"),
 }
-NOMINAL = dict(xsec_model="default", es_model="bks", earth_model="prem_full")
+NOMINAL = dict(xsec_model="default", es_model="bks", earth_model="prem_crust1")
 
 _split_normal = engine.split_normal
 

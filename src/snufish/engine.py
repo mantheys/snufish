@@ -198,7 +198,7 @@ class Setup:
     solar_model: str = "b23_mb22m"
     components: tuple = ("B8",)
     b8_flux: str = "model"          # "model" or "sno_nc" (measured total 8B flux)
-    earth_model: str = "prem_full"
+    earth_model: str = "prem_crust1"
     site: str = "Kamioka"
     detector: str = "water"
     channel: str = "es"

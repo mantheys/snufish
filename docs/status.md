@@ -31,9 +31,9 @@ an issue.
 | SNUfish reference | no repository URL in its catalogue entry until the repository is public |
 | Full-chain rate tools other than SNOwGLoBES | none yet |
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; no NC on ⁴⁰Ar or ¹⁶O |
-| Independent state-of-the-art ⁴⁰Ar models | the state-of-the-art ⁴⁰Ar range is MARLEY 2 alone (three B(GT) sets, one continuum model); the shell-model calculations of Kostensalo & Suhonen (2018) and Suzuki & Shimizu (2023) would make it a range between calculations ([status-of-inputs.md](status-of-inputs.md)) |
+| More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
 | Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %); BKS and Marciano & Parsa bound it at the solar precision |
-| Earth beyond PREM | a continental crust in place of PREM's ocean and 3D Earth models, the real Earth-model uncertainty of A_DN; the current Earth range is empty (one state-of-the-art model) |
+| 3D Earth | `prem_crust1` puts the CRUST1.0 column of each site above PREM's Moho, but stays radial. Next: per night direction (the Sun's position over a year at the site's latitude and longitude), the chord's entry point and its CRUST1.0 column, solved with NuFast-Earth's single-trajectory mode, and a 3D mantle model; then a second current Earth model, and an Earth range. Until then the Earth range is empty (one state-of-the-art model) |
 
 ### Physics scope
 

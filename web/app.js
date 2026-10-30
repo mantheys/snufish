@@ -17,12 +17,13 @@ const XSEC = {
   ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
   ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
   ar40_marley2_bhattacharya1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Bhattacharya 1998)",
+  ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g_A = 1.00)",
   ar40_marley1_bhattacharya2009: "MARLEY v1 model, B(GT) from (p,n) (run by MARLEY 2)",
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
 };
-const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
 const ES = { bks: "Radiative corrections (BKS)", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
 // reference/status.yaml, via engine.status: what is the state of the art, what is legacy, what is an approximation
@@ -183,7 +184,7 @@ function buildControls() {
   }));
   fillSelect($("site"), Object.entries(d.sites).map(([s, info]) => [s, `${s} (${info.latitude_deg.toFixed(1)}° N)`]), "Kamioka");
   const earth = d.earth_models.map((e) => [e, statusOf("earth_model", e)]).sort(([, a], [, b]) => (a.status !== "current") - (b.status !== "current"));
-  fillSelect($("earth"), earth.map(([e, s]) => [e, (EARTH[e] || e) + suffix(s)]), "prem_full");
+  fillSelect($("earth"), earth.map(([e, s]) => [e, (EARTH[e] || e) + suffix(s)]), "prem_crust1");
   fillSelect($("detector"), Object.keys(d.detectors).map((k) => [k, DETECTORS[k] || k]), "water");
 }
 

@@ -1,0 +1,116 @@
+source: CRUST1.0, G. Laske, G. Masters, Z. Ma and M. Pasyanos, EGU General Assembly
+  2013, EGU2013-2658; https://igppweb.ucsd.edu/~gabi/crust1.html
+archive: crust1.0.tar.gz, sha256 0b41b46fc3e1a76debbbcb66ab407febaeee4dc3033db7a0a24d2bb7c7adfe3e
+retrieved: '2026-10-30'
+method: table (the 1 x 1 degree cell of each site; layers top down, thickness in km,
+  density in g/cm^3)
+longitudes: laboratory longitudes to 0.01 degree (scripts/import_crust1.py); only
+  the cell matters
+sites:
+  Kamioka:
+    latitude_deg: 36.48
+    longitude_deg: 137.31
+    cell_centre:
+    - 36.5
+    - 137.5
+    surface_elevation_km: 0.87
+    moho_depth_km: 32.42
+    mantle_density: 3.17
+    layers:
+    - layer: upper sediments
+      thickness_km: 0.1
+      density: 1.97
+    - layer: upper crust
+      thickness_km: 10.99
+      density: 2.63
+    - layer: middle crust
+      thickness_km: 10.66
+      density: 2.74
+    - layer: lower crust
+      thickness_km: 10.67
+      density: 2.92
+  LNGS:
+    latitude_deg: 42.45
+    longitude_deg: 13.57
+    cell_centre:
+    - 42.5
+    - 13.5
+    surface_elevation_km: 0.85
+    moho_depth_km: 33.95
+    mantle_density: 3.22
+    layers:
+    - layer: upper sediments
+      thickness_km: 0.5
+      density: 2.11
+    - layer: upper crust
+      thickness_km: 11.04
+      density: 2.74
+    - layer: middle crust
+      thickness_km: 11.04
+      density: 2.78
+    - layer: lower crust
+      thickness_km: 11.37
+      density: 2.86
+  SURF:
+    latitude_deg: 44.356
+    longitude_deg: -103.75
+    cell_centre:
+    - 44.5
+    - -103.5
+    surface_elevation_km: 1.13
+    moho_depth_km: 48.91
+    mantle_density: 3.36
+    layers:
+    - layer: upper sediments
+      thickness_km: 0.5
+      density: 2.11
+    - layer: middle sediments
+      thickness_km: 0.5
+      density: 2.46
+    - layer: upper crust
+      thickness_km: 15.81
+      density: 2.76
+    - layer: middle crust
+      thickness_km: 15.81
+      density: 2.81
+    - layer: lower crust
+      thickness_km: 16.29
+      density: 2.91
+  SNOLAB:
+    latitude_deg: 46.47
+    longitude_deg: -81.2
+    cell_centre:
+    - 46.5
+    - -81.5
+    surface_elevation_km: 0.32
+    moho_depth_km: 35.75
+    mantle_density: 3.4
+    layers:
+    - layer: upper crust
+      thickness_km: 10.01
+      density: 2.76
+    - layer: middle crust
+      thickness_km: 12.87
+      density: 2.81
+    - layer: lower crust
+      thickness_km: 12.87
+      density: 2.91
+  Jiangmen:
+    latitude_deg: 22.12
+    longitude_deg: 112.52
+    cell_centre:
+    - 22.5
+    - 112.5
+    surface_elevation_km: 0.11
+    moho_depth_km: 30.0
+    mantle_density: 3.3
+    layers:
+    - layer: upper crust
+      thickness_km: 9.9
+      density: 2.74
+    - layer: middle crust
+      thickness_km: 9.9
+      density: 2.78
+    - layer: lower crust
+      thickness_km: 10.2
+      density: 2.86

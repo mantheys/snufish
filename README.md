@@ -97,7 +97,8 @@ predictions come from the inputs, not the solvers.
 </picture>
 <b>B2 × B3 · Day-night asymmetry.</b> <sup>8</sup>B at SURF (DUNE), 10 MeV:
 2.8 % with full PREM, 3.4–3.9 % with the crustless approximations: the
-error of leaving out the crust, not an Earth-model uncertainty.
+error of leaving out the crust, not an Earth-model uncertainty. The local
+crust (CRUST1.0, the default) moves it by −2.4 % of itself.
 </td>
 </tr>
 <tr>
@@ -119,8 +120,8 @@ factor) is 30 % low at 10 MeV, KLMV 66 % high at 6 MeV.
 model moves it by ±16 % (MARLEY 2: 1,757 to 2,409), the nuclear model by
 up to 47 % (1,581 to 2,321 for B16-GS98).
 Counting state-of-the-art inputs only (B23 MB22 against AAG21; MARLEY 2
-with each measured B(GT) set) the spreads are about 16 % and 11 %; the rest
-comes from legacy models.
+with each measured B(GT) set and the shell model of Kostensalo et al.) the
+spreads are about 16 % and 37 %; the rest comes from legacy models.
 </td>
 </tr>
 </table>

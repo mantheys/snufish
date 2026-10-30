@@ -162,7 +162,7 @@ export function sampleFluxes(inputs, rng, solarModel, components, n, b8Flux = "m
 // ------------------------------------------------------------------ setup and checks
 
 export const DEFAULT_SETUP = {
-  solar_model: "b23_mb22m", components: ["B8"], b8_flux: "model", earth_model: "prem_full", site: "Kamioka",
+  solar_model: "b23_mb22m", components: ["B8"], b8_flux: "model", earth_model: "prem_crust1", site: "Kamioka",
   detector: "water", channel: "es", xsec_model: "default", es_model: "bks", period: "day",
   // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
   threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,

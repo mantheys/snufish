@@ -26,25 +26,28 @@ SNUfish reports as model ranges.
 
 ## What it changes
 
-The model ranges before and after, for the B23-MB22m fluxes, JUNO 2025
-parameters, PREM (ten regions), annual rates (app tables):
+The model ranges, state of the art against everything SNUfish offers, for
+the B23-MB22m fluxes, JUNO 2025 parameters, PREM with the local crust,
+annual rates (app tables):
 
 | Observable | Choice | State of the art | With legacy and approximations |
 |---|---|---|---|
 | ⁸B + hep ES in water, T > 3.49 MeV | solar model | −15.9 % (AAG21) | −19.3 % to +10.6 % |
 | | ES cross section | +0.02 % | +2.8 % (tree level) |
-| ⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV | ⁴⁰Ar nuclear model | −10.8 % | −37 % to +1.8 % |
+| ⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV | ⁴⁰Ar nuclear model | −36.6 % (shell model, g<sub>A</sub> = 1.00) | −37 % to +1.8 % |
 | | solar model | −16.0 % | −19.4 % to +10.6 % |
 | ⁷Be ES in scintillator | solar model | −7.8 % | −11.5 % to +0.6 % |
-| A<sub>DN</sub>, ⁸B ES at Kamioka | Earth model | none (one current model): 1.50 % | 1.50 % to 2.07 % |
-| A<sub>DN</sub>, ⁸B CC on ⁴⁰Ar at SURF | Earth model | none: 2.91 % | 2.91 % to 4.02 % |
+| A<sub>DN</sub>, ⁸B ES at Kamioka | Earth model | none (one current model): 1.52 % | 1.50 % to 2.07 % |
+| A<sub>DN</sub>, ⁸B CC on ⁴⁰Ar at SURF | Earth model | none: 2.84 % | 2.84 % to 4.02 % |
 
-The largest spreads SNUfish used to show (the factor 5–7 between ⁴⁰Ar
-tables at 5 MeV, the 2.9–4.0 % A<sub>DN</sub> at SURF, the +10 % of B16-GS98
-in the ⁸B rate) come from superseded inputs or approximations. What remains
-is the solar composition problem (about 16 % on ⁸B, 8 % on ⁷Be) and, for
-argon, the disagreement between the measured Gamow–Teller strengths (about
-11 %).
+Most of the large spreads SNUfish used to show came from superseded inputs
+or approximations: the factor 5–7 between ⁴⁰Ar tables at 5 MeV, the
+2.9–4.0 % A<sub>DN</sub> at SURF (crustless Earths), the +10 % of B16-GS98 on
+the ⁸B rate. What remains is real and open: the solar composition problem
+(about 16 % on ⁸B, 8 % on ⁷Be) and, for argon, how much the Gamow–Teller
+strength is quenched (about 37 % between the shell model with g<sub>A</sub> =
+1.00 and MARLEY 2 with the measured strengths; 11 % within MARLEY 2). The
+Earth-model uncertainty is not yet computable (3D Earth).
 
 ## Solar models
 
@@ -106,17 +109,32 @@ days) and solar + KamLAND 2024 (its reactor side superseded by JUNO).
 
 ## Earth
 
-**State of the art: PREM (ten regions).** PREM (Dziewonski & Anderson
-1981) remains the reference Earth for neutrino propagation. Two caveats,
-not modelled: PREM ends in 3 km of ocean, which under-predicts A<sub>DN</sub>
-at continental sites by about 5 % ([crosschecks.md](crosschecks.md)); 3D
-Earth models move A<sub>DN</sub> by up to ~8 % at some sites. These are the
-real Earth-model uncertainties, and SNUfish cannot give them yet.
+**State of the art: PREM with the local crust (`prem_crust1`).** PREM
+(Dziewonski & Anderson 1981) remains the reference Earth for neutrino
+propagation, but its top 24 km are an average crust ending in 3 km of
+ocean, and the day-night asymmetry is most sensitive to the density the
+neutrinos cross last. `prem_crust1` keeps PREM under the Moho and puts the
+CRUST1.0 column of the detector's 1° × 1° cell above it (Laske et al.
+2013; `reference/earth/crust1_sites.yaml`): continental crust 30–49 km
+thick at the five sites. A<sub>DN</sub> of ⁸B moves by −2.4 % (SURF, whose
+49 km crust is lighter than the mantle PREM puts there) to +3.8 % (SNOLAB)
+of itself ([crosschecks.md](crosschecks.md)). It is solved by NuFast-Earth
+like PREM (the driver's `regions:` model), checked to reproduce PREM
+exactly when given PREM's regions.
 
-**Approximations.** `prem_four` (the four main PREM regions, the mantle
-extended to the surface) and `prem_prob3` (four constant shells) have no
-crust: A<sub>DN</sub> of ⁸B comes out about 40 % and 20 % above full PREM.
-`prem_prob3` stays the B3 tool comparison (every solver can do it exactly).
+Still not modelled, so still not a range: the crust where a chord enters
+the Earth (the column under the detector stands for the whole surface)
+and the 3D mantle, which move A<sub>DN</sub> by up to ~8 % at some sites
+(Han et al.; Bakhti & Smirnov, [arXiv:2001.08030](https://arxiv.org/abs/2001.08030)).
+With one state-of-the-art Earth model the calculator reports no Earth
+range; that is a missing uncertainty, not a small one.
+
+**Approximations.** `prem_full` (PREM's ocean and average crust under
+every detector), `prem_four` (the four main PREM regions, the mantle
+extended to the surface) and `prem_prob3` (four constant shells). The last
+two have no crust: A<sub>DN</sub> of ⁸B comes out about 40 % and 20 % above
+`prem_full`. `prem_full` stays the B3 reference model and `prem_prob3` the
+B3 tool comparison (every solver can do it exactly).
 
 ## ν–e elastic scattering
 
@@ -138,22 +156,33 @@ for ⁸B, 3–4 % at the highest recoil energies.
 ## Cross sections on nuclei
 
 **⁴⁰Ar, state of the art: MARLEY 2 with the three sets of measured
-Gamow–Teller strengths.** At solar energies the cross section is dominated
-by Gamow–Teller transitions to bound ⁴⁰K levels, whose strengths are
-measured, in ⁴⁰Ar(p,n) (Bhattacharya et al. 2009) and in the mirror ⁴⁰Ti β
-decay (Liu et al. 1998; Bhattacharya et al. 1998); the measurements do not
-agree. MARLEY 2.0.0 (2026) combines each with an HF-CRPA continuum
-(Gardiner, PRC 103, 044604 (2021), [arXiv:2010.02393](https://arxiv.org/abs/2010.02393)).
-The spread between the three (about 11 % on the ⁸B rate above 5 MeV) and
-the sampled uncertainty of the (p,n) strengths are what the calculator
-reports.
+Gamow–Teller strengths, and the shell model of Kostensalo, Suhonen & Zuber.**
+At solar energies the cross section is dominated by Gamow–Teller
+transitions to bound ⁴⁰K levels, whose strengths are measured, in
+⁴⁰Ar(p,n) (Bhattacharya et al. 2009) and in the mirror ⁴⁰Ti β decay (Liu
+et al. 1998; Bhattacharya et al. 1998); the measurements do not agree.
+MARLEY 2.0.0 (2026) combines each with an HF-CRPA continuum (Gardiner, PRC
+103, 044604 (2021), [arXiv:2010.02393](https://arxiv.org/abs/2010.02393);
+Gardiner et al., [arXiv:2604.26801](https://arxiv.org/abs/2604.26801)).
+Kostensalo, Suhonen & Zuber (PRC 97, 034309 (2018), table I;
+`reference/xsec/kostensalo2018.yaml`) compute every transition in the
+shell model instead, with a quenched g<sub>A</sub> = 1.00(5): their ⁸B-folded
+cross section, 1.78(23) × 10⁻⁴² cm², is 27–35 % below the MARLEY 2
+calculations (2.42–2.72), and with the free g<sub>A</sub> = 1.27 (2.64) it falls
+inside them. The shell model of Suzuki & Honma (PRC 87, 014607 (2013)),
+whose Gamow–Teller strength reproduces the (p,n) data, agrees with MARLEY 2
+to 3 % on the cross section with electrons above 5 MeV, the one number it
+publishes ([crosschecks.md](crosschecks.md)). The state-of-the-art range,
+the four of them, is now about 37 % on the ⁸B rate: the quenching of the
+Gamow–Teller strength in ⁴⁰Ar is unsettled, and a direct measurement (a
+LArTPC at a stopped-pion source) would settle it.
 
-This range is narrower than the true theory uncertainty: all three share
-MARLEY's continuum model. Independent current calculations, the shell
-model of Kostensalo & Suhonen (PRC 97 (2018); a folded ⁸B cross section of
-1.78(23) × 10⁻⁴² cm², above earlier results) and of Suzuki & Shimizu (PRC
-108, 014611 (2023)), are not in SNUfish. Adding them is the most useful B4
-contribution missing.
+The shell-model table is coarse (5 MeV steps); interpolated log-log in
+E − Q it reproduces the paper's folded value to 3 %. Suzuki & Shimizu
+(PRC 108, 014611 (2023), [arXiv:2304.11358](https://arxiv.org/abs/2304.11358))
+confirm Suzuki & Honma's Gamow–Teller cross sections to 5 % with a chiral
+effective interaction but publish no table; neither shell-model σ(E) of
+that group is in SNUfish.
 
 **⁴⁰Ar, legacy.** MARLEY's v1 model (allowed approximation over all
 levels), SNOwGLoBES's 2018 MARLEY tables (zero below 5 MeV, and without the
@@ -190,7 +219,7 @@ agrees to about 1 %. Current.
   ranges are the state-of-the-art spread; the spread with legacy models
   and approximations is listed apart, greyed in the uncertainty plot and
   marked `legacy spread` in the budget table and the download. The default
-  setup is current (JUNO 2025, B23-MB22m, PREM, BKS, MARLEY 2). Result
+  setup is current (JUNO 2025, B23-MB22m, PREM with the local crust, BKS, MARLEY 2). Result
   Templates use each paper's own inputs, which are usually legacy, and say
   so.
 - **Home page.** The table of every input and its status (from

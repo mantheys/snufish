@@ -340,9 +340,9 @@ def test_model_ranges_compare_the_state_of_the_art_only(inputs):
     and their spread is reported apart ("legacy spread") on request."""
     argon, water = engine.Setup(detector="argon", channel="cc_nue_ar40"), engine.Setup(threshold=3.49)
     assert set(engine.alternatives(inputs, argon, "xsec_model")) == {
-        "ar40_marley2_bhattacharya2009", "ar40_marley2_liu1998", "ar40_marley2_bhattacharya1998"}
+        "ar40_marley2_bhattacharya2009", "ar40_marley2_liu1998", "ar40_marley2_bhattacharya1998", "ar40_ksz2018"}
     assert set(engine.alternatives(inputs, argon, "solar_model")) == {"b23_mb22m", "b23_mb22p", "b23_aag21"}
-    assert engine.alternatives(inputs, water, "earth_model") == ["prem_full"]
+    assert engine.alternatives(inputs, water, "earth_model") == ["prem_crust1"]
     assert engine.alternatives(inputs, water, "es_model") == ["bks", "snowglobes"]
     assert "tree" in engine.alternatives(inputs, water, "es_model", scope="all")
     assert engine.status(inputs, "solar_model", "b16_gs98")["superseded_by"] == "b23_mb22m"

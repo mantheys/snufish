@@ -118,6 +118,32 @@ CallioLab, site dependent) is not modelled: SNUfish's Earth models are radial (P
   5 MeV; at the E_ν ≳ 9 MeV a 5 MeV DUNE threshold sees, the MARLEY calculations differ by 13 % (6.1–6.9 × 10⁻⁴² cm²
   at 10 MeV).
 
+## ⁴⁰Ar: independent calculations
+
+Folded over the ⁸B spectrum (Winter et al.), no threshold, 10⁻⁴² cm²:
+
+| Calculation | ⟨σ⟩ | Source |
+|---|---|---|
+| MARLEY 2, B(GT) from ⁴⁰Ar(p,n) 2009 | 2.72 | SNUfish from MARLEY 2.0.0 |
+| MARLEY 2, B(GT) from ⁴⁰Ti decay (Liu 1998 / Bhattacharya 1998) | 2.42 / 2.43 | SNUfish from MARLEY 2.0.0 |
+| Shell model, Kostensalo, Suhonen & Zuber, g_A = 1.00(5) | 1.78(23) (1.725 from its table) | PRC 97, 034309 (2018) |
+| the same with the free g_A = 1.27 | 2.64 | PRC 97, 034309 (2018), sec. III E |
+
+With electrons above 5 MeV (gammas undetected), Suzuki & Honma's shell model (PRC 87, 014607 (2013),
+[arXiv:1211.4078](https://arxiv.org/abs/1211.4078); its GT strength reproduces the (p,n) data) gives 14.05 ×
+10⁻⁴³ cm² for the GT and Fermi transitions; MARLEY 2 with the (p,n) strengths gives 13.66 (−2.8 %,
+`tests/test_ar40_models.py`). The calculations that use or reproduce the measured strengths agree; the
+shell model with g_A = 1.00 is 27–35 % lower, and with the free g_A within the MARLEY 2 spread. How much the
+Gamow–Teller operator is quenched in ⁴⁰Ar is the open question behind the state-of-the-art range for argon.
+
+## Local crust
+
+The CRUST1.0 column under each detector in place of PREM's ocean and average crust (`prem_crust1`) moves
+the ⁸B A_DN (B23-MB22m, JUNO 2025 parameters, exact solvers) by +1.5 % at Kamioka (ES, T > 3.49 MeV),
++2.2 % at LNGS, +3.8 % at SNOLAB, +3.0 % at Jiangmen (ES, T > 2 MeV) and −2.4 % at SURF (argon CC,
+E_vis > 5 MeV), of itself. SURF's crust is 49 km thick and lighter than the PREM mantle it replaces; the
+others gain dense rock where PREM has ocean.
+
 ## Found by these checks
 
 - **θ13 in the app tables.** The interpolation tables are computed at the default θ13 but were fed every θ13 the

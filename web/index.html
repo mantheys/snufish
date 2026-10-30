@@ -18,7 +18,7 @@
     const BADGE = { current: "state of the art", legacy: "legacy", approximation: "approximation" };
     const CHANNELS = { cc_nue_ar40: "⁴⁰Ar", cc_nue_o16: "¹⁶O", cc_nue_d: "d CC", nc_d: "d NC" };
     const ES = { bks: "BKS", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
-    const EARTH = { prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+    const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
     fetch("data/inputs.json").then((r) => r.json()).then((d) => {
       const status = d.status || {}, name = (category, key, channel) => ({
         parameter_set: d.parameter_sets.sets[key]?.label, solar_model: d.solar_models[key]?.label, earth_model: EARTH[key],

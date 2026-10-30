@@ -11,7 +11,7 @@ SOLAR_MODEL_LABELS = {"b16_gs98": "B16-GS98", "b16_agss09met": "B16-AGSS09met", 
                       "b23_c11": "B23-C11", "b23_aag21": "B23-AAG21", "b23_mb22m": "B23-MB22m",
                       "b23_mb22p": "B23-MB22p", "exponential": "Exponential $n_e$"}
 
-EARTH_MODEL_LABELS = {"prem_full": "PREM", "prem_four": "PREM, 4 regions", "prem_prob3": "4 constant shells",
+EARTH_MODEL_LABELS = {"prem_crust1": "PREM + local crust", "prem_full": "PREM", "prem_four": "PREM, 4 regions", "prem_prob3": "4 constant shells",
                       "native": "NuFast-Earth default"}
 
 TOOL_LABELS = {"snufish-reference": "SNUfish reference", "nufast-earth": "NuFast-Earth", "snowglobes": "SNOwGLoBES",

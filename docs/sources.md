@@ -72,6 +72,7 @@ paper they reproduce (`PAPER_SETS` in `web/checks.js`).
 | PREM | Dziewonski & Anderson, Phys. Earth Planet. Inter. 25, 297 (1981) |
 | `prem_prob3`, `prem_four`, `prem_full` | copied from NuFast-Earth `src/Earth.cpp` @ 327586d |
 | Yₑ = 0.466 (core), 0.494 (mantle) | hep-ph/0002149, as in NuFast-Earth |
+| Local crust (`prem_crust1`) | CRUST1.0 (Laske, Masters, Ma & Pasyanos 2013, [igppweb.ucsd.edu/~gabi/crust1.html](https://igppweb.ucsd.edu/~gabi/crust1.html)), the 1° × 1° cell of each site; `reference/earth/crust1_sites.yaml`, written by `scripts/import_crust1.py` (retrieved 2026-10-30, archive sha256 in the file); laboratory longitudes to 0.01° |
 | Night exposure W(η; λ) | Lisi & Montanino, [hep-ph/9702343](https://arxiv.org/abs/hep-ph/9702343), table II, as implemented in NuFast-Earth `src/Solar.cpp` |
 | Kamioka 36.48°, LNGS 42.45°, SNOLAB 46.47° | hep-ph/9702343, fig. 3 |
 | SURF 44.356° | [arXiv:1707.02322](https://arxiv.org/abs/1707.02322), table 1 |
@@ -86,6 +87,7 @@ paper they reproduce (`PAPER_SETS` in `web/checks.js`).
 | ES, all flavours | SNOwGLoBES tables (from 0.5 MeV) | [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) `xscns/` |
 | νₑ ⁴⁰Ar CC | KLMV | Kolbe, Langanke, Martínez-Pinedo & Vogel, as tabulated by SNOwGLoBES (`xs_nue_Ar40_klmv.dat`) |
 | νₑ ⁴⁰Ar CC | MARLEY (SNOwGLoBES 2018 tables, zero below 5 MeV) | [arXiv:2101.11867](https://arxiv.org/abs/2101.11867); B(GT): Bhattacharya et al., PRC 80, 055501 (2009) (`marley`), ⁴⁰Ti β decay (`marley1`; SNOwGLoBES does not say which measurement) |
+| νₑ ⁴⁰Ar CC | Shell model, Kostensalo, Suhonen & Zuber (g_A = 1.00) | Phys. Rev. C 97, 034309 (2018), table I (open-access copy [jyx.jyu.fi/handle/123456789/57301](https://jyx.jyu.fi/handle/123456789/57301)), `reference/xsec/kostensalo2018.yaml`; 5–60 MeV in 5–10 MeV steps, interpolated log-log in E − Q (folded ⁸B: 1.725 against the paper's 1.777 × 10⁻⁴² cm²) |
 | νₑ ⁴⁰Ar CC | MARLEY 2.0.0 (HF-CRPA + measured B(GT)) | MARLEY 2.0.0 (31 July 2026), [doi:10.5281/zenodo.21880925](https://doi.org/10.5281/zenodo.21880925); Gardiner, PRC 103, 044604 (2021); B(GT): Bhattacharya 2009, Liu et al. PRC 58, 2677 (1998), Bhattacharya et al. PRC 58, 3677 (1998) |
 | νₑ ¹⁶O, ¹³C CC | SNOwGLoBES tables | SNOwGLoBES `xscns/` |
 | νₑ d CC, ν d NC | Nakamura et al., Nucl. Phys. A 707, 561 (2002), [nucl-th/0201062](https://arxiv.org/abs/nucl-th/0201062), table 1 (AV18, ±1 %) | `reference/xsec/nakamura2002.yaml`; SNOwGLoBES's `xs_nue_d.dat` is the same table from 5 MeV |
