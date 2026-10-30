@@ -105,7 +105,7 @@ sections and the uncertainty budget, in NumPy only.
 page crediting every experiment, model and tool used (`index.html`), and the
 calculator (`rates.html`): choose the result (rate or day-night asymmetry),
 oscillation parameters, solar model and flux components, site and Earth
-model, interaction (target, channel, cross-section model) and detector
+model (optionally at the real Earth–Sun distance: [cross-checks](docs/crosschecks.md#earthsun-distance)), interaction (target, channel, cross-section model) and detector
 (threshold, resolution, efficiency, exposure and detector uncertainties; a
 Super-K IV preset from its published values; or an imported smearing matrix
 and efficiency curve, read in the browser and never uploaded), each step with links

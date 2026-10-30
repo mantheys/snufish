@@ -404,3 +404,20 @@ def test_tables_follow_theta13():
         (d, n, _), (d0, n0, _) = (engine.combine(engine.component_totals(inputs, p, setup, osc), ["B8"]) for p in (tables, exact))
         assert d == pytest.approx(d0, rel=1e-3)
         assert 2 * (n - d) / (n + d) == pytest.approx(2 * (n0 - d0) / (n0 + d0), rel=0.025)  # tables: ~1 % at any theta13
+
+
+def test_orbit_scales_day_and_night(inputs):
+    params = engine.parameters(inputs, "juno_2025")
+    setup = engine.Setup(components=("B8",), detector="argon", site="SURF")
+    osc = engine.oscillation(params)
+    plain = engine.component_totals(inputs, Vacuum(), setup, osc)["B8"]
+    orbit = engine.component_totals(inputs, Vacuum(), setup.replace(orbit=True), osc)["B8"]
+    g_day, g_night = engine.orbital(inputs, setup.replace(orbit=True))
+    assert orbit["day"] == pytest.approx(g_day * plain["day"]) and orbit["night"] == pytest.approx(g_night * plain["night"])
+    reference = engine.totals(engine.observed_rates(inputs, Vacuum(), setup.replace(orbit=True), osc))["B8"]
+    assert reference["day"] == pytest.approx(orbit["day"], rel=1e-9)
+    # without matter effects the whole asymmetry is the Earth-Sun distance's: ~0.9 % at SURF
+    adn = engine.quantity_value("adn", "day", orbit["day"], orbit["night"])
+    assert adn == pytest.approx(2 * (g_night - g_day) / (g_night + g_day)) and 0.008 < adn < 0.01
+    with pytest.raises(ValueError, match="Earth-Sun distance"):
+        engine.check(inputs, setup.replace(orbit=True), "ratio")

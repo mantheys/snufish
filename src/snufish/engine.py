@@ -187,6 +187,9 @@ class Setup:
     normalisation_error: float = 0.0    # and on the rate (efficiencies, fiducial volume, cuts...)
     exposure: float = None          # kton-years, for the statistical uncertainty
     profile_model: str = None       # solar model of the day fractions, if not solar_model
+    orbit: bool = False             # day and night rates times the site's mean (1 AU / R)^2 over its days or nights
+                                    # (exposure.orbital_factors); False: at 1 AU, the convention of published A_DN
+                                    # (experiments correct each event for the Earth-Sun distance)
 
     def replace(self, **changes):
         return replace(self, **changes)
@@ -248,6 +251,12 @@ def check(inputs, setup, quantity="rate"):
             raise ValueError("a smearing matrix in neutrino energy applies to CC channels only")
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
+    if setup.orbit:
+        if quantity == "ratio":
+            raise ValueError("a rate over the rate without oscillations does not depend on the Earth-Sun distance; "
+                             "leave orbit off")
+        if "orbit_day" not in inputs["sites"][setup.site]:
+            raise ValueError("these inputs have no orbital factors: rebuild them (snufish export-app --inputs-only)")
     if setup.exposure is not None and setup.exposure <= 0:
         raise ValueError("the exposure must be > 0 (or None for no statistical uncertainty)")
 
@@ -414,6 +423,15 @@ def _response(inputs, setup, edges):
     return cache[key]
 
 
+def orbital(inputs, setup):
+    """(day, night) factors of the rates: the site's mean (1 AU / R)^2 over its
+    days and nights with ``setup.orbit``, else (1, 1)."""
+    if not setup.orbit:
+        return 1.0, 1.0
+    site = inputs["sites"][setup.site]
+    return site["orbit_day"], site["orbit_night"]
+
+
 def survival(inputs, probabilities, setup, osc, night=True):
     """{component: (P_ee by day, P_ee by night or None)} at the component's energies."""
     U2 = np.abs(pmns(osc)) ** 2
@@ -458,13 +476,14 @@ def observed_rates(inputs, probabilities, setup, osc, night=True):
     edges, _ = observed_edges(setup.threshold)
     matrix, acceptance = _response(inputs, setup, edges)
     seconds, targets = inputs["seconds_per_year"], _targets(inputs, setup)
+    g_day, g_night = orbital(inputs, setup)
     out = {}
     for c, (pee_day, pee_night) in survival(inputs, probabilities, setup, osc, night).items():
         kind, energy, weight = inputs.components[c]
         scale = targets * inputs.flux(setup.solar_model, c, setup.b8_flux) * seconds
         kernels = _kernels(inputs, setup, c, edges)
 
-        def spectrum(pee):
+        def spectrum(pee, g):
             if pee is None:
                 return None
             if is_nc(setup):
@@ -474,9 +493,9 @@ def observed_rates(inputs, probabilities, setup, osc, night=True):
                 true = (q * pee) @ kernels[0] + (q * (1 - pee)) @ kernels[1]
             else:
                 true = _visible(inputs, setup, kind, energy, scale * weight * pee * kernels, edges)
-            return (true @ matrix) * acceptance
+            return g * (true @ matrix) * acceptance
 
-        out[c] = {"day": spectrum(pee_day), "night": spectrum(pee_night)}
+        out[c] = {"day": spectrum(pee_day, g_day), "night": spectrum(pee_night, g_night)}
     return out
 
 
@@ -512,6 +531,7 @@ def _prepared(inputs, setup, component):
 
 
 def _fast(inputs, probabilities, setup, osc, night, spectra):
+    g_day, g_night = orbital(inputs, setup)
     out = {}
     for c, peeses in survival(inputs, probabilities, setup, osc, night).items():
         kind, energy, weight = inputs.components[c]
@@ -534,7 +554,8 @@ def _fast(inputs, probabilities, setup, osc, night, spectra):
             smeared = true if prep["identity"] else true @ prep["matrix"]
             return rebin(smeared * prep["acceptance"], prep["edges"], prep["display"])
 
-        out[c] = {"day": value(peeses[0]), "night": value(peeses[1])}
+        day, nite = value(peeses[0]), value(peeses[1])
+        out[c] = {"day": day if day is None else g_day * day, "night": nite if nite is None else g_night * nite}
         if not spectra:  # without oscillations (every neutrino a nu_e): the denominator of "ratio"
             out[c]["ref"] = value(np.ones_like(peeses[0]))
     return out

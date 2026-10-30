@@ -48,6 +48,31 @@ the zenith-angle shape by energy bin; SNUfish's is the plain rate asymmetry, ~2.
 | SNO 1109.0763 | daytime P_ee(10 MeV) | 0.317 ± 0.018 | 0.326 | +0.5σ |
 | Borexino 1709.00756 | ⁸B rate above 3.2 MeV, B16-GS98 flux (cpd/100 t) | 0.223 ± 0.016 | 0.216 | −0.4σ |
 
+## Earth–Sun distance
+
+Published day-night asymmetries are at 1 AU: experiments correct each event for the Earth–Sun distance. The flux
+at the detector is not, and because a northern site's longest nights fall near perihelion, the eccentricity alone
+makes the night flux larger. With **include the Earth–Sun distance** (`Setup(orbit=True)`), day and night rates are
+scaled by the mean (1 AU/R)² over the site's days and nights (`exposure.orbital_factors`: a Kepler orbit with J2000
+elements, sampled over a year). Han et al. compute the same effect from an ephemeris
+(arXiv:2607.24421, table 7.1: their flux asymmetry minus their survival-probability asymmetry):
+
+| Site | Han et al. (pp) | SNUfish (pp) |
+|---|---|---|
+| Jiangmen (JUNO) | 0.347 | 0.359 |
+| Kamioka | 0.645 | 0.659 |
+| LNGS | 0.808 | 0.821 |
+| SURF | 0.867 | 0.880 |
+| SNOLAB | 0.939 | 0.951 |
+
+SNUfish is 0.012–0.014 pp above at every site, a common offset not yet explained (Han et al. use the 2026 ephemeris
+and their survival-probability asymmetry is itself weighted by (1 AU/R)²). For the ⁸B ES rate above 3.49 MeV
+(B16-GS98, NuFIT 6.0, PREM, BKS, perfect resolution), the term takes A_DN from 1.54 % to 1.90 % at Jiangmen, 1.51 %
+to 2.16 % at Kamioka and 1.46 % to 2.34 % at SURF: +23 to +60 % of the oscillation-only asymmetry. Left out:
+nights near perihelion are also deeper (more core crossings); weighting the nadir exposure by (1 AU/R)² changes
+A_DN by +0.05 % (Jiangmen) to +0.14 % (SURF) of itself. The 3D Earth (Han et al.: up to 0.2 pp, ~8 % of A_DN at
+CallioLab, site dependent) is not modelled: SNUfish's Earth models are radial (PREM variants).
+
 ## Found by these checks
 
 - **θ13 in the app tables.** The interpolation tables are computed at the default θ13 but were fed every θ13 the
