@@ -199,6 +199,7 @@ function readSetup() {
     efficiency_table: efficiencyTable(),
     energy_scale_error: number("unc-scale") / 100, resolution_error: number("unc-res") / 100,
     normalisation_error: number("unc-norm") / 100, exposure: exposure(),
+    orbit: $("orbit").checked && !$("orbit").disabled,
   });
 }
 
@@ -243,6 +244,13 @@ function sync() {
   $("unit-row").hidden = radio("quantity") !== "rate";
   const night = engine.needsNight(radio("quantity"), radio("period"));
   $("site").disabled = $("earth").disabled = !night;
+  $("orbit").disabled = !night || radio("quantity") === "ratio";
+  const g = d.sites[$("site").value] || {};
+  $("orbit-note").textContent = $("orbit").disabled ? ""
+    : g.orbit_day === undefined ? "These tables have no orbital factors (rebuild them with snufish export-app --inputs-only)."
+    : $("orbit").checked
+      ? `Rates at the real Earth–Sun distance: × ${g.orbit_day.toFixed(4)} by day, × ${g.orbit_night.toFixed(4)} by night at ${$("site").value} (mean (1 AU/R)² over its days and nights). This adds ${(200 * (g.orbit_night - g.orbit_day) / (g.orbit_night + g.orbit_day)).toFixed(2)} percentage points to the day-night asymmetry.`
+      : "Off: fluxes at 1 AU, the convention of published day-night asymmetries (experiments correct each event for the Earth–Sun distance).";
   $("earth-note").textContent = night
     ? "Neutrinos cross the Earth at night; the site's latitude sets the path lengths through it."
     : "Not used: daytime neutrinos do not cross the Earth. Choose a night or annual rate, or the day-night asymmetry.";
@@ -270,6 +278,7 @@ function saveHash() {
   for (const [id, key] of Object.entries(KEYS)) if ($(id).value) p.set(key, $(id).value);
   for (const [name, key] of Object.entries(RADIOS)) p.set(key, radio(name));
   p.set("components", readSetup().components.join(","));
+  if ($("orbit").checked) p.set("orbit", "1");
   history.replaceState(null, "", `#${p}`);
 }
 
@@ -282,6 +291,7 @@ function loadHash() {
   if (p.has("channel")) { $("channel").value = p.get("channel"); sync(); }
   for (const [id, key] of Object.entries(KEYS)) if (p.has(key) && id !== "detector" && id !== "channel") $(id).value = p.get(key);
   for (const [name, key] of Object.entries(RADIOS)) if (p.has(key)) setRadio(name, p.get(key));
+  $("orbit").checked = p.get("orbit") === "1";
   if (p.has("components")) {
     const chosen = p.get("components").split(",");
     document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = chosen.includes(x.value); });
@@ -739,6 +749,7 @@ function applyValues(values) {
     if (["detector", "channel"].includes(id)) continue;
     if (id === "components") document.querySelectorAll('input[name="components"]').forEach((x) => { x.checked = v.includes(x.value); });
     else if (id === "quantity" || id === "period" || id === "b8" || id === "es") setRadio(id, v);
+    else if (id === "orbit") $(id).checked = v;
     else $(id).value = v;
   }
 }
@@ -746,7 +757,7 @@ function applyValues(values) {
 // every field a check may leave untouched, at its default: a check sets the whole page
 const CHECK_BASE = { set: "nufit60_global", solar: "b23_gs98", b8: "model", es: "bks", earth: "prem_full", "res-model": "quadrature",
                      "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, "eff-width": 0.5, mass: "", years: "",
-                     "unc-scale": 0, "unc-res": 0, "unc-norm": 0, quantity: "rate", period: "annual", unit: "kt" };
+                     "unc-scale": 0, "unc-res": 0, "unc-norm": 0, quantity: "rate", period: "annual", unit: "kt", orbit: false };
 const STEP5 = ["threshold", "res-model", "res-a", "res-b", "eff-model", "eff", "eff-e50", "eff-width", "mass", "years", "unc-scale", "unc-res", "unc-norm"];
 
 function applyCheck(id) {

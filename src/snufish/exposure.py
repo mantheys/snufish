@@ -8,6 +8,10 @@ integrable log singularities at
 eta = |latitude - i| and latitude + i, so averages over a nadir grid use the
 exposure integrated over each grid cell (`cell_weights`), not W sampled at
 the grid points.
+
+W is an annual average at a fixed Earth-Sun distance. `orbital_factors`
+gives the mean (1 AU / R)^2 over a site's days and nights, by which a
+rate computed at 1 AU is scaled when the Earth-Sun distance is included.
 """
 
 import functools
@@ -73,6 +77,43 @@ def night_exposure(latitude, eta_lo, eta_hi):
     """Exposure between two nadir angles (radians)."""
     eta, cumulative = _cumulative(float(latitude))
     return float(np.diff(np.interp([eta_lo, eta_hi], eta, cumulative))[0])
+
+
+# Earth's orbit, J2000 mean elements (Simon et al. 1994, A&A 282, 663; Meeus, Astronomical Algorithms, ch. 25)
+ECCENTRICITY = 0.0167086
+PERIHELION_LONGITUDE = np.radians(102.93735)  # of the Earth; the Sun's longitude at perihelion is 180 deg more
+EARTH_RADIUS_AU = 6371.0 / 1.495978707e8
+
+
+@functools.lru_cache(maxsize=32)
+def orbital_factors(latitude, n=20000):
+    """(g_day, g_night): the mean of g = (1 AU / R)^2 over the site's daytime and
+    over its night in a year, R the detector-Sun distance (Kepler orbit, sampled
+    uniformly in time; "night": the Sun below the horizon, as in W). A flux
+    quoted at 1 AU is g times larger at distance R. Northern sites have their
+    longest nights near perihelion (early January), so g_night > g_day there.
+    The detector is R_E cos(zenith) nearer the Sun than the Earth's centre
+    (by day; farther by night): g (1 + 2 R_E cos(zenith) / R), -0.009 pp on
+    A_DN. The nights near perihelion are also deeper (more core crossings);
+    that reweighting of W changes A_DN by < 0.2 % of itself and is left out."""
+    e, lat = ECCENTRICITY, float(latitude)
+    mean_anomaly = 2 * np.pi * (np.arange(n) + 0.5) / n
+    eccentric = mean_anomaly.copy()
+    for _ in range(20):
+        eccentric = mean_anomaly + e * np.sin(eccentric)
+    true_anomaly = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(eccentric / 2), np.sqrt(1 - e) * np.cos(eccentric / 2))
+    distance = 1 - e * np.cos(eccentric)  # AU
+    g = distance ** -2
+    declination = np.arcsin(np.sin(INCLINATION) * np.sin(true_anomaly + PERIHELION_LONGITUDE + np.pi))
+    half_day = np.arccos(np.clip(-np.tan(lat) * np.tan(declination), -1, 1))  # hour angle of sunset
+    day = half_day / np.pi  # fraction of each day in daylight
+    # mean cos(zenith) = a + b cos(hour angle) over the day and over the night
+    a, b = np.sin(lat) * np.sin(declination), np.cos(lat) * np.cos(declination)
+    zenith_day = np.where(day > 0, a + b * np.sin(half_day) / np.maximum(half_day, 1e-12), 0.0)
+    zenith_night = np.where(day < 1, a - b * np.sin(half_day) / np.maximum(np.pi - half_day, 1e-12), 0.0)
+    parallax = 2 * EARTH_RADIUS_AU / distance
+    g_day, g_night = g * (1 + parallax * zenith_day), g * (1 + parallax * zenith_night)
+    return float(np.sum(g_day * day) / np.sum(day)), float(np.sum(g_night * (1 - day)) / np.sum(1 - day))
 
 
 def cell_weights(cos_nadir, latitude):

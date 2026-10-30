@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from .exposure import cell_weights
+from .exposure import cell_weights, orbital_factors
 from .fluxes import components
 from .paths import build_dir, repo_root
 from .reference.radiative import ratio_table
@@ -153,7 +153,9 @@ def collect_inputs():
         "es_radiative_ratio": ratio,
         "es_bks": ratio_table(load_spec("B4_xsec")["constants"]),
         "earth_models": list(b3["earth_models"]),
-        "sites": b3["sites"],
+        "sites": {site: {**info, **dict(zip(("orbit_day", "orbit_night"),
+                                            orbital_factors(np.radians(info["latitude_deg"]))))}
+                  for site, info in b3["sites"].items()},
         "parameter_sets": _yaml("reference/oscillation/parameter_sets.yaml"),
         "measurements": _yaml("reference/measurements/solar.yaml"),
         "efficiency_curves": efficiency_curves(),
