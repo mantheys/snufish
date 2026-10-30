@@ -99,7 +99,11 @@ def collect_inputs():
                     "composition": m["composition"], "reference": m["reference"], "fluxes": m["fluxes"],
                     "flux_uncertainty": m.get("flux_uncertainty"), "flux_correlation": m.get("flux_correlation")}
              for name, m in models().items()}
-    sigma = pd.read_parquet(build_dir() / "B4_Sigma.parquet")
+    sigma_path = build_dir() / "B4_Sigma.parquet"
+    if not sigma_path.exists():
+        from .build import build
+        build("B4_xsec", out_dir=build_dir(), echo=lambda *_: None)
+    sigma = pd.read_parquet(sigma_path)
     xsec = {}
     for row in sigma[(sigma.Tool == "snowglobes") & sigma.Channel.str.startswith("cc_")].itertuples():
         # NaN: not provided by the model at that energy; counted as zero (a lower bound)
