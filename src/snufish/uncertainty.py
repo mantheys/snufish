@@ -22,7 +22,6 @@ threshold for ES, no detector response) and the ES day-night asymmetry.
 
 import functools
 
-import numpy as np
 import pandas as pd
 
 from . import engine

@@ -13,8 +13,9 @@ requires-python = ">=3.10"
 dependencies = ["numpy", "pandas", "pyarrow", "pyyaml", "scipy"]
 
 [project.optional-dependencies]
-plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git"]
-dev = ["pytest"]
+# plotipus pinned to a commit, so the plots CI makes are reproducible; bump it deliberately
+plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git@cb57f98adf6c1e6896948e62aba2c28c1970da60"]
+dev = ["pytest", "ruff==0.17.3"]
 
 [project.scripts]
 snufish = "snufish.cli:main"
@@ -24,3 +25,16 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 150
+extend-exclude = ["contributions/nufast-earth/scripts/NuFast-Earth"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = [
+    "B023",  # closures in loops are called within the same iteration (build, engine, sections)
+    "B905",  # zip(strict=) on paired grids adds noise; the arrays are built together
+    "E731",  # short lambdas for one-line callbacks
+    "E741",  # physics names (l, I) follow the papers' notation
+]

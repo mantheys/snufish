@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from snufish.contribution import load_contribution, validate, write_contribution
+from snufish.contribution import load_contribution, validate
 from snufish.spec import load_spec
 
 ROOT = Path(__file__).resolve().parents[1]
