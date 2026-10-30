@@ -38,6 +38,7 @@ for (const c of fixtures.cases) {
   const inputs = c.inject ? new engine.Inputs({ ...plain.data, xsec: { ...plain.data.xsec, cc_nue_ar40: { ...plain.data.xsec.cc_nue_ar40, ...c.inject.xsec } },
                                                 xsec_levels: c.inject.xsec_levels }) : plain;
   const setup = engine.makeSetup(c.setup), params = c.params;
+  if (c.electron !== null) setup.smearing_table = engine.electronSmearing(inputs, setup.channel, setup.xsec_model, c.electron);
   const given = { osc: c.draws.osc, flux: c.draws.flux, noise: c.draws.noise };
   const f = engine.fluxSummary(inputs, tables, setup, engine.oscillation(params));
   close(f.total, c.flux.total, `${c.name} flux`); close(f.nue_day, c.flux.nue_day, `${c.name} nue fraction`);

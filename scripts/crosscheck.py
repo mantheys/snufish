@@ -145,6 +145,39 @@ def main():
     row("SNO 1109.0763 tab. VII", "P_ee(10 MeV), day", 0.317, float(np.interp(10.0, energy, pee)), "",
         "measured ±0.018; NuFIT 6.0 here", "{:.3f}")
 
+    # ---- DUNE far detector (predictions): νe CC on 40Ar counting the electron alone (gammas undetected)
+    marley = "ar40_marley2_bhattacharya2009"
+    electron = engine.electron_smearing(inputs, "cc_nue_ar40", marley, 0.07)
+    argon = dict(components=("B8",), b8_flux="sno_nc", detector="argon", site="SURF", period="annual")
+    cc = dict(argon, channel="cc_nue_ar40", xsec_model=marley, smearing_table=electron)
+    # Capozzi, Li, Zhu & Beacom (arXiv:1808.08232): 100 kt yr, 7 %, counts in/outside a 40° cone holding 81/88 %
+    o = osc(sin2_theta12=0.308, dm2_21_eV2=4.85e-5)
+    d, n, _ = totals(engine.Setup(threshold=5.0, **cc), o)
+    row("Capozzi 1808.08232", "DUNE 8B CC events, T > 5 MeV, 100 kt yr", 9.9e4 / 0.88, 50 * (d + n), "",
+        "9.9e4 outside the cone / 0.88", "{:.4g}")
+    d, n, _ = totals(engine.Setup(threshold=5.0, resolution_b=0.07, **dict(argon, channel="es")), o)
+    row("Capozzi 1808.08232", "DUNE 8B ES events, T > 5 MeV, 100 kt yr", 2.6e4 / 0.81, 50 * (d + n), "",
+        "2.6e4 inside the cone / 0.81", "{:.4g}")
+    d, n, _ = totals(engine.Setup(threshold=11.0, **dict(cc, components=("hep",))), o)
+    row("Capozzi 1808.08232", "DUNE hep CC events, T > 11 MeV, 100 kt yr", 150, 50 * (d + n), "",
+        "paper's hep flux 8.25e3, ours 7.95e3", "{:.4g}")
+    for earth in ("prem_full", "prem_four"):
+        d, n, _ = totals(engine.Setup(threshold=6.0, earth_model=earth, **cc), o)
+        row("Capozzi 1808.08232", f"DUNE CC A_DN, T > 6 MeV, {earth}", (3.04 - 3.29) / 3.165, -adn(d, n), "",
+            "from D = 3.04e4, N = 3.29e4; Earth model not given", "{:+.4f}")
+    # Hajjar, Nairat & Beacom (arXiv:2606.18347), table I: 20 kt yr, NuFIT 6.0, SNO flux, 7 %
+    d, n, _ = totals(engine.Setup(threshold=5.0, **cc), osc())
+    row("Hajjar 2606.18347 tab. I", "DUNE 8B CC events, T > 5 MeV, 20 kt yr", 21722, 10 * (d + n), "", "", "{:.5g}")
+    # Ioannisian, Smirnov & Wyler (arXiv:1702.06097), sec. IV: E_nu > 11 MeV (visible > 9.496 MeV, unsmeared)
+    above11 = dict(argon, channel="cc_nue_ar40", xsec_model=marley, threshold=11 - 1.504)
+    d, n, _ = totals(engine.Setup(**above11), osc(dm2_21_eV2=7.5e-5))
+    row("Ioannisian 1702.06097", "DUNE 8B CC events/yr, 40 kt, E_nu > 11 MeV", 27000, 20 * (d + n), "",
+        "paper: approximate cross section, parameters not stated", "{:.4g}")
+    for dm2, excess in ((7.5e-5, 0.04), (5.0e-5, 0.065)):
+        d, n, _ = totals(engine.Setup(**above11), osc(dm2_21_eV2=dm2))
+        row("Ioannisian 1702.06097", f"DUNE CC A_DN, E_nu > 11 MeV, Δm² {dm2 * 1e5:.1f}e-5", -excess / (1 + excess / 2),
+            -adn(d, n), "", f"'about {100 * excess:g} %' as N/D - 1", "{:+.4f}")
+
     width = max(len(r[1]) for r in rows)
     print(f"{'source':24} {'quantity':{width}} {'published':>16} {'SNUfish':>16} {'diff':>8}  note")
     for source, what, pub, ours, rel, note in rows:

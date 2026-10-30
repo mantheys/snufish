@@ -283,6 +283,24 @@ def test_imported_response(inputs):
         engine.check(inputs, engine.Setup(smearing_table=shifted))
 
 
+def test_electron_alone_drops_the_level_energy(inputs):
+    osc = engine.oscillation(engine.parameters(inputs, "juno_2025"))
+    marley = "ar40_marley2_bhattacharya2009"
+    cc = dict(detector="argon", channel="cc_nue_ar40", xsec_model=marley)
+
+    def rate(**changes):
+        return engine.totals(engine.observed_rates(inputs, Vacuum(), engine.Setup(**cc, **changes), osc, False))["B8"]["day"]
+
+    table = engine.electron_smearing(inputs, "cc_nue_ar40", marley, 0.0)
+    xsec = inputs["xsec"]["cc_nue_ar40"][marley]
+    centres = 0.5 * (np.array(table.x[1:]) + np.array(table.x[:-1]))
+    open_ = np.interp(centres, xsec["energy"], xsec["sigma"], left=0.0) > 0
+    assert np.allclose(np.sum(table.matrix, axis=1)[open_], 1, atol=2e-3)   # every event goes somewhere
+    assert rate(smearing_table=table) == pytest.approx(rate(), rel=1e-3)
+    # the 2.3-6.1 MeV of the 40K level is lost: about half the events above 5 MeV remain
+    assert 0.4 < rate(threshold=5.0, smearing_table=table) / rate(threshold=5.0) < 0.6
+
+
 
 def with_levels(inputs, shifts):
     """A copy of the inputs with synthetic B(GT)-shifted tables of the default argon CC model."""

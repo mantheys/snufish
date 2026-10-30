@@ -2,7 +2,8 @@
 // docs/crosschecks.md): each entry sets every step to the paper's inputs and states what the paper found.
 // published.kind: "rate" (in published.unit, a key of the page's UNITS), "events" (in the exposure of step 5),
 // "ratio" (to the unoscillated rate) or "adn" (in the paper's convention (D - N)/mean, as a fraction).
-// arxiv: the paper (linked in the page); figure: the official figure recreated with it (official.js).
+// arxiv: the paper (linked in the page); figure: the official figure recreated with it (official.js);
+// electron: count the electron of a CC event alone (gammas undetected), with this fractional resolution.
 
 // the selector's groups: by result, the experiment in each label
 export const RESULTS = { rate: "Interaction rates", events: "Interaction rates", ratio: "Rate ÷ no oscillation (flux ratios)",
@@ -22,11 +23,20 @@ export const PAPER_SETS = {
   paper_sk_48: paper("Super-K 2023, Δm² 4.8 × 10⁻⁵", 0.305, 0.0220, 4.8e-5, "arXiv:2312.12907 sec. VIII"),
   paper_sk_61: paper("Super-K 2023 solar best fit, Δm² 6.1 × 10⁻⁵", 0.305, 0.0220, 6.1e-5, "arXiv:2312.12907 sec. VIII"),
   paper_sk_75: paper("Super-K 2023, Δm² 7.5 × 10⁻⁵", 0.305, 0.0220, 7.5e-5, "arXiv:2312.12907 sec. VIII"),
+  paper_dune_capozzi: paper("DUNE solar study 2019 (Capozzi et al.), Δm² 4.85 × 10⁻⁵", 0.308, 0.02195, 4.85e-5,
+                            "arXiv:1808.08232 (θ13 not stated: NuFIT 6.0's)"),
+  paper_dune_isw_50: paper("DUNE day-night study 2017 (Ioannisian et al.), Δm² 5.0 × 10⁻⁵", 0.307, 0.02195, 5.0e-5,
+                           "arXiv:1702.06097 (θ12, θ13 not stated: NuFIT 6.0's)"),
+  paper_dune_isw_75: paper("DUNE day-night study 2017 (Ioannisian et al.), Δm² 7.5 × 10⁻⁵", 0.307, 0.02195, 7.5e-5,
+                           "arXiv:1702.06097 (θ12, θ13 not stated: NuFIT 6.0's)"),
 };
 
 const JUNO = { preset: "juno" };
 const SK1 = { preset: "sk4", threshold: 4.49, quantity: "adn" };
 const SNO_ES = { preset: "sno_salt", channel: "es" };
+const DUNE = { preset: "dune", components: ["B8"] }, MARLEY = { xsec: "ar40_marley2_bhattacharya2009" };
+const CAPOZZI = { ...DUNE, set: "paper_dune_capozzi", threshold: 5, mass: 40, years: 2.5 }; // 100 kt yr, SNO NC 8B flux
+const CAPOZZI_SOURCE = { source: "Capozzi, Li, Zhu & Beacom, arXiv:1808.08232", arxiv: "1808.08232" };
 
 export const CHECKS = [
   { id: "bx_pp", group: "Borexino", label: "pp rate, B16-GS98 prediction",
@@ -87,4 +97,30 @@ export const CHECKS = [
     published: { kind: "ratio", value: 0.340, minus: 0.039, plus: 0.037, measured: true }, source: "SNO nucl-ex/0502021", arxiv: "nucl-ex/0502021", figure: "sno10" },
   { id: "sno_es_nc", group: "SNO", label: "φ_ES / φ_NC, salt phase (measured)", values: SNO_ES,
     published: { kind: "ratio", value: 2.35 / 4.94, minus: 0.06, plus: 0.06, measured: true }, source: "SNO nucl-ex/0502021 (2.35 / 4.94)", arxiv: "nucl-ex/0502021", figure: "sno10" },
+
+  { id: "dune_cc", group: "DUNE", label: "⁸B νe CC events, electron T > 5 MeV, 100 kt·yr (Capozzi et al. 2019)",
+    values: { ...CAPOZZI, ...MARLEY }, electron: 0.07, published: { kind: "events", value: 9.9e4 / 0.88 }, ...CAPOZZI_SOURCE,
+    note: "The electron alone (gammas undetected), 7 % resolution. The paper counts 9.9 × 10⁴ events outside a 40° cone that holds 88 % of them (both rounded): 1.125 × 10⁵ in all." },
+  { id: "dune_es", group: "DUNE", label: "⁸B ES events, T > 5 MeV, 100 kt·yr (Capozzi et al. 2019)",
+    values: { ...CAPOZZI, channel: "es", "res-b": 7 }, published: { kind: "events", value: 2.6e4 / 0.81 }, ...CAPOZZI_SOURCE,
+    note: "The paper counts 2.6 × 10⁴ events inside a 40° cone that holds 81 % of them (both rounded): 3.2 × 10⁴ in all." },
+  { id: "dune_hep", group: "DUNE", label: "hep νe CC events, electron T > 11 MeV, 100 kt·yr (Capozzi et al. 2019)",
+    values: { ...CAPOZZI, ...MARLEY, components: ["hep"], threshold: 11 }, electron: 0.07, published: { kind: "events", value: 150 },
+    ...CAPOZZI_SOURCE, note: "The paper's hep flux is 8.25 × 10³ cm⁻² s⁻¹, B23-GS98's here 7.95 × 10³ (3.8 % fewer events)." },
+  { id: "dune_adn", group: "DUNE", label: "A_DN, νe CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (Capozzi et al. 2019; not reproduced)",
+    values: { ...CAPOZZI, ...MARLEY, threshold: 6, quantity: "adn" }, electron: 0.07, published: { kind: "adn", value: (3.04 - 3.29) / 3.165 },
+    ...CAPOZZI_SOURCE, note: "From the paper's D = 3.04 × 10⁴ and N = 3.29 × 10⁴ signal events. At DUNE's energies the asymmetry follows the Earth's outer layers: −6.9 % with the ten-region PREM, −8.7 % with the four-region one (no crust); the paper does not describe its Earth model beyond citing its method (ref. 49)." },
+  { id: "dune_hnb", group: "DUNE", label: "⁸B νe CC events, electron T > 5 MeV, 20 kt·yr (Hajjar et al. 2026)",
+    values: { ...DUNE, ...MARLEY, threshold: 5, mass: 20, years: 1 }, electron: 0.07, published: { kind: "events", value: 21722 },
+    source: "Hajjar, Nairat & Beacom, arXiv:2606.18347, table I", arxiv: "2606.18347",
+    note: "NuFIT 6.0 and the SNO NC ⁸B flux (the paper takes the flux from SNO); the electron alone with 7 % resolution, over the (p,n) strengths MARLEY 2 also uses." },
+  { id: "dune_isw", group: "DUNE", label: "⁸B νe CC events with Eν > 11 MeV, 40 kt in a year (Ioannisian et al. 2017)",
+    values: { ...DUNE, set: "paper_dune_isw_75", threshold: 11 - 1.504, "res-b": 0, mass: 40, years: 1 },
+    published: { kind: "events", value: 27000 }, source: "Ioannisian, Smirnov & Wyler, arXiv:1702.06097, sec. IV", arxiv: "1702.06097",
+    note: "Eν > 11 MeV as visible energy above 11 − 1.504 MeV, unsmeared. The paper's cross section is an approximation (σ ∝ p_e E_e above 5.8 MeV) and its oscillation parameters are not stated." },
+  ...[["paper_dune_isw_75", "7.5", 0.04], ["paper_dune_isw_50", "5.0", 0.065]].map(([set, dm2, excess]) => ({
+    id: `dune_isw_adn_${dm2[0]}`, group: "DUNE", label: `A_DN, Eν > 11 MeV, Δm² ${dm2} × 10⁻⁵ (Ioannisian et al. 2017)`,
+    values: { ...DUNE, set, threshold: 11 - 1.504, "res-b": 0, quantity: "adn" }, published: { kind: "adn", value: -excess / (1 + excess / 2) },
+    source: "Ioannisian, Smirnov & Wyler, arXiv:1702.06097, sec. IV", arxiv: "1702.06097",
+    note: `The paper's "about ${100 * excess} %" night excess N/D − 1, here as (D − N)/mean.` })),
 ];

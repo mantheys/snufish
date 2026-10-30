@@ -11,6 +11,12 @@ paper's number next to SNUfish's (all but the BKS cross sections, SNO's φ_CC/φ
 where the paper prints the numbers for it, recomputes an official figure (Super-K figs. 49 and 52, JUNO fig. 3 and table 7,
 SNO fig. 10, Borexino table II) as a Plotly preview and a plotipus figure (web/official.js).
 
+The DUNE entries are predictions for a detector not yet built. Most count the electron of a νₑ CC event alone, its
+de-excitation gammas undetected, as the papers do: the template imports a smearing matrix in neutrino energy
+(`electron_smearing` in engine.py, `electronSmearing` in engine.js) that sends each ⁴⁰K level's share of the
+MARLEY 2 cross section to T = E_ν − Q − E_level with σ = 7 % T. The page's own visible energy, E_ν − Q, counts the
+gammas too and gives about twice the events above 5 MeV.
+
 ## Predictions: reproduced
 
 | Source | Quantity | Published | SNUfish | Δ |
@@ -23,17 +29,30 @@ SNO fig. 10, Borexino table II) as a Plotly preview and a plotipus figure (web/o
 | JUNO 2006.11760, tab. 7 | A_DN at Δm² 4.8 × 10⁻⁵ in 2–16, 5–16, 3–5, 2–3 MeV | −2.9, −3.4, −2.5, −2.1 % | −2.8, −3.4, −2.5, −2.1 % | within the table's rounding |
 | Super-K 2312.12907, §VIII | expected A_DN, SK-IV range, Δm² 6.1 × 10⁻⁵ | −2.38 % | −2.32 % | 2.5 % |
 | | expected A_DN, SK-I range, Δm² 6.1 and 7.5 × 10⁻⁵ | −2.42, −1.72 % | −2.37, −1.67 % | 2.3, 2.6 % |
+| Hajjar, Nairat & Beacom 2606.18347, tab. I | DUNE ⁸B νₑ CC events, electron T > 5 MeV, 20 kt·yr, NuFIT 6.0, SNO flux | 21,722 | 21,914 | +0.9 % |
+| Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE ⁸B νₑ CC events, T > 5 MeV, 100 kt·yr, Δm² 4.85 × 10⁻⁵ | 9.9 × 10⁴ / 0.88 = 1.125 × 10⁵ | 1.061 × 10⁵ | −5.7 % |
+| | DUNE ⁸B ES events, T > 5 MeV, 100 kt·yr | 2.6 × 10⁴ / 0.81 = 3.21 × 10⁴ | 3.41 × 10⁴ | +6.2 % |
+| | DUNE hep νₑ CC events, T > 11 MeV, 100 kt·yr | 150 | 155 | +3.3 % (hep flux 7.95 × 10³ here, 8.25 × 10³ there) |
+| Ioannisian, Smirnov & Wyler 1702.06097, sec. IV | DUNE ⁸B νₑ CC events with E_ν > 11 MeV, 40 kt, one year | 27,000 | 27,871 | +3.2 % |
+| | A_DN, E_ν > 11 MeV, Δm² 7.5 and 5.0 × 10⁻⁵ ("about 4 %" and "6.5 %" as N/D − 1) | −3.92, −6.30 % | −3.99, −6.83 % | 1.7, 8.5 % |
 
 JUNO writes the tree-level cross section with g₁ ≈ 0.73, g₂ ≈ 0.23 (sin²θ_W = 0.23). SNUfish's tree level uses
 0.23857 and comes out 2.2 % above JUNO's numbers; with radiative corrections (BKS, the default) it is within
 0.6 %: the two shifts happen to cancel. Super-K's expected asymmetries come from its amplitude fit, which weights
 the zenith-angle shape by energy bin; SNUfish's is the plain rate asymmetry, ~2.5 % smaller in every case.
 
+Capozzi et al. count events outside (CC) or inside (ES) a 40° cone around the Sun that holds 88 % and 81 % of them;
+the published number is their count divided by that fraction, and both are rounded, so the ±6 % (in opposite
+directions for CC and ES) is within what the paper lets one reconstruct. Ioannisian et al. use an approximate cross
+section (σ ∝ p_e E_e above 5.8 MeV) and do not state their oscillation parameters (NuFIT 6.0 here, with their Δm²);
+their asymmetries are quoted as "about".
+
 ## Not reproduced
 
 | Source | Quantity | Published | SNUfish | Note |
 |---|---|---|---|---|
 | Super-K 2312.12907, §VIII | expected A_DN, SK-I range, Δm² 4.8 × 10⁻⁵ | −3.84 % | −3.32 % (exact solvers: same) | 13.5 % off, while 6.1 and 7.5 × 10⁻⁵ agree to 2.5 %. θ13 = 0 gives −3.48 % (exact); not explained. The value is quoted "for reference" at the previously favoured Δm²; it may come from an older calculation. |
+| Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE A_DN, νₑ CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (from D = 3.04 × 10⁴, N = 3.29 × 10⁴) | −7.90 % | −6.87 % (four-region PREM: −8.75 %) | 13 % off. At DUNE's energies the asymmetry follows the Earth's outer layers: the ten-region PREM, with its crust, and the four-region one, without, bracket the paper's value. The paper describes its Earth treatment only through its ref. 49. |
 | JUNO 2006.11760, sec. 4.2 | expected A_DN, Δm² 7.5 × 10⁻⁵, 2–16 MeV | −1.6 % | −1.38 % | JUNO's own table 1 at this Δm² (1.44 day, 1.46 night) gives −1.4 % ± 0.7 % from rounding, consistent with SNUfish; the −1.6 % in the text is not. |
 
 ## Measurements: SNUfish's prediction

@@ -156,6 +156,39 @@ class Table:
         return hash(self.id)
 
 
+def electron_smearing(inputs, channel, xsec_model, b, step=0.1, top=25.0):
+    """Smearing matrix in neutrino energy (a Table) for the electron of a CC event alone,
+    its de-excitation gammas undetected: each nuclear level takes its share of the cross
+    section to T = E_nu - Q - E_level, smeared by a Gaussian of sigma = b T (b = 0: none).
+    The shares come from the model's measured levels (their 1-sigma tables: sigma is linear
+    in each strength); the rest of the cross section (unmeasured levels) goes to the highest."""
+    table = inputs["xsec"][channel]
+    energy, total = np.asarray(table[xsec_model]["energy"]), np.asarray(table[xsec_model]["sigma"])
+    levels = inputs["xsec_levels"][channel][xsec_model]
+    edges = np.round(np.arange(0.0, top + step / 2, step), 10)
+    centres = 0.5 * (edges[1:] + edges[:-1])
+    sigma = np.interp(centres, energy, total, left=0.0)
+    shares = [np.interp(centres, energy, (np.interp(energy, table[l["name"]]["energy"], table[l["name"]]["sigma"]) - total)
+                        * l["strength"] / l["error"], left=0.0) for l in levels]
+    shares = [np.clip(np.divide(s, sigma, out=np.zeros_like(s), where=sigma > 0), 0, None) for s in shares]
+    shares[-1] = shares[-1] + np.where(sigma > 0, np.clip(1 - sum(shares), 0, None), 0)
+    cdf = np.vectorize(lambda z: 0.5 * (1 + erf(z / np.sqrt(2))))
+    matrix = np.zeros((len(centres), len(edges) - 1))
+    for level, share in zip(levels, shares):
+        t = centres - inputs["visible_offset_MeV"][channel] - level["level_MeV"]
+        for i in np.flatnonzero((share > 0) & (t > 0)):
+            if b > 0:
+                c = cdf((edges - t[i]) / (b * t[i]))
+                row = np.diff(c)
+                row[0] += c[0]
+                row[-1] += 1 - c[-1]
+            else:
+                row = np.zeros(len(edges) - 1)
+                row[min(np.searchsorted(edges, t[i], side="right") - 1, len(row) - 1)] = 1
+            matrix[i] += share[i] * row
+    return Table(f"electron:{channel}:{xsec_model}:{b:g}", tuple(edges), tuple(edges), tuple(map(tuple, matrix)), "neutrino")
+
+
 @dataclass(frozen=True)
 class Setup:
     """Everything but the oscillation parameters."""

@@ -71,6 +71,10 @@ CASES = [
           smearing_table=dict(id="m2", x=[1.5, 5, 8, 12, 17], y=[0, 4, 8, 12, 20], true_axis="neutrino",
                               matrix=[[0.9, 0.1, 0, 0], [0.2, 0.7, 0.1, 0], [0, 0.2, 0.7, 0.1], [0, 0, 0.2, 0.8]])),
      "adn", "solar_global_2024", "full"),
+    ("argon CC, the electron alone (DUNE templates)", dict(detector="argon", channel="cc_nue_ar40", threshold=6.0,
+                                                           xsec_model="ar40_marley2_bhattacharya2009",
+                                                           electron_smearing=0.07, site="SURF"), "adn",
+     "nufit60_global", "full"),
     ("argon CC with synthetic measured B(GT) levels", dict(detector="argon", channel="cc_nue_ar40", threshold=4.0,
                                                             inject_levels=[1.013, 0.995, 1.021]),
      "rate", "juno_2025", "fluxes"),
@@ -113,9 +117,17 @@ def test_web_engine_matches_python(tmp_path):
                       "xsec_levels": {"cc_nue_ar40": {"default": [{"name": n} for n in names]}}}
             inputs = engine.Inputs(dict(plain.data, xsec={**plain.data["xsec"], "cc_nue_ar40": {
                 **plain.data["xsec"]["cc_nue_ar40"], **inject["xsec"]}}, xsec_levels=inject["xsec_levels"]))
+        if "electron_smearing" in changes:  # built by each engine from the measured levels
+            changes = dict(changes)
+            electron = engine.electron_smearing(inputs, changes["channel"], changes["xsec_model"],
+                                                changes.pop("electron_smearing"))
+        else:
+            electron = None
         imported = {k: engine.Table(v["id"], tuple(v["x"]), tuple(v["y"]), tuple(map(tuple, v.get("matrix", ()))),
                                   v.get("true_axis", "observed"))
                   for k, v in changes.items() if k.endswith("_table")}
+        if electron is not None:
+            imported["smearing_table"] = electron
         setup = engine.Setup(**{**changes, **imported, "components": tuple(changes.get("components", ("B8",))),
                                 "resolution_poly": tuple(changes.get("resolution_poly", ()))})
         params = engine.parameters(inputs, set_name)
@@ -132,7 +144,9 @@ def test_web_engine_matches_python(tmp_path):
         rows, _ = engine.budget(inputs, tables, setup, params, quantity, n=n, seed=seed, solar_range=solar_range)
         night = engine.needs_night(quantity, setup.period)
         spec = engine.spectra(inputs, tables, setup, params, n=n, seed=seed, night=night)
-        cases.append(dict(name=name, inject=inject, setup={**changes, "components": list(setup.components)}, quantity=quantity,
+        electron_b = None if electron is None else float(electron.id.rsplit(":", 1)[1])
+        cases.append(dict(name=name, inject=inject, electron=electron_b,
+                          setup={**changes, "components": list(setup.components)}, quantity=quantity,
                           params=params, solar_range=solar_range, rows=rows,
                           draws=dict(osc=osc_draws, flux=flux_draws, noise=noise),
                           flux=engine.flux_summary(inputs, tables, setup, engine.oscillation(params)),

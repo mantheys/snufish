@@ -323,6 +323,42 @@ function kernels(inputs, setup, component, edges) {
   return inputs.kernelCache.get(key);
 }
 
+export function electronSmearing(inputs, channel, xsecModel, b, step = 0.1, top = 25.0) {
+  // smearing matrix in neutrino energy for the electron of a CC event alone, its de-excitation gammas undetected:
+  // each nuclear level takes its share of the cross section to T = E_nu - Q - E_level, smeared by a Gaussian of
+  // sigma = b T (b = 0: none); shares from the model's measured levels (their 1-sigma tables: sigma is linear in
+  // each strength), the rest of the cross section (unmeasured levels) at the highest
+  const table = inputs.data.xsec[channel], { energy, sigma: total } = table[xsecModel];
+  const levels = inputs.data.xsec_levels[channel][xsecModel], q = inputs.data.visible_offset_MeV[channel];
+  const n = Math.round(top / step), edges = Array.from({ length: n + 1 }, (_, i) => +(i * step).toFixed(10));
+  const centres = edges.slice(0, -1).map((e, i) => 0.5 * (e + edges[i + 1]));
+  const sigma = centres.map((c) => interp(c, energy, total, 0));
+  const shares = levels.map((l) => {
+    const t = table[l.name], part = energy.map((e, k) => (interp(e, t.energy, t.sigma) - total[k]) * l.strength / l.error);
+    return centres.map((c, i) => (sigma[i] > 0 ? Math.max(interp(c, energy, part, 0) / sigma[i], 0) : 0));
+  });
+  const last = shares[shares.length - 1];
+  centres.forEach((_, i) => { if (sigma[i] > 0) last[i] += Math.max(1 - shares.reduce((s, x) => s + x[i], 0), 0); });
+  const cdf = (z) => 0.5 * (1 + erf(z / Math.SQRT2));
+  const matrix = centres.map(() => new Array(n).fill(0));
+  levels.forEach((level, j) => centres.forEach((c, i) => {
+    const t = c - q - level.level_MeV, w = shares[j][i];
+    if (!(w > 0 && t > 0)) return;
+    const row = matrix[i];
+    if (b > 0) {
+      const f = edges.map((e) => cdf((e - t) / (b * t)));
+      for (let m = 0; m < n; m++) row[m] += w * (f[m + 1] - f[m]);
+      row[0] += w * f[0]; row[n - 1] += w * (1 - f[n]);
+    } else {
+      let m = 0;
+      while (m < n - 1 && edges[m + 1] <= t) m++;
+      row[m] += w;
+    }
+  }));
+  return { id: `electron:${channel}:${xsecModel}:${b}`, x: edges, y: edges, matrix, true_axis: "neutrino",
+           name: "electron alone", summary: `electron kinetic energy alone over ${levels.length} nuclear levels, σ/T = ${+(100 * b).toFixed(3)} %` };
+}
+
 export function resolution(inputs, setup, energy) {
   // sigma (MeV) at an observed energy: sqrt((a sqrt(E))^2 + (b E)^2), or Super-K's c0 + c1 sqrt(E) + c2 E in
   // total electron energy (ES); times resolution_scale

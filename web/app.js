@@ -765,7 +765,13 @@ function applyCheck(id) {
     $("eff-model").value = "import";
     $("eff-info").textContent = `Energy window ${lo}–${hi} MeV (set by the published check).`;
   }
-  if (c.window || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
+  if (c.electron) { // the electron alone, gammas undetected: a matrix over the nuclear levels, in neutrino energy
+    app.imports.smearing = engine.electronSmearing(app.inputs, $("channel").value, $("xsec").value, c.electron);
+    $("res-model").value = "import";
+    $("smear-neutrino").checked = true;
+    $("smear-info").textContent = `The ${app.imports.smearing.summary} (set by the published check): T = Eν − Q − E_level.`;
+  }
+  if (c.window || c.electron || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
 }
 
 function refreshSources() {
