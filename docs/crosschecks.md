@@ -54,24 +54,50 @@ Published day-night asymmetries are at 1 AU: experiments correct each event for 
 at the detector is not, and because a northern site's longest nights fall near perihelion, the eccentricity alone
 makes the night flux larger. With **include the Earth–Sun distance** (`Setup(orbit=True)`), day and night rates are
 scaled by the mean (1 AU/R)² over the site's days and nights (`exposure.orbital_factors`: a Kepler orbit with J2000
-elements, sampled over a year). Han et al. compute the same effect from an ephemeris
+elements, sampled over a year, R from the detector: by night it is one Earth radius × cos(zenith) farther from the
+Sun, −0.009 pp). Han et al. compute the same effect from an ephemeris
 (arXiv:2607.24421, table 7.1: their flux asymmetry minus their survival-probability asymmetry):
 
 | Site | Han et al. (pp) | SNUfish (pp) |
 |---|---|---|
-| Jiangmen (JUNO) | 0.347 | 0.359 |
-| Kamioka | 0.645 | 0.659 |
-| LNGS | 0.808 | 0.821 |
-| SURF | 0.867 | 0.880 |
-| SNOLAB | 0.939 | 0.951 |
+| Jiangmen (JUNO) | 0.347 | 0.349 |
+| Kamioka | 0.645 | 0.650 |
+| LNGS | 0.808 | 0.813 |
+| SURF | 0.867 | 0.872 |
+| SNOLAB | 0.939 | 0.944 |
 
-SNUfish is 0.012–0.014 pp above at every site, a common offset not yet explained (Han et al. use the 2026 ephemeris
-and their survival-probability asymmetry is itself weighted by (1 AU/R)²). For the ⁸B ES rate above 3.49 MeV
+Measured from the Earth's centre, SNUfish was 0.012–0.014 pp above at every site; the detector's position (the
+diurnal parallax) accounts for 0.009 pp of it. The remaining 0.002–0.005 pp is below the precision of the table. For the ⁸B ES rate above 3.49 MeV
 (B16-GS98, NuFIT 6.0, PREM, BKS, perfect resolution), the term takes A_DN from 1.54 % to 1.90 % at Jiangmen, 1.51 %
 to 2.16 % at Kamioka and 1.46 % to 2.34 % at SURF: +23 to +60 % of the oscillation-only asymmetry. Left out:
 nights near perihelion are also deeper (more core crossings); weighting the nadir exposure by (1 AU/R)² changes
 A_DN by +0.05 % (Jiangmen) to +0.14 % (SURF) of itself. The 3D Earth (Han et al.: up to 0.2 pp, ~8 % of A_DN at
 CallioLab, site dependent) is not modelled: SNUfish's Earth models are radial (PREM variants).
+
+## Investigated
+
+- **PREM's ocean.** Full PREM ends in 3 km of water (1.02 g/cm³), and the B3 detector sits at the surface, in it.
+  The day-night asymmetry is most sensitive to the density just under the detector, so for continental sites
+  (all of SNUfish's) PREM under-predicts it. With rock (2.6 g/cm³) in place of the ocean (a driver variant in the
+  paper repository), Super-K's expected asymmetries go from 2.2–2.8 % above SNUfish's to −0.7 to +1.9 %:
+  SK-IV range at 6.1 × 10⁻⁵, −2.314 % → −2.392 % (Super-K: −2.38 %). DUNE's argon CC A_DN at SURF moves
+  by +4.9 % of itself. `prem_prob3` and `prem_four` have no crust at all (3.3 and 3.8 g/cm³ at the surface) and
+  give 14–33 % larger asymmetries: as a model range they measure the missing crust, not an Earth-model uncertainty.
+- **Super-K at 4.8 × 10⁻⁵.** Super-K's 2014 paper (arXiv:1312.5176) expects −3.3 % at Δm² = 4.8 × 10⁻⁵
+  (sin²θ12 = 0.342, sin²θ13 = 0.025, the same energy range); SNUfish gives −3.27 % there. The −3.84 % of the 2023
+  paper disagrees with Super-K's own earlier calculation and with the Δm² dependence of its other two values; of the
+  inputs SNUfish varies, only the crustless Earth models move A_DN by more than 4 % (mixing angles, θ13, crust,
+  resolution, solar model: < 4 %).
+- **JUNO at 7.5 × 10⁻⁵.** The −1.6 % of the text is not JUNO's table 1 (1.44 and 1.46 cpd/kt: −1.38 %, with
+  rounding anywhere from −0.7 % to −2.1 %); SNUfish agrees with the table (−1.37 %).
+- **SNOwGLoBES's MARLEY table has no Coulomb factor.** The allowed cross section from the (p,n) strengths of
+  Bhattacharya et al. 2009 reproduces `xs_nue_Ar40_marley.dat` (`ar40_marley`) to 4–6 % *without* the Fermi
+  function, and MARLEY's own calculation with the same strengths (`ar40_marley1_bhattacharya2009`) to 3 % *with*
+  it: the SNOwGLoBES table is 35–40 % low at 8–14 MeV. With MARLEY's calculation SNUfish reproduces DEAP-3600's
+  prediction (arXiv:2605.12769: ⟨σ⟩ = 1.67 × 10⁻⁴¹ cm² over E_ν = 12–14.5 MeV, 2.3 events): 1.60 × 10⁻⁴¹ cm²,
+  2.24 events. The "factor 5–7 at 5 MeV" between nuclear models comes from this table and from tables cut at
+  5 MeV; at the E_ν ≳ 9 MeV a 5 MeV DUNE threshold sees, the MARLEY calculations differ by 13 % (6.1–6.9 × 10⁻⁴² cm²
+  at 10 MeV).
 
 ## Found by these checks
 

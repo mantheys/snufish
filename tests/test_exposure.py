@@ -33,7 +33,7 @@ def test_zero_above_the_horizon():
 
 
 # Han et al., arXiv:2607.24421, table 7.1: A_DN of the flux minus A_DN of the survival probability
-# (percentage points), the part of the flux asymmetry due to the Earth-Sun distance (2026 ephemeris)
+# (percentage points), the part of the flux asymmetry due to the detector-Sun distance (2026 ephemeris)
 HAN_2026 = {36.48: 2.052 - 1.407, 42.45: 2.161 - 1.353, 44.356: 2.258 - 1.391, 46.47: 2.332 - 1.393,
             22.12: 1.824 - 1.477}
 
@@ -41,7 +41,7 @@ HAN_2026 = {36.48: 2.052 - 1.407, 42.45: 2.161 - 1.353, 44.356: 2.258 - 1.391, 4
 @pytest.mark.parametrize("latitude_deg", list(HAN_2026))
 def test_orbital_asymmetry_matches_ephemeris_calculation(latitude_deg):
     g_day, g_night = orbital_factors(np.radians(latitude_deg))
-    assert 200 * (g_night - g_day) / (g_night + g_day) == pytest.approx(HAN_2026[latitude_deg], abs=0.02)
+    assert 200 * (g_night - g_day) / (g_night + g_day) == pytest.approx(HAN_2026[latitude_deg], abs=0.007)
 
 
 def test_orbital_factors_flip_south():

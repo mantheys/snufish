@@ -32,7 +32,7 @@ export const SOURCES = {
   exposure: S("Night exposure per latitude: Lisi & Montanino 1997", "hep-ph/9702343"),
   surf: S("SURF latitude (DUNE far detector)", "arXiv:1707.02322"),
   orbit: S("Earth's orbit: J2000 mean elements, e = 0.0167086, perihelion longitude 102.94° (Simon et al. 1994, A&A 282, 663; Meeus, Astronomical Algorithms, ch. 25)"),
-  orbit_check: S("Earth–Sun distance in the day-night asymmetry, by site, from an ephemeris: Han et al. 2026, table 7.1 (SNUfish within 0.02 percentage points)", "arXiv:2607.24421"),
+  orbit_check: S("Earth–Sun distance in the day-night asymmetry, by site, from an ephemeris: Han et al. 2026, table 7.1 (SNUfish within 0.005 percentage points)", "arXiv:2607.24421"),
   borexino: S("Borexino Phase-II: pp, ⁷Be, pep rates, electron density, fiducial mass, exposure (table II, sec. II)", "arXiv:1707.09279"),
   sno: S("SNO combined analysis: D₂O, fiducial volume, thresholds, live times, energy scale", "arXiv:1109.0763"),
   dune_snb: S("DUNE supernova-burst paper: 40 kt LAr, 5 MeV detected-energy threshold, resolution ~20 % (MARLEY + LArSoft)", "arXiv:2008.06647"),
