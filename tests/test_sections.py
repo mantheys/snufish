@@ -27,3 +27,40 @@ def test_every_budget_source_has_a_step():
                    "40Ar nuclear model", "ES radiative corrections", "measured B(GT) (11 levels)"):
         assert _section(source) is not None
     assert _section("total sampled") is None
+
+
+def test_split_regions_thin_the_polynomial_regions_only():
+    from snufish import crust
+    from snufish.spec import load_spec
+
+    regions = crust.regions("prem_crust1", "Kamioka")
+    thin = crust.split(regions, 25.0)
+    assert thin[-1]["outer_radius_km"] == regions[-1]["outer_radius_km"]
+    assert {r["outer_radius_km"] for r in regions} <= {r["outer_radius_km"] for r in thin}  # borders kept
+    inner = 0.0
+    for r in thin:
+        if len(r["coefficients"]) > 1:
+            assert r["outer_radius_km"] - inner <= 25.0 + 1e-6
+        inner = r["outer_radius_km"]
+    shells = load_spec("B3_earth")["earth_models"]["prem_full"]["regions"][-3:]  # constant: left as they are
+    assert crust.split(shells, 1.0)[-2:] == shells[-2:]
+
+
+def test_b3_shows_its_approximations_on_night_observables():
+    import json
+    from pathlib import Path
+
+    import pytest
+
+    path = Path(__file__).resolve().parents[1] / "build" / "app" / "sections.json"
+    if not path.exists():
+        pytest.skip("run snufish export-sections")
+    from snufish.sections import EARTH_APPROXIMATIONS, SOLVER_APPROXIMATION
+
+    data = json.loads(path.read_text())["observables"]
+    adn = {r["source"]: r for r in data["water_es_adn"]["rows"] if r["section"] == "B3"}
+    assert set(adn) == {*EARTH_APPROXIMATIONS.values(), SOLVER_APPROXIMATION}
+    assert all(r["kind"] == "approximation" for r in adn.values())
+    central = data["water_es_adn"]["central"]
+    assert adn[EARTH_APPROXIMATIONS["prem_four"]]["shift"] / central > 0.2   # no crust: A_DN far too large
+    assert abs(adn[SOLVER_APPROXIMATION]["shift"] / central) < 0.02

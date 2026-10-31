@@ -11,7 +11,9 @@ profiles, B3 the Earth model, B4 the cross sections; the oscillation
 parameters are an input of B2 and B3 and are kept apart. B2 adds the
 approximations some solvers make about where neutrinos are produced
 (``TREATMENTS``): signed shifts of the observable, computed with the exact
-B2 solver (the tables hold each component's own profile only). With them,
+B2 solver (the tables hold each component's own profile only). B3 adds the
+simpler Earth models against the state of the art (``EARTH_APPROXIMATIONS``)
+and NuFast-Earth's mean density per region crossing against thin shells. With them,
 per benchmark, the curves its pages plot (solar profiles, P_ee per
 component, regeneration per Earth model) and the agreement between tools.
 """
@@ -56,6 +58,13 @@ SINGLE_DENSITY = 100 * 2 / 3
 TREATMENTS = {"B8": "every component on the 8B production profile",
               "centre": "every component produced at the centre",
               "single": f"one density for every component, n_e = {SINGLE_DENSITY:.1f} N_A/cm³ (NuFast-Earth's examples)"}
+# B3: the Earth models that are approximations of the state of the art (prem_crust1, the engine's default),
+# and the solver's: NuFast-Earth takes each region crossing's mean density; 25 km shells remove that
+EARTH_APPROXIMATIONS = {"prem_full": "PREM, ten regions (an average crust ending in ocean, not the local crust)",
+                        "prem_four": "PREM, four regions (no crust)",
+                        "prem_prob3": "four constant shells (Prob3++)"}
+SOLVER_APPROXIMATION = "mean density per region crossing (NuFast-Earth, the engine's night)"
+SPLIT_KM = 25.0
 ENERGIES = np.geomspace(0.1, 20.0, 120)
 RADII = np.round(np.arange(0.0, 0.4001, 0.0025), 6)
 
@@ -80,6 +89,21 @@ class ProductionTreatment:
 
     def night(self, osc, earth_model, site):
         return self._night.night(osc, earth_model, site)
+
+
+class ThinShellNight:
+    """The exact solvers, with the continuous Earth regions cut into SPLIT_KM shells for NuFast-Earth."""
+
+    def day(self, osc, solar_model, component, energies):
+        from .export import ExactProbabilities
+
+        return ExactProbabilities().day(osc, solar_model, component, energies)
+
+    def night(self, osc, earth_model, site):
+        from .export import site_latitude
+        from .scan import night_probabilities
+
+        return night_probabilities(osc, earth_model, site_latitude(site), site, split_km=SPLIT_KM)
 
 
 def _section(source):
@@ -127,6 +151,17 @@ def impacts(inputs, tables, params):
         for treatment, label in TREATMENTS.items():
             rows.append(dict(section="B2", source=label, kind="approximation",
                              shift=value(ProductionTreatment(treatment, tables)) - own))
+        if night:  # B3: the Earth enters through the night only
+            nominal = value(tables)
+            for model, label in EARTH_APPROXIMATIONS.items():
+                if model in inputs["earth_models"] and model != setup.earth_model:
+                    rows.append(dict(section="B3", source=label, kind="approximation",
+                                     shift=value(tables, setup.replace(earth_model=model)) - nominal))
+            if _has_driver():
+                from .export import ExactProbabilities
+
+                rows.append(dict(section="B3", source=SOLVER_APPROXIMATION, kind="approximation",
+                                 shift=value(ExactProbabilities()) - value(ThinShellNight())))
         out[name] = dict(label=o["label"], quantity=q, central=central, rows=rows)
     return out
 
@@ -169,6 +204,16 @@ def regeneration(inputs, tables, osc):
             F = tables.day(osc, SOLAR_MODEL, "B8", energy)
             out[earth][site] = (np.sum(F * P, axis=1) - F @ ue2).tolist()
     return dict(energy=np.asarray(energy).tolist(), models=out)
+
+
+def _has_driver():
+    from .scan import _nufast_driver
+
+    try:
+        _nufast_driver()
+    except FileNotFoundError:
+        return False
+    return True
 
 
 def _contribution(tool, benchmark):

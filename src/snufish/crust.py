@@ -9,6 +9,7 @@ where a chord enters the Earth, a 3D effect, is not included.
 """
 
 import functools
+import math
 import tempfile
 from pathlib import Path
 
@@ -57,11 +58,31 @@ def regions(earth_model, site):
     return out + shells[::-1]
 
 
-@functools.lru_cache(maxsize=None)
-def regions_file(earth_model, site):
+def split(regions_list, step_km):
+    """The regions with every non-constant one cut into shells of at most ``step_km`` (same polynomial):
+    NuFast-Earth takes each crossing's mean density, which converges to the continuous profile as the
+    shells thin (docs/crosschecks.md, NuFast-Earth on continuous density)."""
+    out, inner = [], 0.0
+    for region in regions_list:
+        outer = region["outer_radius_km"]
+        if len(region["coefficients"]) > 1:
+            n = max(1, math.ceil((outer - inner) / step_km))
+            out += [dict(region, outer_radius_km=round(inner + (outer - inner) * (k + 1) / n, 6)) for k in range(n)]
+        else:
+            out.append(region)
+        inner = outer
+    return out
+
+
+def write_regions(regions_list, name):
     """A file of the regions in the NuFast-Earth driver's `regions:` format (one per line: outer radius, Ye,
     coefficients)."""
-    path = Path(tempfile.gettempdir()) / f"snufish_{earth_model}_{site}.regions"
+    path = Path(tempfile.gettempdir()) / f"snufish_{name}.regions"
     path.write_text("".join(f"{r['outer_radius_km']} {r['ye']} {' '.join(map(str, r['coefficients']))}\n"
-                            for r in regions(earth_model, site)))
+                            for r in regions_list))
     return str(path)
+
+
+@functools.lru_cache(maxsize=None)
+def regions_file(earth_model, site):
+    return write_regions(regions(earth_model, site), f"{earth_model}_{site}")
