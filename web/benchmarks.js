@@ -391,6 +391,7 @@ async function discrepancies() {
   }
   let rows;
   try { rows = await page.templates; } catch (error) {
+    page.templates = null; // computed again the next time the tab opens
     note.textContent = `Could not compute the templates: ${error.message || error}`; note.classList.add("error"); return;
   }
   if (page.tab !== "discrepancies") return;
@@ -411,23 +412,24 @@ async function discrepancies() {
   $("discrepancy-scale").innerHTML = `<span class="key"><b>Reproduction</b> |Δ| ${HEAT[0]} % ${strip("reproduction")} ≥ ${HEAT[1]} %; pull 0 ${strip("reproduction")} ≥ 3σ</span>`
     + `<span class="key"><b>Update</b> |shift| ${HEAT[0]} % ${strip("update")} ≥ ${HEAT[1]} %; pull 0 ${strip("update")} ≥ 3σ</span>`;
   $("discrepancy-table").innerHTML = `<table><thead>`
-    + `<tr><th colspan="3"></th><th colspan="5" class="group reproduction">Reproduction: the paper's own assumptions</th>`
-    + `<th colspan="4" class="group update">Update: state-of-the-art models and measurements</th><th></th></tr>`
-    + `<tr><th>Experiment</th><th>Template</th><th>Unit</th>`
+    + `<tr><th colspan="2"></th><th colspan="5" class="group reproduction">Reproduction: the paper's own assumptions</th>`
+    + `<th colspan="4" class="group update">Update: state-of-the-art models and measurements</th></tr>`
+    + `<tr><th>Experiment</th><th>Template and source</th>`
     + `<th class="num">Published</th><th class="num" title="With the paper's inputs, as the calculator's template">SNUfish</th>`
     + `<th class="num" title="SNUfish ÷ published − 1: what SNUfish does not reproduce with the paper's assumptions">Δ</th>`
     + `<th class="num" title="Measurements: (SNUfish − measured) / its error">Pull</th><th>Paper's inputs</th>`
     + `<th>Replaced</th><th class="num" title="Every legacy input and approximation replaced by the state of the art">SNUfish</th>`
     + `<th class="num" title="State of the art ÷ paper's inputs − 1: what the newer models and measurements change">Shift</th>`
-    + `<th class="num" title="Measurements: the state-of-the-art prediction's pull">Pull</th><th>Source</th></tr></thead><tbody>${
+    + `<th class="num" title="Measurements: the state-of-the-art prediction's pull">Pull</th></tr></thead><tbody>${
     shown.map((r) => {
       const c = r.check, p = c.published, changed = r.flagged.some((f) => f.by);
       const published = `${paperNumber(p, p.value)}${p.measured ? ` <span class="error-bar">−${paperNumber(p, p.minus)} +${paperNumber(p, p.plus)}</span>` : ""}`;
       const points = p.kind === "adn" ? ` (${minus((100 * (r.ours - p.value)).toFixed(2))} points)` : "";
       const replaced = r.flagged.filter((f) => f.by);
       return `<tr><td>${c.group}</td><td class="template"><a href="rates.html#check=${encodeURIComponent(c.id)}" title="Open in the calculator">${c.label}</a>`
-        + `${c.note ? `<span class="note">${c.note}</span>` : ""}</td><td>${UNIT_OF[p.kind](p)}${p.measured ? " (measured)" : ""}</td>`
-        + `<td class="num start">${published}</td><td class="num">${paperNumber(p, r.ours)}</td>`
+        + `<a class="source" href="https://arxiv.org/abs/${c.arxiv}" target="_blank" rel="noopener">${c.source}</a>`
+        + `${c.note ? `<span class="note">${c.note}</span>` : ""}</td>`
+        + `<td class="num start">${published}<span class="unit">${UNIT_OF[p.kind](p)}${p.measured ? ", measured" : ""}</span></td><td class="num">${paperNumber(p, r.ours)}</td>`
         + `<td class="num" style="background:${shade("reproduction", heat(r.relative))}" title="SNUfish ÷ published − 1${points}">${signedPct(r.relative)}</td>`
         + pullCell("reproduction", r.pull)
         + `<td class="inputs">${inputsCell(r)}</td>`
@@ -435,8 +437,7 @@ async function discrepancies() {
         + (changed ? `<td class="num">${paperNumber(p, r.current)}</td>`
             + `<td class="num" style="background:${shade("update", heat(r.shift))}" title="State of the art ÷ published − 1: ${signedPct(r.currentRelative)}">${signedPct(r.shift)}</td>`
             + pullCell("update", r.currentPull)
-          : `<td class="num muted">same</td>${empty}${empty}`)
-        + `<td><a href="https://arxiv.org/abs/${c.arxiv}" target="_blank" rel="noopener">${c.source}</a></td></tr>`;
+          : `<td class="num muted">same</td>${empty}${empty}`) + `</tr>`;
     }).join("")}</tbody></table>`;
 
   const c = colours(), node = $("plot-discrepancies"), ordered = [...shown].reverse(); // the first row at the top
@@ -469,6 +470,7 @@ const RENDER = { overview: () => { matrix(); overviewPlot(); }, B1: b1, B2: b2, 
 function show() {
   const tab = (location.hash || "#overview").slice(1);
   page.tab = RENDER[tab] ? tab : "overview";
+  document.body.dataset.tab = page.tab; // the discrepancy table widens the page (style.css)
   document.querySelectorAll("[data-page]").forEach((el) => { el.hidden = el.dataset.page !== page.tab; });
   document.querySelectorAll("nav.tabs a").forEach((a) => a.classList.toggle("active", a.dataset.tab === page.tab));
   render();
