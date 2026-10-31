@@ -10,7 +10,8 @@ const DATA = "data/";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted build carries its own copy (build.py)
 const N_DRAWS = 400, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O",
-                   cc_nue_d: "νe CC on deuterium", nc_d: "NC on deuterium (all flavours)" };
+                   cc_nue_d: "νe CC on deuterium", nc_d: "NC on deuterium (all flavours)",
+                   nc_ar40: "NC on ⁴⁰Ar (all flavours; SNOwGLoBES table, in neutrino energy)" };
 const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
                     scintillator_lab: "Liquid scintillator: LAB (JUNO)", heavy_water: "Heavy water, D₂O (SNO)" };
 const XSEC = {

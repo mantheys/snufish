@@ -15,6 +15,8 @@ asymmetries and uncertainty budgets (command line and web page). The
 | [sources.md](sources.md) | find where every number comes from: solar models, spectra, oscillation parameters, Earth models, sites, cross sections, detectors, measurements, tools |
 | [usage.md](usage.md) | run the command line, call the engine from Python, make plots, use and deploy the calculator |
 | [crosschecks.md](crosschecks.md) | see which published numbers SNUfish reproduces, which it does not, and its predictions for measurements |
+| [dune-solar-tables.md](dune-solar-tables.md) | reproduce the CC, ES and NC rate tables of DUNE solar analyses in SOLAR's conventions |
+| [release.md](release.md) | make a citable release (prepared, not done) |
 | [status.md](status.md) | see what is missing, what is approximate and what is still open |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | contribute a tool's results |
 

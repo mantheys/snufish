@@ -38,7 +38,7 @@ def test_flux_shapes_normalised():
     spec = load_spec("B5_rates", root=ROOT)
     fluxes = components(spec)
     assert set(fluxes) == {"pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"}
-    for name, flux in fluxes.items():
+    for flux in fluxes.values():
         if len(flux) == 3:
             assert np.trapezoid(flux[2], flux[1]) == pytest.approx(1.0, rel=1e-9)
         else:

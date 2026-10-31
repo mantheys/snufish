@@ -9,7 +9,6 @@ cannot reproduce. Day-night asymmetries are given in each paper's convention.
 
 import argparse
 import sys
-from pathlib import Path
 
 import numpy as np
 

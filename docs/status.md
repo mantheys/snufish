@@ -28,9 +28,9 @@ an issue.
 |---|---|
 | nuSQuIDS | catalogue entry only (draft, fields `null`); no B2 or B3 contribution |
 | PEANUTS | catalogue entry only (draft, fields `null`); no contribution, although its data directory supplies the B16 and BS05 tables |
-| SNUfish reference | no repository URL in its catalogue entry until the repository is public |
+| SNUfish reference | repository URL in its catalogue entry; no DOI yet: the release files (CITATION.cff, .zenodo.json, docs/release.md) are prepared, no version is tagged or archived |
 | Full-chain rate tools other than SNOwGLoBES | none yet |
-| Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; no NC on ⁴⁰Ar or ¹⁶O |
+| Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E_ν only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
 | Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %); BKS and Marciano & Parsa bound it at the solar precision |
 | 3D Earth | `prem_crust1` puts the CRUST1.0 column of each site above PREM's Moho, but stays radial. Next: per night direction (the Sun's position over a year at the site's latitude and longitude), the chord's entry point and its CRUST1.0 column, solved with NuFast-Earth's single-trajectory mode, and a 3D mantle model; then a second current Earth model, and an Earth range. Until then the Earth range is empty (one state-of-the-art model) |
@@ -44,17 +44,22 @@ an issue.
 - **No correlations between oscillation parameters.** They are sampled
   independently: no source publishes them.
 - **No backgrounds.** Statistical errors are Poisson on the signal alone.
-- **Equal day and night exposure.** The annual rate is (D + N)/2 and the
-  statistics split the exposure in halves, at every latitude.
+- **Day and night exposure set by hand.** By default the annual rate is
+  (D + N)/2 and the statistics split the exposure in halves; `Setup.night_fraction`
+  sets another share (SOLAR: 0.507 at SURF, a constant of its configuration).
+  The share is not derived from the site's latitude, and the calculator
+  always uses halves.
 - **Earth–Sun distance optional, as day and night averages only.** By
   default fluxes are at 1 AU (the convention of published A_DN);
   `Setup(orbit=True)` scales day and night rates by the site's mean
   (1 AU/R)² ([crosschecks.md](crosschecks.md#earthsun-distance)). Not
   modelled: deeper nights near perihelion (< 0.2 % of A_DN), time-resolved
   seasonal spectra, and the 3D Earth (radial PREM variants only).
-- **PREM ends in 3 km of ocean.** The B3 detector sits in it, which
-  under-predicts A_DN at continental sites; a crust variant exists only in
-  an investigation driver ([crosschecks.md](crosschecks.md#investigated)).
+- **B3's Earth models end in PREM's 3 km of ocean.** The engine and the
+  calculator default to `prem_crust1` (the CRUST1.0 column of each site
+  above PREM's Moho, [crosschecks.md](crosschecks.md#local-crust)), but the
+  B3 benchmark has no crust variant: its detector sits in the ocean, which
+  shifts A_DN by −2.4 % to +3.8 % against the local crust at the five sites.
 - **Detector at the surface.** B3 sets the detector depth to 0.
 - **CC visible energy is E_ν − Q** with no neutron, binding or quenching
   losses; NC on deuterium deposits 6.25 MeV (capture on ²H in pure D₂O),
@@ -80,6 +85,20 @@ an issue.
 | JUNO preset | no energy-dependent fiducial volume, muon-veto dead time or non-linearity | calculator preset |
 
 ## Data to check
+
+- DUNE solar rate tables (thesis ch. 3, paper app. A;
+  [dune-solar-tables.md](dune-solar-tables.md)): SNOwGLoBES-style tables are reproduced with
+  `ar40_marley1_bhattacharya2009`, `nu_threshold`, `nc_ar40` and
+  `night_fraction`; the thesis's T_e > 8 and 10 MeV CC values (+16 %, −28 %)
+  and the paper's appendix A (CC 482, ES 141, NC 18.8) are not reproduced and
+  their generating script has not been found.
+- SOLAR's Earth density model: set in its NuFast-Earth Python binding, which
+  is outside its repository; `night_mode="solar"` matches its depth, latitude
+  and nadir PDF but not necessarily its Earth.
+- SOLAR's Sun: P_ee from production at one density, ρY_e = 90 g/cm³
+  (`rhoYe_sun`, "Prob3++ match"), against the ⁸B production profile here:
+  −0.6 % on the CC rate above E_ν = 5 MeV at Δm²₂₁ = 6 × 10⁻⁵. Not an option
+  in the engine.
 
 - Jiangmen latitude 22.12°: the JUNO paper gives 22° N; the hundredths are
   not yet checked against a source.
@@ -118,9 +137,12 @@ From [crosschecks.md](crosschecks.md):
 
 ## Housekeeping
 
-- CI runs the tests, validation, build and the `b1`, `b2`, `b3`, `b45`
-  plots. It does not build the NuFast-Earth driver, so the tests that need
-  it or the app tables (`test_engine.py` table tests, the scan,
-  `test_web_engine.py`) are skipped there, and `scan`, `budget` and
-  `export-app` are not exercised.
-- No release on PyPI; the package version is 0.1.0.
+- CI runs ruff, validation, build, the tests on Python 3.10 and 3.12 and
+  the `b1`, `b2`, `b3`, `b45` plots. It builds the NuFast-Earth driver and
+  the app tables (`export-app`, cached on the inputs and the code), so no
+  test is skipped, including `test_web_engine.py` (the page's engine against
+  the Python one). The `scan` and `budget` commands themselves are not run.
+- Pushes to `main` publish the page (`web/deploy.sh`) once lint and tests
+  pass. plotipus is pinned to a commit in `pyproject.toml`; the page serves
+  the wheel of that commit.
+- No release on PyPI; the package version is 0.1.0. A first citable release (v0.2.0) is prepared in docs/release.md, not tagged.

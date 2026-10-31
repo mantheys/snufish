@@ -1,0 +1,26 @@
+# Prepared for the first citable release (docs/release.md); fill in the ORCID and the DOI before tagging.
+cff-version: 1.2.0
+message: "If you use SNUfish, please cite the archived release you used (its Zenodo DOI)."
+title: "SNUfish: community benchmarks of solar neutrino tools"
+type: software
+authors:
+  - family-names: Manthey
+    given-names: Sergio
+    email: sergio.manthey@gmail.com
+    # orcid: https://orcid.org/XXXX-XXXX-XXXX-XXXX   (to fill in)
+    # affiliation: (to fill in)
+repository-code: "https://github.com/mantheys/snufish"
+url: "https://mantheys.github.io/snufish/"
+license: MIT
+version: 0.2.0
+# date-released: YYYY-MM-DD   (the tag date)
+# doi: 10.5281/zenodo.XXXXXXX (the version DOI Zenodo mints for the tag)
+keywords:
+  - solar neutrinos
+  - neutrino oscillations
+  - MSW effect
+  - day-night asymmetry
+  - benchmark
+  - SNOwGLoBES
+  - MARLEY
+  - DUNE

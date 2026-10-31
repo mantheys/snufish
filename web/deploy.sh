@@ -2,6 +2,7 @@
 # Publish the static page to GitHub Pages (https://mantheys.github.io/snufish/): builds build/site
 # from web/ and build/app (snufish export-app) and force-pushes it as the single commit of gh-pages.
 #     bash web/deploy.sh            # --plotipus etc. are passed to web/build.py
+# CI runs it on main after the tests (.github/workflows/ci.yml), with DEPLOY_REMOTE carrying its token.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
@@ -13,6 +14,6 @@ cp -r build/site/. "$SITE"
 git -C "$SITE" init -q -b gh-pages
 git -C "$SITE" add -A
 git -C "$SITE" commit -q -m "SNUfish static site, built from main@$(git rev-parse --short HEAD)"
-git -C "$SITE" push -q -f "$(git remote get-url origin)" gh-pages
+git -C "$SITE" push -q -f "${DEPLOY_REMOTE:-$(git remote get-url origin)}" gh-pages
 rm -rf "$SITE"
 echo "pushed; GitHub Pages rebuilds https://mantheys.github.io/snufish/ in about a minute"

@@ -1,19 +1,93 @@
 name: ci
 on: [push, pull_request]
+
 jobs:
-  validate-and-plot:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
+      - run: pip install ruff==0.17.3
+      - run: ruff check .
+
+  # The app tables (snufish export-app, ~6 min) and the NuFast-Earth driver, built once and shared: without
+  # them the table tests, the scan and the JS-against-Python test (test_web_engine.py) are skipped.
+  tables:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: true}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -e .
+      - id: cache                       # keyed before make, so the compiled drivers are not hashed
+        uses: actions/cache@v4
+        with:
+          path: build/app
+          key: app-${{ hashFiles('src/snufish/**', 'reference/**', 'benchmarks/**', 'contributions/**') }}
+      - run: make -C contributions/nufast-earth/scripts
+      - run: snufish build              # export-app reads build/data (B4 cross sections)
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: snufish export-app --out build/app
+      - run: snufish export-sections --tables build/app
+      - uses: actions/upload-artifact@v4
+        with: {name: app, path: build/app, retention-days: 7}
+
+  test:
+    needs: tables
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]    # the floor in pyproject.toml and the version the plots are made with
+    steps:
+      - uses: actions/checkout@v4
+        with: {submodules: true}
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "22"}
       - run: pip install -e ".[dev,plots]"
+      - run: make -C contributions/nufast-earth/scripts
+      - uses: actions/download-artifact@v4
+        with: {name: app, path: build/app}
       - run: snufish validate
       - run: snufish build              # the engine tests read build/data (B4 cross sections)
-      - run: pytest
-      - run: plotipus run b3 --jobs 4
-      - run: plotipus run b2 --jobs 4
-      - run: plotipus run b45 --jobs 4
-      - run: plotipus run b1 --jobs 4
-      - uses: actions/upload-artifact@v4
+      - run: pytest -rs
+      - if: matrix.python == '3.12'
+        run: |
+          plotipus run b3 --jobs 4
+          plotipus run b2 --jobs 4
+          plotipus run b45 --jobs 4
+          plotipus run b1 --jobs 4
+      - if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
         with: {name: plots, path: output/plots}
+
+  # Publishes https://mantheys.github.io/snufish/ from main once lint and tests pass (web/deploy.sh by hand
+  # does the same).
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    permissions: {contents: write}
+    concurrency: {group: pages, cancel-in-progress: true}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -e .
+      - name: plotipus checkout at the commit pinned in pyproject.toml (its wheel is served by the page)
+        run: |
+          rev=$(grep -o 'plotipus.git@[0-9a-f]*' pyproject.toml | cut -d@ -f2)
+          git clone -q https://github.com/mantheys/plotipus.git ../plotipus
+          git -C ../plotipus checkout -q "$rev"
+      - uses: actions/download-artifact@v4
+        with: {name: app, path: build/app}
+      - run: bash web/deploy.sh
+        env:
+          DEPLOY_REMOTE: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
