@@ -144,6 +144,26 @@ the ⁸B A_DN (B23-MB22m, JUNO 2025 parameters, exact solvers) by +1.5 % at Kami
 E_vis > 5 MeV), of itself. SURF's crust is 49 km thick and lighter than the PREM mantle it replaces; the
 others gain dense rock where PREM has ocean.
 
+## NuFast-Earth on continuous density
+
+NuFast-Earth replaces each crossing of a PREM region by the region's mean density along it. Against the B3
+reference for continuous density (fourth-order Magnus, converged to 4 × 10⁻⁷), P_iₑ is off by up to
+4 × 10⁻² through the core (cos η ≈ 0.95–1, `prem_four` and `prem_full`), while on constant shells
+(`prem_prob3`) NuFast-Earth agrees with the exact solution to 9 × 10⁻⁸. Night-averaged, the ⁸B A_DN
+(B16-GS98, B3 parameters, P_ee at the neutrino energy, as `B23_DayNight`):
+
+| Earth model, site | 5 MeV | 10 MeV | 15 MeV |
+|---|---|---|---|
+| `prem_crust1`, Kamioka | −0.68 % | −0.70 % | −1.88 % |
+| `prem_crust1`, SURF | −0.17 % | −1.27 % | −1.31 % |
+| `prem_full`, Kamioka | −0.80 % | −0.78 % | −1.93 % |
+| `prem_four`, SURF | +1.29 % | +0.90 % | +0.61 % |
+
+(NuFast-Earth / reference − 1.) The engine's night tables come from NuFast-Earth, so its A_DN carries this
+bias for the continuous models, including the default `prem_crust1`. Cutting each polynomial region into
+25 km shells in the regions file NuFast-Earth reads removes it (within 0.007 % of the reference at both
+sites, 4× the driver time; 10 km: 0.004 %), which also confirms the reference independently.
+
 ## Found by these checks
 
 - **θ13 in the app tables.** The interpolation tables are computed at the default θ13 but were fed every θ13 the

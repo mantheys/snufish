@@ -24,6 +24,7 @@ components: [pp, pep, hep, Be7, B8, N13, O15, F17]
 checks:
   production_normalisation_tolerance: 1.0e-6   # each profile integrates to 1
   density_decreasing_beyond: 0.05              # n_e falls monotonically outside the core
+  tail_jump_tolerance_log10: 0.01              # a fitted tail joins its table (|jump| in log10 n_e)
 
 # Open questions:
 # - Spectral shapes are shared by all models (B5); add the Ortiz et al. 8B shape

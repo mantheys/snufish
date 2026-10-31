@@ -13,6 +13,14 @@ from .spec import available_benchmarks, load_spec
 def cmd_validate(args):
     paths = args.paths or find_contributions(args.benchmark, args.extra)
     failed = 0
+    if not args.paths and args.benchmark in (None, "B1_ssm"):  # B1: the solar-model registry
+        from .contribution import validate_ssm
+
+        for model, problems in validate_ssm().items():
+            print(f"{'ok     ' if not problems else 'INVALID'} B1_ssm/{model}")
+            for problem in problems:
+                print(f"  - {problem}")
+            failed += bool(problems)
     for path in paths:
         problems = validate(load_contribution(path))
         print(f"{'ok     ' if not problems else 'INVALID'} {path}")
@@ -40,13 +48,16 @@ def _reference_records(spec):
     if spec.id == "B3_earth":
         from .reference import earth
 
-        variants = earth.exact_variants(spec)
-        return variants, "exact matrix exponential per constant-density segment", [
+        variants = earth.solved_variants(spec)
+        return variants, ("constant shells: exact matrix exponential per segment; continuous regions: fourth-order "
+                          f"commutator-free Magnus along the chord, {earth.CONVERGED_STEP_KM} km steps ending on "
+                          "every region border"), [
             r for variant in variants for grid in spec.grids for r in earth.solve_b3(spec, variant, grid)]
     if spec.id == "B4_xsec":
         from .reference import xsec
 
-        return ["default"], "tree-level SM nu-e elastic scattering, all recoil energies (no radiative corrections)", [
+        return ["default", "es_bks"], ("nu-e elastic scattering, all recoil energies: tree-level SM (default) and with "
+                                       "the BKS 1995 radiative corrections (es_bks)"), [
             r for grid in spec.grids for r in xsec.solve_b4(spec, grid)]
     from .reference import sun
 

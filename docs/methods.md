@@ -56,12 +56,25 @@ Earth is the column `U[:, i]`; after the chord its νₑ amplitude is
   P_iₑ = |(S_N ⋯ S_1 U)_eᵢ|².
 
 This is exact for piecewise-constant models (`prem_prob3`). For the
-polynomial models (`prem_four`, `prem_full`) the reference has no
-converged solution yet ([status.md](status.md)); NuFast-Earth is the only
-contribution there. The tests check the matter potential against its
+polynomial models (`prem_four`, `prem_full`) `chord_regions` cuts the
+chord at every region border and `probabilities_ie_regions` integrates
+each piece with the fourth-order commutator-free Magnus scheme (Blanes &
+Moan 2006): over a step h, with H₁, H₂ at the Gauss points
+t = ½ ∓ √3/6,
+
+  S = exp(−ih(α₁H₁ + α₂H₂)) exp(−ih(α₂H₁ + α₁H₂)),
+  α₁,₂ = (3 ∓ 2√3)/12,
+
+the right factor first. For constant density it is exactly the shell
+propagator. Steps of 6.25 km (`CONVERGED_STEP_KM`) give P_iₑ within
+4 × 10⁻⁷ of a 1.5625 km solution over 43 chords and the 39 exposure
+energies; the convergence is slowest at low energy, where the Δm²₃₁ mode
+oscillates over ~2 km. Independently, the exact solver on 1 km constant
+shells agrees to 3 × 10⁻⁶. The tests check the matter potential against its
 textbook value, chord lengths, the core-crossing threshold, unitarity, the
-vacuum limit at the horizon, independence of θ₂₃ and δ, and the
-two-flavour constant-density formula.
+vacuum limit at the horizon, independence of θ₂₃ and δ, the
+two-flavour constant-density formula, the Magnus scheme's exactness on
+constant shells, its order and its agreement with thin shells.
 
 ## Night exposure
 
@@ -155,8 +168,9 @@ engine's `_quadrature`), lines as points. Rates are per kiloton-year with
 the detector's targets per kt (B5 spec and `export.APP_DETECTORS`).
 
 The B5 build (`combine_rates`) folds in true neutrino energy with the B2
-reference daytime oscillations; the engine adds the night and detector
-response below.
+reference daytime oscillations, and with the B3 reference night excess of
+each site for `B5_DayNight` ([benchmarks.md](benchmarks.md#b5_rates-interaction-rates));
+the engine adds the detector response below.
 
 ## Observed energy
 

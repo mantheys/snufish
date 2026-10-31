@@ -194,3 +194,57 @@ def _check_b4(df, spec):
 
 
 BENCHMARK_CHECKS = {"B3_earth": _check_b3, "B2_sun": _check_b2, "B4_xsec": _check_b4}
+
+
+def validate_ssm(spec=None):
+    """B1 has no contributions: its checks run on the solar-model registry
+    (benchmarks/B1_ssm/models.yaml). Returns {model: [problems]}."""
+    from .solar import COMPONENTS, electron_density, models, table
+
+    spec = spec or load_spec("B1_ssm")
+    checks = spec["checks"]
+    out = {}
+    for name, model in models().items():
+        problems = []
+        flux = model["fluxes"]
+        missing = [c for c in COMPONENTS if c not in flux]
+        if missing:
+            problems.append(f"fluxes missing {missing}")
+        bad = [c for c in COMPONENTS if c in flux and not (np.isfinite(flux[c]) and flux[c] > 0)]
+        if bad:
+            problems.append(f"fluxes not positive and finite: {bad}")
+        errors = model.get("flux_uncertainty") or {}
+        bad = [c for c, e in errors.items() if not (np.isfinite(e) and e > 0)]
+        if bad:
+            problems.append(f"flux uncertainties not positive: {bad}")
+        if model.get("flux_correlation") is not None:
+            c = np.asarray(model["flux_correlation"], dtype=float)
+            if c.shape != (len(COMPONENTS), len(COMPONENTS)):
+                problems.append(f"flux correlation is {c.shape}, expected {len(COMPONENTS)} x {len(COMPONENTS)}")
+            elif not (np.allclose(c, c.T) and np.allclose(np.diag(c), 1.0) and np.abs(c).max() <= 1.0):
+                problems.append("flux correlation not symmetric with unit diagonal and |rho| <= 1")
+            elif np.linalg.eigvalsh(c).min() < 0:
+                problems.append(f"flux correlation not positive semi-definite (eigenvalue {np.linalg.eigvalsh(c).min():.2e})")
+
+        data = table(name)
+        r = data[:, 0]
+        for k, component in enumerate(COMPONENTS):
+            profile = data[:, 2 + k]
+            norm = np.trapezoid(profile, r)
+            if abs(norm - 1) > checks["production_normalisation_tolerance"]:
+                problems.append(f"{component} production profile integrates to {norm:.8f}")
+            if (profile < 0).any():
+                problems.append(f"{component} production profile negative at {(profile < 0).sum()} radii")
+        radius = np.linspace(checks["density_decreasing_beyond"], 0.9, 200)
+        log_ne = np.log10(electron_density(name, radius))
+        if not np.all(np.diff(log_ne) < 0):
+            where = radius[1:][np.diff(log_ne) >= 0]
+            problems.append(f"electron density not falling beyond r = {checks['density_decreasing_beyond']} "
+                            f"(first at r = {where[0]:.3f})")
+        end = r[-1]
+        if end < 0.9:  # the fitted tail must join the table
+            inside, outside = np.log10(electron_density(name, [end - 1e-4, end + 1e-4]))
+            if abs(outside - inside) > checks["tail_jump_tolerance_log10"]:
+                problems.append(f"density tail jumps by {outside - inside:+.4f} in log10 n_e at r = {end:.4f}")
+        out[name] = problems
+    return out

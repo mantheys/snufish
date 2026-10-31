@@ -167,11 +167,30 @@ def _spectrum_row(base, binning, edges, content):
                 EnergyHigh=edges[1:])
 
 
+def _night_regeneration(out_dir, spec):
+    """{(EarthModel, EarthTool, Site): (energy, R[i, energy])}: the night excess
+    R_i = <P_ie>_night - |U_ei|^2 of B3, per Earth model from the tool the B5
+    spec names for it."""
+    path = out_dir / "B3_Night.parquet"
+    if not path.exists():
+        return {}
+    nights = pd.read_parquet(path)
+    out = {}
+    for earth_model, tool in spec["night"]["earth_models"].items():
+        sub = nights[(nights.Tool == tool) & (nights.Variant == earth_model)]
+        for site, group in sub.groupby("Site"):
+            rows = {q: group[group.Quantity == q].iloc[0] for q in ("P1e", "P2e", "P3e")}
+            energy = np.asarray(rows["P1e"].Energy)
+            out[(earth_model, tool, site)] = (energy, np.stack([np.asarray(rows[q].Regeneration) for q in rows]))
+    return out
+
+
 def combine_rates(out_dir=None, echo=print):
     """B5: interaction rates per B1 solar model, B4 model, detector, channel
     and flux component (daytime oscillations from the B2 reference of the
     same solar model), in events per kton-year: spectra in 0.1 MeV bins of
-    neutrino energy and totals."""
+    neutrino energy and totals. With B3: day, night and annual totals per
+    site and Earth model (B5_DayNight)."""
     from .fluxes import components
     from .solar import models as solar_models
 
@@ -191,18 +210,29 @@ def combine_rates(out_dir=None, echo=print):
     binnings = {name: _bins(**info) for name, info in spec["spectrum_bins"].items()}
     edges = binnings["linear"]
     centres = 0.5 * (edges[1:] + edges[:-1])
+    nights = _night_regeneration(out_dir, spec)
 
-    spectra, totals = [], []
+    spectra, totals, day_night = [], [], []
     for solar_model in solar_models():
         sun = sun_all[sun_all.Variant == solar_model].set_index("Component")
         if sun.empty:
             continue
         fluxes = components(spec, solar_model)
 
-        def oscillation(component, energy):
+        def oscillation(component, energy, night=None):
+            """P_{e alpha}(E), alpha = e, mu, tau; at night P_ee gains sum_i F_i R_i (zero below the B3
+            grid), and the rest is split between mu and tau as by day (sigma_mu = sigma_tau in ES)."""
             row = sun.loc[component]
             F = np.stack([np.interp(energy, row.Energy, row[f"F{i}"]) for i in (1, 2, 3)], axis=-1)
-            return F @ U2.T  # P_{e alpha}(E), alpha = e, mu, tau
+            P = F @ U2.T
+            if night is None:
+                return P
+            grid, R = night
+            excess = sum(F[..., i] * np.interp(energy, grid, R[i], left=0.0, right=R[i][-1]) for i in range(3))
+            pee = P[..., 0] + excess
+            rest = P[..., 1] + P[..., 2]
+            share = np.divide(P[..., 1], rest, out=np.full_like(rest, 0.5), where=rest > 0)
+            return np.stack([pee, (1 - pee) * share, (1 - pee) * (1 - share)], axis=-1)
 
         for (tool, version, label, variant), models in xs.groupby(["Tool", "Version", "Label", "Variant"]):
             sigma = {row.Channel: row for row in models.itertuples()}
@@ -214,8 +244,8 @@ def combine_rates(out_dir=None, echo=print):
                         continue
                     n_targets = info["targets"][target]
 
-                    def folded(component, energy):
-                        P = oscillation(component, energy)
+                    def folded(component, energy, night):
+                        P = oscillation(component, energy, night)
                         total, missing = np.zeros_like(energy), np.zeros_like(energy, dtype=bool)
                         for k, flavour in enumerate(("nue", "numu", "nutau")):
                             if flavour not in flavours:
@@ -228,56 +258,79 @@ def combine_rates(out_dir=None, echo=print):
                             total += P[..., k] * np.nan_to_num(s)
                         return total, missing
 
+                    def rates(night):
+                        """{component: (contents per binning, coverage)} for the day (night None) or a night."""
+                        out = {}
+                        for component, flux in fluxes.items():
+                            # coverage: fraction of the flux above threshold where sigma is known
+                            if len(flux) == 2:  # lines
+                                known, above, lines = 0.0, 0.0, []
+                                for energy, branching in flux[1]:
+                                    value, missing = folded(component, np.array([energy]), night)
+                                    lines.append((energy, n_targets * flux[0] * branching * value[0] * seconds))
+                                    if energy >= threshold:
+                                        above += branching
+                                        known += 0.0 if missing[0] else branching
+                                contents = {name: _bin_lines(lines, e) for name, e in binnings.items()}
+                            else:
+                                _, energy, shape = flux
+                                # The density is linear between the shape's table points; bin edges
+                                # inside the table become nodes too, so bins narrower than the table
+                                # spacing are not flat steps.
+                                inner = [e[(e > energy[0]) & (e < energy[-1])] for e in binnings.values()]
+                                fine = np.unique(np.concatenate([energy, *inner]))
+                                value, _ = folded(component, fine, night)
+                                density = n_targets * flux[0] * np.interp(fine, energy, shape) * value * seconds  # per MeV
+                                cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(fine))])
+                                contents = {name: np.diff(np.interp(e, fine, cumulative)) for name, e in binnings.items()}
+                                _, missing = folded(component, energy, night)
+                                weight = shape * (energy >= threshold)
+                                above = np.trapezoid(weight, energy)
+                                known = np.trapezoid(weight * ~missing, energy)
+                            out[component] = contents, (known / above if above > 0 else 1.0)
+                        return out
+
+                    def total_coverage(parts):
+                        rate = sum(t["Total"] for t in parts)
+                        return min(t["Coverage"] for t in parts if t["Total"] > 1e-3 * rate) if rate > 0 else 1.0
+
+                    base = dict(SolarModel=solar_model, Tool=tool, Version=version, Label=label, Variant=variant,
+                                Model=f"{tool}: {variant}", Detector=detector, Channel=channel)
+                    day = rates(None)
                     sums = {name: np.zeros(len(e) - 1) for name, e in binnings.items()}
-                    for component, flux in fluxes.items():
-                        # coverage: fraction of the flux above threshold where sigma is known
-                        if len(flux) == 2:  # lines
-                            known, above, lines = 0.0, 0.0, []
-                            for energy, branching in flux[1]:
-                                value, missing = folded(component, np.array([energy]))
-                                lines.append((energy, n_targets * flux[0] * branching * value[0] * seconds))
-                                if energy >= threshold:
-                                    above += branching
-                                    known += 0.0 if missing[0] else branching
-                            contents = {name: _bin_lines(lines, e) for name, e in binnings.items()}
-                        else:
-                            _, energy, shape = flux
-                            # The density is linear between the shape's table points; bin edges
-                            # inside the table become nodes too, so bins narrower than the table
-                            # spacing are not flat steps.
-                            inner = [e[(e > energy[0]) & (e < energy[-1])] for e in binnings.values()]
-                            fine = np.unique(np.concatenate([energy, *inner]))
-                            value, _ = folded(component, fine)
-                            density = n_targets * flux[0] * np.interp(fine, energy, shape) * value * seconds  # per MeV
-                            cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(fine))])
-                            contents = {name: np.diff(np.interp(e, fine, cumulative)) for name, e in binnings.items()}
-                            _, missing = folded(component, energy)
-                            weight = shape * (energy >= threshold)
-                            above = np.trapezoid(weight, energy)
-                            known = np.trapezoid(weight * ~missing, energy)
-                        coverage = known / above if above > 0 else 1.0
-                        base = dict(SolarModel=solar_model, Tool=tool, Version=version, Label=label, Variant=variant,
-                                    Model=f"{tool}: {variant}", Detector=detector, Channel=channel, Component=component)
+                    parts = []
+                    for component, (contents, coverage) in day.items():
                         for name, e in binnings.items():
                             sums[name] += contents[name]
-                            spectra.append(_spectrum_row(base, name, e, contents[name]))
+                            spectra.append(_spectrum_row(dict(base, Component=component), name, e, contents[name]))
                         content = contents["linear"]
-                        totals.append(dict(base, Total=content.sum(), Above5=content[centres > 5].sum(), Coverage=coverage))
-                    base = dict(SolarModel=solar_model, Tool=tool, Version=version, Label=label, Variant=variant,
-                                Model=f"{tool}: {variant}",
-                                Detector=detector, Channel=channel, Component="all")
+                        parts.append(dict(base, Component=component, Total=content.sum(),
+                                          Above5=content[centres > 5].sum(), Coverage=coverage))
                     for name, e in binnings.items():
-                        spectra.append(_spectrum_row(base, name, e, sums[name]))
+                        spectra.append(_spectrum_row(dict(base, Component="all"), name, e, sums[name]))
                     total_spectrum = sums["linear"]
-                    parts = totals[-len(fluxes):]
-                    rate = sum(t["Total"] for t in parts)
-                    coverage = min(t["Coverage"] for t in parts if t["Total"] > 1e-3 * rate) if rate > 0 else 1.0
-                    totals.append(dict(base, Total=total_spectrum.sum(), Above5=total_spectrum[centres > 5].sum(),
-                                       Coverage=coverage))
-    spectrum_frame, total_frame = pd.DataFrame(spectra), pd.DataFrame(totals)
+                    totals += parts + [dict(base, Component="all", Total=total_spectrum.sum(),
+                                            Above5=total_spectrum[centres > 5].sum(), Coverage=total_coverage(parts))]
+
+                    day_totals = {c: contents["linear"] for c, (contents, _) in day.items()}
+                    day_totals["all"] = total_spectrum
+                    for (earth_model, earth_tool, site), night in nights.items():
+                        night_totals = {c: contents["linear"] for c, (contents, _) in rates(night).items()}
+                        night_totals["all"] = sum(night_totals.values())
+                        for component, n in night_totals.items():
+                            d = day_totals[component]
+                            row = dict(base, Component=component, EarthModel=earth_model, EarthTool=earth_tool, Site=site)
+                            for suffix, keep in (("", slice(None)), ("Above5", centres > 5)):
+                                D, N = d[keep].sum(), n[keep].sum()
+                                row.update({f"Day{suffix}": D, f"Night{suffix}": N, f"Annual{suffix}": 0.5 * (D + N),
+                                            f"ADN{suffix}": 2 * (N - D) / (N + D) if N + D > 0 else np.nan})
+                            day_night.append(row)
+    spectrum_frame, total_frame, day_night_frame = pd.DataFrame(spectra), pd.DataFrame(totals), pd.DataFrame(day_night)
     _write_frame(spectrum_frame, out_dir / "B5_Spectrum.parquet")
     _write_frame(total_frame, out_dir / "B5_Totals.parquet")
-    echo(f"wrote   {out_dir / 'B5_Spectrum'}.parquet ({len(spectrum_frame)} rows), B5_Totals ({len(total_frame)} rows)")
+    _write_frame(day_night_frame, out_dir / "B5_DayNight.parquet")
+    echo(f"wrote   {out_dir / 'B5_Spectrum'}.parquet ({len(spectrum_frame)} rows), B5_Totals ({len(total_frame)} rows), "
+         f"B5_DayNight ({len(day_night_frame)} rows)")
     return total_frame
 
 

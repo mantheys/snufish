@@ -43,9 +43,14 @@ def es_above(energy_mev, flavour, constants, t_min_mev):
 
 
 def solve_b4(spec, grid="map"):
+    """Tree level as `default`; with radiative corrections (BKS 1995, all recoil energies) as `es_bks`."""
+    from .radiative import es_above as bks_above
+
     energies = spec.axis("energy", grid)
     records = []
     for flavour in ("nue", "numu", "nutau"):
         for e, sigma in zip(energies, es_total(energies, flavour, spec["constants"])):
             records.append((grid, "default", f"es_{flavour}", e, sigma))
+        for e, sigma in zip(energies, bks_above(energies, flavour, spec["constants"], [0.0])[:, 0]):
+            records.append((grid, "es_bks", f"es_{flavour}", e, sigma))
     return records

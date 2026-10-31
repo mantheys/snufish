@@ -34,7 +34,17 @@ solar_models: all
 reference_solar_model: b16_gs98
 
 oscillation:
-  source: B2_sun reference, variant = the solar model, daytime   # night: next version, from B3
+  source: B2_sun reference, variant = the solar model, daytime
+
+# Night and annual totals (SNUfish's folding only, B5_DayNight; contributions
+# stay daytime): P_ee(night) = P_ee(day) + sum_i F_i R_i with the B3 night
+# excess R_i = <P_ie>_night - |U_ei|^2 of each site, from the B3 tool named
+# for each Earth model (the SNUfish reference). R_i is interpolated on
+# the B3 exposure grid and zero below it (1 MeV); the rest of the flux is split
+# between nu_mu and nu_tau as by day (equal ES cross sections). Annual =
+# (day + night)/2, equal exposures; fluxes at 1 AU.
+night:
+  earth_models: {prem_prob3: snufish-reference, prem_four: nufast-earth, prem_full: nufast-earth}
   
 exposure:
   kton_year: 1.0
@@ -71,7 +81,6 @@ thresholds_MeV: [0.0, 5.0]
 # Open questions:
 # - The 8B shape table is truncated at 15.2 MeV (true endpoint ~16.5 MeV):
 #   take the full Winter et al. tail before using rates above 15 MeV.
-# - Night and annual rates per site (B3 night averages).
 # - Observed spectra need detector response (the D library): smearing and efficiency.
 
 # --- Contributions: full-chain rates from tools that fold fluxes themselves ---

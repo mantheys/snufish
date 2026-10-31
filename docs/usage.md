@@ -161,6 +161,7 @@ All in `build/data/`, one row per series with arrays in the cells.
 | `B4_Sigma` | Tool, Version, Label, Variant, Channel, Model, Energy, Sigma, SigmaPerE |
 | `B5_Spectrum` | SolarModel, Tool, Version, Label, Variant, Model, Detector, Channel, Component, Binning, Energy, Rate, EnergyLow, EnergyHigh |
 | `B5_Totals` | SolarModel, Tool, Version, Label, Variant, Model, Detector, Channel, Component, Total, Above5, Coverage |
+| `B5_DayNight` | SolarModel, Tool, Version, Label, Variant, Model, Detector, Channel, Component, EarthModel, EarthTool, Site, Day, Night, Annual, ADN, DayAbove5, NightAbove5, AnnualAbove5, ADNAbove5 |
 | `B5_Chain` | Tool, Version, Variant, SolarModel, Detector, Channel, Component, Threshold, Case, Rate, Folded, Coverage, Ratio |
 | `Scan_DM21` | EarthModel, Site, SolarModel, Observable, DM21, Value |
 | `Scan_Sets` | Set, Label, Kind, EarthModel, Site, DM21, adn_es, adn_pee, pee_10, slope_10, upturn, chi2_quadratic |

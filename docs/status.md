@@ -12,14 +12,11 @@ an issue.
 | Item | Where | Notes |
 |---|---|---|
 | **D: detector response library** | `benchmarks/README.md` | Smearing, efficiency and thresholds per detector as a benchmark of their own. The engine has a generic response (Gaussian or Super-K resolution, logistic or imported efficiency, imported smearing matrices) and one published curve (Super-K IV), but no contributed or validated detector responses. |
-| **Night and annual rates in B5** | B5 spec | B5 folds daytime oscillations only; the night (from B3) is in the engine and the calculator but not in the benchmark or its products. |
+| **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
 | **Observed spectra in B5** | B5 spec | B5 rates are in true neutrino energy before detector response; observed spectra wait for D. |
-| **Converged reference for continuous Earth models** | B3 spec | The reference is exact for piecewise-constant shells (`prem_prob3`) only. `prem_four` and `prem_full` have one contribution (NuFast-Earth) and no reference to compare it with; a converged sliced solution is planned. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
-| **Radiative corrections in the B4 reference** | B4 spec | BKS is implemented (`snufish.reference.radiative`) and used by the engine, but the `snufish-reference` B4 contribution is tree level only. |
 | **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T_min) for detector thresholds is not a benchmark quantity (the engine computes it). |
 | **Spectral-shape variants** | B1 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
-| **B1 checks in the validator** | B1 spec | B1 has no contributions; its checks (profile normalisation, falling density) run in `tests/test_ssm.py`, not in `snufish validate`. |
 | **B1 flux correlations in B5** | B1 spec | The B23 correlation matrices are used by `snufish budget` and the engine, not by the B5 build. |
 
 ### Tools
@@ -70,6 +67,7 @@ an issue.
 |---|---|---|
 | Adiabatic F_i in B2 | O(10⁻⁶) for the B2 parameters | `reference/sun.py` |
 | App tables instead of exact solvers | 2 × 10⁻⁴ (rates), 1 % (A_DN) | `engine.TableProbabilities` |
+| NuFast-Earth's mean density per region crossing (the engine's night for `prem_four`, `prem_full`, `prem_crust1`) | ⁸B A_DN −0.2 to −1.9 % (`prem_crust1`, `prem_full`), +0.6 to +1.3 % (`prem_four`) against the B3 reference ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density)) | `scan.night_grid` |
 | θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A_DN over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
 | ⁸B shape truncated at 15.2 MeV (true endpoint ~16.5 MeV) | ~10⁻⁴ of the flux; matters above 15 MeV (⁸B background to hep) | `reference/ssm/shapes/` |
 | B16 and BS05 density beyond 0.5 R_☉ | exponential tail fit, residual ≤ 0.0033 in log₁₀ n_e | `models.yaml` `tail` |
@@ -105,14 +103,12 @@ From [crosschecks.md](crosschecks.md):
 
 ## Open questions before freezing the specs
 
-- **B3**: which reference for the continuous Earth models? Extend the
-  energy grid down to 0.1 MeV for pp and ⁷Be (Earth effects are tiny
-  there)?
-- **B4**: add σ(E; T > T_min) for the detectors' ES thresholds? Put BKS in
-  the reference?
+- **B3**: extend the energy grid down to 0.1 MeV for pp and ⁷Be (Earth
+  effects are tiny there)? Add `prem_crust1` per site as a variant?
+- **B4**: add σ(E; T > T_min) for the detectors' ES thresholds?
 - **B5**: take the full Winter et al. ⁸B tail before using rates above
-  15 MeV; add night and annual rates per site; add observed spectra once D
-  exists.
+  15 MeV; night and annual quantities in contributions; observed spectra
+  once D exists.
 - **B1**: shape variants; use the B23 correlations in B5 rate
   uncertainties.
 - **B2**: a non-adiabatic solver; radial path against the true line of

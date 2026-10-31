@@ -32,6 +32,12 @@ variants:
   default:
     required: true
     description: The tool's default cross section for each channel it provides.
+  es_bks:
+    required: false
+    quantities: [es_nue, es_numu, es_nutau]
+    description: >-
+      ES with electroweak, QCD and QED radiative corrections, Bahcall, Kamionkowski & Sirlin, PRD 51, 6146 (1995),
+      all recoil energies (the photon of nu e -> nu e gamma undetected); sin^2 theta_W(m_Z) = 0.2317 as in BKS.
   ar40_klmv:
     required: false
     quantities: [cc_nue_ar40]

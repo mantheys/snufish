@@ -55,8 +55,12 @@ Conventions fixed by the spec:
   log₁₀ n_e = intercept + slope · r, fitted to the table for r > 0.4
   (`tail` in `models.yaml`, with its maximum residual). Below the first
   radius, n_e and the production densities are constant.
-- Checks: each production profile integrates to 1 (to 10⁻⁶); n_e falls
-  monotonically beyond r = 0.05 (tested in `tests/test_ssm.py`).
+- Checks, run by `snufish validate` (B1 has no contributions: they run on
+  the registry): fluxes positive, flux errors positive, correlation
+  matrices symmetric with unit diagonal and positive semi-definite; each
+  production profile integrates to 1 (to 10⁻⁶) and is never negative;
+  n_e falls monotonically beyond r = 0.05; a fitted tail joins its table
+  (to 0.01 in log₁₀ n_e).
 - Spectral shapes are shared by all models (B5).
 
 **Products** (`snufish build`): `B1_Fluxes` (flux, ratio to `b16_gs98`,
@@ -167,6 +171,7 @@ A tool contributes only the channels it has. Variants:
 | Variant | Channel | Model |
 |---|---|---|
 | `default` (required) | all | the tool's own choice per channel |
+| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν_μ,τ against its tree level) |
 | `ar40_klmv` | ⁴⁰Ar | KLMV (Kolbe, Langanke, Martínez-Pinedo, Vogel), SNOwGLoBES table |
 | `ar40_marley` | ⁴⁰Ar | MARLEY, allowed approximation, B(GT) from ⁴⁰Ar(p,n) (Bhattacharya 2009); SNOwGLoBES table, zero below 5 MeV |
 | `ar40_marley1` | ⁴⁰Ar | MARLEY, B(GT) from ⁴⁰Ti β decay; SNOwGLoBES table, zero below 5 MeV |
@@ -221,9 +226,20 @@ kton-year):
 
 **Products**: `B5_Spectrum`, `B5_Totals` (SNUfish's folding: solar model ×
 tool × cross-section model × detector × channel × component, with the
-fraction of the spectrum the cross-section table covers) and `B5_Chain`
-(tool totals, SNUfish's folding of the same inputs, their ratio). Plots:
-`plotipus run b45`.
+fraction of the spectrum the cross-section table covers), `B5_DayNight`
+(the same totals by day, by night and over the year, with A_DN, per site
+and Earth model) and `B5_Chain` (tool totals, SNUfish's folding of the
+same inputs, their ratio). Plots: `plotipus run b45`.
+
+Night and annual totals are SNUfish's folding only (contributions stay
+daytime): P_ee(night) = P_ee(day) + Σᵢ F_i R_i, with the B3 night excess
+R_i = ⟨P_iₑ⟩_night − |U_eᵢ|² of the site from the `snufish-reference` B3
+contribution (`night.earth_models` in the spec), interpolated on the B3
+exposure grid and zero below it (1 MeV; pp and ⁷Be have no night effect
+there). The rest of the flux is split between ν_μ and ν_τ as by day (their
+ES cross sections are equal). Annual = (day + night)/2, equal exposures,
+fluxes at 1 AU. The folding agrees with the engine's (exact solvers, own
+kernels) to 10⁻⁶ in A_DN (`tests/test_b5_night.py`).
 
 ---
 

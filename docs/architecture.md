@@ -85,6 +85,8 @@ cells, in `build/data/` (never committed). It also derives:
   (tool, solar model, Earth model, site, component);
 - `B5_Spectrum`, `B5_Totals`: SNUfish's folding of every B4 cross-section
   model with every B1 solar model and the B2 reference oscillations;
+- `B5_DayNight`: the same totals by day, by night and over the year, per
+  site and Earth model (B3 reference night excess);
 - `B5_Chain`: full-chain tool rates next to SNUfish's folding of the same
   inputs.
 
