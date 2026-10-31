@@ -135,6 +135,10 @@ of Lisi & Montanino (see [methods.md](methods.md#night-exposure)):
 | SNOLAB | 46.47 | SNO, SNO+ |
 | Jiangmen | 22.12 | JUNO |
 
+The `snufish-reference` contribution solves `prem_prob3` exactly and
+`prem_four`, `prem_full` with a converged Magnus integration
+([methods.md](methods.md#earth-crossing-b3-reference)).
+
 **Products**: `B3_Energy` (P_iₑ and the regeneration P_iₑ − |U_eᵢ|²
 against energy at selected nadir angles), `B3_Nadir` (against cos η in
 energy bins), `B3_Map` (the full maps), `B3_Night` (night averages per
@@ -238,8 +242,10 @@ contribution (`night.earth_models` in the spec), interpolated on the B3
 exposure grid and zero below it (1 MeV; pp and ⁷Be have no night effect
 there). The rest of the flux is split between ν_μ and ν_τ as by day (their
 ES cross sections are equal). Annual = (day + night)/2, equal exposures,
-fluxes at 1 AU. The folding agrees with the engine's (exact solvers, own
-kernels) to 10⁻⁶ in A_DN (`tests/test_b5_night.py`).
+fluxes at 1 AU. On constant shells the folding agrees with the engine's
+(exact solvers, own kernels) to 10⁻⁶ in A_DN; on the continuous models the
+engine's NuFast-Earth night differs by its mean-density approximation
+([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density); `tests/test_b5_night.py`).
 
 ---
 

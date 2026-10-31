@@ -44,7 +44,7 @@ oscillation:
 # between nu_mu and nu_tau as by day (equal ES cross sections). Annual =
 # (day + night)/2, equal exposures; fluxes at 1 AU.
 night:
-  earth_models: {prem_prob3: snufish-reference, prem_four: nufast-earth, prem_full: nufast-earth}
+  earth_models: {prem_prob3: snufish-reference, prem_four: snufish-reference, prem_full: snufish-reference}
   
 exposure:
   kton_year: 1.0

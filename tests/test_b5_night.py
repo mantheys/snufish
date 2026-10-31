@@ -58,6 +58,10 @@ def test_night_excess_where_matter_regenerates(day_night):
 @needs_solvers
 @pytest.mark.parametrize("detector, channel, model, choice, site, earth_model, component", [
     ("argon", "cc_nue_ar40", "snowglobes: ar40_marley", dict(xsec_model="ar40_marley"), "SURF", "prem_prob3", "B8"),
+    ("water", "es", "snufish-reference: es_bks", dict(es_model="bks"), "Kamioka", "prem_prob3", "B8"),
+    ("argon", "es", "snufish-reference: default", dict(es_model="tree"), "LNGS", "prem_prob3", "hep"),
+    # continuous density: the engine's NuFast-Earth takes each region crossing's mean density, B5 the converged
+    # B3 reference; they differ by that approximation (docs/crosschecks.md), here 0.2 %
     ("water", "es", "snufish-reference: es_bks", dict(es_model="bks"), "Kamioka", "prem_full", "B8"),
     ("argon", "es", "snufish-reference: default", dict(es_model="tree"), "LNGS", "prem_four", "hep"),
 ])
@@ -65,6 +69,7 @@ def test_night_matches_the_engine_with_the_exact_solvers(day_night, detector, ch
                                                          earth_model, component):
     """Independent folding (engine kernels) and probabilities (B2 solver and NuFast-Earth rerun, not the B3
     contribution grids) at the B2/B3 parameters, NuFIT 6.0."""
+    exact = earth_model == "prem_prob3"  # both solvers exact on constant shells
     from snufish import engine
     from snufish.export import ExactProbabilities
 
@@ -77,8 +82,8 @@ def test_night_matches_the_engine_with_the_exact_solvers(day_night, detector, ch
                          earth_model=earth_model, **choice)
     day, night, _ = engine.combine(engine.component_totals(inputs, ExactProbabilities(), setup, osc), [component])
     assert row.Day == pytest.approx(day, rel=1e-4)
-    assert row.Night == pytest.approx(night, rel=1e-4)
-    assert row.ADN == pytest.approx(2 * (night - day) / (night + day), rel=1e-3)
+    assert row.Night == pytest.approx(night, rel=1e-4 if exact else 1e-3)
+    assert row.ADN == pytest.approx(2 * (night - day) / (night + day), rel=1e-3 if exact else 0.03)
 
 
 def test_b4_reference_bks_variant():
