@@ -1,0 +1,15 @@
+{
+  "title": "SNUfish: community benchmarks of solar neutrino tools",
+  "upload_type": "software",
+  "description": "Community benchmarks of solar neutrino tools (solar models, MSW in the Sun, Earth matter effects, cross sections, interaction rates), reference solvers, and a rate and uncertainty calculator that runs in the browser.",
+  "creators": [
+    {"name": "Manthey, Sergio"}
+  ],
+  "license": "MIT",
+  "version": "0.2.0",
+  "keywords": ["solar neutrinos", "neutrino oscillations", "MSW effect", "day-night asymmetry", "benchmark", "SNOwGLoBES", "MARLEY", "DUNE"],
+  "related_identifiers": [
+    {"identifier": "https://github.com/mantheys/snufish", "relation": "isSupplementTo", "scheme": "url"},
+    {"identifier": "https://mantheys.github.io/snufish/", "relation": "isDocumentedBy", "scheme": "url"}
+  ]
+}

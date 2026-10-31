@@ -91,22 +91,29 @@ def night_probabilities(osc, earth_model, latitude_deg, site=None):
     return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude_deg)))
 
 
-def night_grid(osc, earth_model, site=None):
+def night_grid(osc, earth_model, site=None, depth_km=None, cos_grid=None):
     """(energies MeV, cos nadir, array [E, cos, 3] of P(nu_i -> nu_e)) on the
-    B3 exposure grid, before averaging over a site's night."""
+    B3 exposure grid, before averaging over a site's night. ``depth_km``: the
+    detector depth (default B3's, 0); ``cos_grid``: (start, stop, step) of cos nadir
+    in place of B3's."""
     spec = load_spec("B3_earth")
-    grid = spec["grids"]["exposure"]
+    grid = {a: dict(v) for a, v in spec["grids"]["exposure"].items()}
+    if cos_grid is not None:
+        grid["cos_nadir"].update(zip(("start", "stop", "step"), map(float, cos_grid)))
     if earth_model in crust.SITE_MODELS:
         if site is None:
             raise ValueError(f"{earth_model} depends on the site")
         earth_model = f"regions:{crust.regions_file(earth_model, site)}"
     argv = [earth_model, *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
                                                  "dm2_21_eV2", "dm2_31_eV2")),
-            str(spec["earth"]["detector_depth_km"]),
+            str(spec["earth"]["detector_depth_km"] if depth_km is None else float(depth_km)),
             *(str(grid[a][k]) for a in ("energy", "cos_nadir") for k in ("start", "stop", "step"))]
     out = subprocess.run([str(_nufast_driver()), *argv], capture_output=True, text=True, check=True).stdout
     table = np.loadtxt(out.splitlines())
-    energies, cosines = spec.axis("energy", "exposure"), spec.axis("cos_nadir", "exposure")
+    energies = spec.axis("energy", "exposure")
+    c = grid["cos_nadir"]
+    cosines = (spec.axis("cos_nadir", "exposure") if cos_grid is None
+               else c["start"] + c["step"] * np.arange(int(round((c["stop"] - c["start"]) / c["step"])) + 1))
     P = table[:, [2, 5, 8]].reshape(len(energies), len(cosines), 3)  # m[i][e], rows E-major
     return energies, cosines, P
 

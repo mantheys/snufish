@@ -104,6 +104,7 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
                                         S("Model range: BKS against SNOwGLoBES's tables; tree level is selectable but not in the range")];
     if (setup.channel === "cc_nue_d") return [SOURCES.nakamura];
     if (setup.channel === "nc_d") return [SOURCES.nakamura, SOURCES.nc_capture];
+    if (setup.channel === "nc_ar40") return [SOURCES.snowglobes, S("NC on ⁴⁰Ar: SNOwGLoBES's xs_nc_nue_Ar40.dat, a QRPA calculation by Pirinen & Suhonen given to SNOwGLoBES by private communication (2018), unpublished and without the measured ⁴⁰Ar levels; its negative values (8–9 MeV) are set to zero. No visible-energy model: the threshold is a cut in neutrino energy")];
     const out = [SOURCES.snowglobes];
     const m = setup.xsec_model;
     if (m === "ar40_marley" || m === "ar40_marley1") out.push(SOURCES.marley, m === "ar40_marley" ? SOURCES.bgt_pn : SOURCES.bgt_ti);

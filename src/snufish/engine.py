@@ -205,6 +205,10 @@ class Setup:
     xsec_model: str = "default"     # nuclear model of a CC channel (B4 variants)
     es_model: str = "bks"           # "bks" (radiative corrections, BKS 1995), "tree" or "snowglobes"
     period: str = "day"             # "day", "night" or "annual"
+    night_fraction: float = 0.5     # share of the exposure by night: annual = (1 - f) day + f night, and the
+                                    # statistics split the exposure the same way (0.507 at SURF in SOLAR)
+    nu_threshold: float = 0.0       # MeV: only neutrinos with E_nu above it interact (a cut in true neutrino
+                                    # energy, on top of the observed-energy threshold)
     # detector response, in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
     threshold: float = 0.0          # MeV
     resolution_a: float = 0.0       # sigma = sqrt((a sqrt(E))^2 + (b E)^2), a in MeV^1/2
@@ -248,6 +252,8 @@ def check(inputs, setup, quantity="rate"):
 
     allowed("quantity", quantity, QUANTITY_NAMES)
     allowed("period", setup.period, PERIODS)
+    within("the night fraction", setup.night_fraction, 0.0, 1.0)
+    within("the neutrino-energy threshold (MeV)", setup.nu_threshold, 0.0, 30.0)
     allowed("solar model", setup.solar_model, list(inputs["solar_models"]))
     if not setup.components:
         raise ValueError("select at least one flux component")
@@ -314,20 +320,39 @@ def observed_edges(threshold=0.0):
     return fine, display
 
 
+# Channels without a model of the visible energy: their observed axis is the neutrino energy itself
+# (NC on 40Ar: the de-excitation gammas are not modelled), so a threshold there is a cut in E_nu.
+NEUTRINO_AXIS = ("nc_ar40",)
+
+
 def observable(channel):
+    if channel in NEUTRINO_AXIS:
+        return "Neutrino energy E_nu (MeV)"
     if channel.startswith("nc_"):
         return "Neutron-capture gamma energy (MeV)"
     return "Electron kinetic energy T (MeV)" if channel == "es" else "Visible energy E_nu - Q (MeV)"
 
 
-def _quadrature(kind, energy, weight):
+def _quadrature(kind, energy, weight, low=0.0):
     """Weights q_k with sum_k q_k f(E_k) = the trapezoid integral of shape * f (continuum),
-    or sum of branching * f (lines)."""
+    or sum of branching * f (lines), over E > ``low``: the interval holding ``low`` counts
+    its part above it, exactly for shape * f linear in the interval."""
     if kind == "line":
-        return weight
+        return np.where(energy > low, weight, 0.0) if low > 0 else weight
     q = np.zeros_like(energy)
-    q[:-1] += 0.5 * np.diff(energy)
-    q[1:] += 0.5 * np.diff(energy)
+    h = np.diff(energy)
+    if low <= energy[0]:
+        q[:-1] += 0.5 * h
+        q[1:] += 0.5 * h
+        return q * weight
+    j = int(np.searchsorted(energy, low, side="right")) - 1   # energy[j] <= low < energy[j + 1]
+    if j >= len(energy) - 1:
+        return q
+    q[j + 1:-1] += 0.5 * h[j + 1:]
+    q[j + 2:] += 0.5 * h[j + 1:]
+    t = (low - energy[j]) / h[j]
+    q[j] += h[j] * 0.5 * (1 - t) ** 2
+    q[j + 1] += h[j] * 0.5 * (1 - t * t)
     return q * weight
 
 
@@ -488,11 +513,15 @@ def survival(inputs, probabilities, setup, osc, night=True):
 
 def _visible(inputs, setup, kind, energy, density, edges):
     """CC: the rate in each fine bin of visible energy E - Q (a continuum's density
-    integrated over the bin, lines in the bin holding them; below the first edge: first bin)."""
+    integrated over the bin, lines in the bin holding them; below the first edge: first bin),
+    from neutrinos above ``setup.nu_threshold`` only."""
+    low = setup.nu_threshold
+    if kind == "line" and low > 0:
+        density = np.where(energy > low, density, 0.0)
     fixed = inputs.data.get("visible_fixed_MeV", {}).get(setup.channel)
     if fixed is not None:  # NC: every event deposits the same energy (the neutron-capture gamma)
-        total = float(np.sum(density)) if kind == "line" else float(np.sum(0.5 * (density[1:] + density[:-1])
-                                                                            * np.diff(energy)))
+        total = float(np.sum(density)) if kind == "line" else float(_quadrature(kind, energy, np.ones_like(energy),
+                                                                                 low) @ density)
         out = np.zeros(len(edges) - 1)
         out[min(max(int(np.searchsorted(edges, fixed, side="right")) - 1, 0), len(out) - 1)] = total
         return out
@@ -500,8 +529,28 @@ def _visible(inputs, setup, kind, energy, density, edges):
     shifted[0], shifted[-1] = -np.inf, np.inf
     if kind == "line":
         return np.histogram(energy, shifted, weights=density)[0].astype(float)
+    if low > energy[0]:  # the cumulative integral from E_nu = low (linear density inside its interval)
+        shifted = np.maximum(shifted, low)
+        cut = _cumulative_linear(energy, density, low)
+    else:
+        cut = None
     cumulative = np.concatenate([[0.0], np.cumsum(0.5 * (density[1:] + density[:-1]) * np.diff(energy))])
-    return np.diff(np.interp(shifted, energy, cumulative, left=0.0, right=cumulative[-1]))
+    at = np.interp(shifted, energy, cumulative, left=0.0, right=cumulative[-1])
+    if cut is not None:
+        at = np.where(shifted <= low, cut, at)
+    return np.diff(at)
+
+
+def _cumulative_linear(energy, density, x):
+    """Integral of the piecewise-linear density from energy[0] to x."""
+    if x <= energy[0]:
+        return 0.0
+    if x >= energy[-1]:
+        return float(np.sum(0.5 * (density[1:] + density[:-1]) * np.diff(energy)))
+    j = int(np.searchsorted(energy, x, side="right")) - 1
+    whole = float(np.sum(0.5 * (density[1:j + 1] + density[:j]) * np.diff(energy[:j + 1])))
+    at_x = density[j] + (density[j + 1] - density[j]) * (x - energy[j]) / (energy[j + 1] - energy[j])
+    return whole + 0.5 * (density[j] + at_x) * (x - energy[j])
 
 
 def observed_rates(inputs, probabilities, setup, osc, night=True):
@@ -525,7 +574,7 @@ def observed_rates(inputs, probabilities, setup, osc, night=True):
             if is_nc(setup):
                 pee = np.ones_like(pee)  # all active flavours alike
             if setup.channel == "es":
-                q = scale * _quadrature(kind, energy, weight)
+                q = scale * _quadrature(kind, energy, weight, setup.nu_threshold)
                 true = (q * pee) @ kernels[0] + (q * (1 - pee)) @ kernels[1]
             else:
                 true = _visible(inputs, setup, kind, energy, scale * weight * pee * kernels, edges)
@@ -540,7 +589,8 @@ def _prepared(inputs, setup, component):
     costs one short product per component: for each true bin, the accepted
     fraction g = R a; ES also the kernels times g (totals) and times R, a and the
     display re-binning (spectra)."""
-    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model) + _response_key(setup)
+    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model,
+           setup.nu_threshold) + _response_key(setup)
     cache = inputs.__dict__.setdefault("_prepared", {})
     if key not in cache:
         edges, display = observed_edges(setup.threshold)
@@ -556,7 +606,7 @@ def _prepared(inputs, setup, component):
                     accepted=acceptance if identity else matrix @ acceptance)
         kernels = _kernels(inputs, setup, component, edges)
         if setup.channel == "es":
-            q = _quadrature(kind, energy, weight)
+            q = _quadrature(kind, energy, weight, setup.nu_threshold)
             diff, base = kernels[0] - kernels[1], q @ kernels[1]  # true = (q P) @ (K_e - K_x) + q @ K_x
             prep.update(q=q, diff_total=diff @ prep["accepted"], base_total=float(base @ prep["accepted"]),
                         diff_display=observe(diff), base_display=observe(base))
@@ -634,27 +684,31 @@ def combine(per_component, components, multipliers=None):
     return day, night, ref
 
 
-def quantity_value(quantity, period, day, night, ref=np.nan):
+def quantity_value(quantity, period, day, night, ref=np.nan, night_fraction=0.5):
+    """The rate by day, by night or over the year ((1 - f) day + f night, f the night share of the
+    exposure), its ratio to ``ref``, or A_DN = 2 (N - D) / (N + D) (rates, not counts: f does not enter)."""
     if quantity == "adn":
         return 2 * (night - day) / (night + day)
-    rate = {"day": day, "night": night, "annual": 0.5 * (day + night)}[period]
+    rate = {"day": day, "night": night, "annual": (1 - night_fraction) * day + night_fraction * night}[period]
     return rate / ref if quantity == "ratio" else rate
 
 
-def statistical_sigma(quantity, period, day, night, exposure, ref=np.nan):
-    """Poisson error for ``exposure`` kton-years, half of it by night
-    (annual average; no backgrounds). The ratio's: the rate's, over the
-    no-oscillation rate (a prediction, without error)."""
+def statistical_sigma(quantity, period, day, night, exposure, ref=np.nan, night_fraction=0.5):
+    """Poisson error for ``exposure`` kton-years, a share ``night_fraction`` of it by night
+    (no backgrounds). The ratio's: the rate's, over the no-oscillation rate (a prediction, without error)."""
     if not exposure:
         return None
+    f = night_fraction
     if quantity == "ratio":
-        return statistical_sigma("rate", period, day, night, exposure) / ref
+        return statistical_sigma("rate", period, day, night, exposure, night_fraction=f) / ref
     if quantity == "adn":
-        D, N = day * exposure / 2, night * exposure / 2
-        S = D + N
-        return float(np.sqrt((4 * D / S**2) ** 2 * N + (4 * N / S**2) ** 2 * D))
-    rate = quantity_value(quantity, period, day, night)
-    live = exposure / 2 if period in ("day", "night") else exposure
+        D, N = day * exposure * (1 - f), night * exposure * f
+        # A = 2 (n - d) / (n + d) with the rates d = D / (1 - f), n = N / f: Poisson errors on D and N
+        d, n = day, night
+        dA_dd, dA_dn = -4 * n / (n + d) ** 2, 4 * d / (n + d) ** 2
+        return float(np.sqrt((dA_dd * d) ** 2 / D + (dA_dn * n) ** 2 / N))
+    rate = quantity_value(quantity, period, day, night, night_fraction=f)
+    live = {"day": exposure * (1 - f), "night": exposure * f, "annual": exposure}[period]
     return float(np.sqrt(rate * live) / live)
 
 
@@ -765,12 +819,12 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
 
     def value(osc=None, s=setup, multipliers=None):
         per = component_totals(inputs, probabilities, s, osc or oscillation(params), night)
-        return quantity_value(quantity, s.period, *combine(per, comps, multipliers))
+        return quantity_value(quantity, s.period, *combine(per, comps, multipliers), night_fraction=s.night_fraction)
 
     rng, osc_draws, flux_draws = _draws(inputs, setup, params, n, seed)
     nominal = component_totals(inputs, probabilities, setup, oscillation(params), night)
     day0, night0, ref0 = combine(nominal, comps)
-    central = quantity_value(quantity, setup.period, day0, night0, ref0)
+    central = quantity_value(quantity, setup.period, day0, night0, ref0, setup.night_fraction)
 
     rows, samples = [], {}
 
@@ -783,14 +837,16 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
 
     per_draw = [component_totals(inputs, probabilities, setup, o, night) for o in osc_draws]
     sampled("oscillation parameters",
-            [quantity_value(quantity, setup.period, *combine(p, comps)) for p in per_draw])
+            [quantity_value(quantity, setup.period, *combine(p, comps), night_fraction=setup.night_fraction) for p in per_draw])
     total = np.array([quantity_value(quantity, setup.period, *combine(p, comps, flux_draws[i]
-                                                                       if flux_draws is not None else None))
+                                                                       if flux_draws is not None else None),
+                                     night_fraction=setup.night_fraction)
                       for i, p in enumerate(per_draw)])
     if flux_draws is not None and not (quantity != "rate" and len(comps) == 1):  # one flux cancels in a ratio
-        sampled(flux_label(setup), [quantity_value(quantity, setup.period, *combine(nominal, comps, m))
+        sampled(flux_label(setup), [quantity_value(quantity, setup.period, *combine(nominal, comps, m),
+                                                   night_fraction=setup.night_fraction)
                                     for m in flux_draws])
-    stat = statistical_sigma(quantity, setup.period, day0, night0, setup.exposure, ref0)
+    stat = statistical_sigma(quantity, setup.period, day0, night0, setup.exposure, ref0, setup.night_fraction)
     if stat is not None:
         sampled(f"statistics ({setup.exposure:g} kt yr)", central + stat * rng.standard_normal(n))
         total = total + stat * rng.standard_normal(n)
@@ -829,7 +885,7 @@ def detector_sigmas(inputs, probabilities, setup, params, quantity, central, nig
     normalisation scales a rate (and cancels in A_DN)."""
     def value(s):
         per = component_totals(inputs, probabilities, s, oscillation(params), night)
-        return quantity_value(quantity, s.period, *combine(per, list(s.components)))
+        return quantity_value(quantity, s.period, *combine(per, list(s.components)), night_fraction=s.night_fraction)
 
     out = []
     if setup.energy_scale_error > 0:
@@ -857,7 +913,7 @@ def level_sigmas(inputs, probabilities, setup, params, quantity, central, night)
         return []
     def value(s):
         per = component_totals(inputs, probabilities, s, oscillation(params), night)
-        return quantity_value(quantity, s.period, *combine(per, list(s.components)))
+        return quantity_value(quantity, s.period, *combine(per, list(s.components)), night_fraction=s.night_fraction)
     variance = sum((value(setup.replace(xsec_model=level["name"])) - central) ** 2 for level in levels)
     return [(f"measured B(GT) ({len(levels)} levels)", float(np.sqrt(variance)))]
 
