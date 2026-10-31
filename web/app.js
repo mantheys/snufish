@@ -32,15 +32,18 @@ const STATUS_LABEL = { current: "state of the art", legacy: "legacy", approximat
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
 const PRESETS = {
-  // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector
-  thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
+  // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector,
+  // with the state-of-the-art inputs of reference/status.yaml (the page's defaults; the templates' base is older)
+  thumb: { set: "juno_2025", solar: "b23_mb22m", b8: "model", earth: "prem_crust1", es: "bks",
+           detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
            "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
            components: ORDER, quantity: "rate", period: "annual", unit: "g" },
   ...EXPERIMENTS,
 };
 const PRESET_NOTES = {
   thumb: `A thumb, as ${THUMB_GRAMS} g of water: every solar flux component, elastic scattering on its electrons, `
-       + "no threshold and a perfect detector, averaged over day and night. Change any setting to start from it.",
+       + "no threshold and a perfect detector, averaged over day and night, with the state-of-the-art inputs "
+       + "(JUNO 2025 oscillation parameters, B23-MB22m fluxes, PREM with the local CRUST1.0 crust, BKS cross section). Change any setting to start from it.",
   custom: "",
   borexino: "Borexino Phase-II as published (arXiv:1707.09279): pseudocumene with 3.307 × 10³¹ electrons per 100 t, its "
           + "71.3 t fiducial mass over 1291.51 days, ~50 keV resolution at 1 MeV, and rates over all recoil energies. Choose pp, ⁷Be "
@@ -510,25 +513,14 @@ async function compute() {
   $("download").disabled = $("share").disabled = $("render").disabled = false;
 }
 
-// Target densities (g/cm^3), for the cross-section area of a 1 kt cube: water; liquid argon at its boiling point.
-const DENSITY = { water: 1.0, argon: 1.3954, heavy_water: 1.105 }; // D2O at 20 °C
-
 function renderFlux() {
   const r = app.result, f = r.flux, d = app.inputs.data, card = $("flux");
   const names = r.setup.components.map((c) => engine.DISPLAY[c]).join(", ");
   const per = r.setup.components.length > 1
     ? `<div class="sub">${r.setup.components.map((c) => `${engine.DISPLAY[c]} ${fmt(f.components[c][0])}`).join(" · ")}</div>` : "";
-  let compare = "";
-  if (r.quantity === "rate" && DENSITY[r.setup.detector]) {
-    const side = (1e9 / DENSITY[r.setup.detector]) ** (1 / 3), crossing = f.total * side ** 2 * d.seconds_per_year;
-    const rate = r.rows[0].Central;
-    compare = `<div><h4>Flux against rate</h4><p>A 1 kt ${r.setup.detector === "water" ? "water" : "liquid-argon"} cube
-      (${(side / 100).toFixed(1)} m side) is crossed by <b>${fmt(crossing)}</b> of these neutrinos a year;
-      <b>${fmt(rate)}</b> are counted (${r.setup.period}, this channel and detector): one in <b>${fmt(crossing / rate)}</b>.</p></div>`;
-  }
   card.innerHTML = `<div><h4>Flux at Earth</h4><div class="big">${fmt(f.total)} <small>cm⁻² s⁻¹</small></div>
       <div class="sub">${names} (${d.solar_models[r.setup.solar_model].label}); νₑ by day ${(100 * f.nue_day).toFixed(1)} %</div>${per}</div>
-    ${compare}${thumbShown() ? `<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>` : ""}`;
+    ${thumbShown() ? `<div id="thumb"><h4>Your thumb against the Sun</h4><p class="hint">Computing…</p></div>` : ""}`;
   card.hidden = false;
   if (thumbShown() && app.thumb && app.thumb.key === thumbKey()) showThumb();
 }
