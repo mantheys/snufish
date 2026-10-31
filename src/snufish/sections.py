@@ -117,7 +117,8 @@ def impacts(inputs, tables, params):
 
         def value(probabilities, s=setup):
             per = engine.component_totals(inputs, probabilities, s, osc, night)
-            return engine.quantity_value(q, s.period, *engine.combine(per, list(s.components)))
+            return engine.quantity_value(q, s.period, *engine.combine(per, list(s.components)),
+                                         night_fraction=s.night_fraction)
 
         # the solar model's density and production profiles, its fluxes fixed
         profiles = [value(tables, setup.replace(profile_model=m)) for m in models if engine.is_current(inputs, "solar_model", m)]

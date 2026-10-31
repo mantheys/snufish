@@ -204,11 +204,27 @@ documented in `src/snufish/engine.py`; the main ones:
 | `components` | tuple of pp, pep, hep, Be7, B8, N13, O15, F17 |
 | `b8_flux` | `model` or `sno_nc` (measured) |
 | `site`, `earth_model` | a B3 site; `prem_prob3`, `prem_four`, `prem_full` |
-| `detector`, `channel` | `water` (es, cc_nue_o16), `argon` (es, cc_nue_ar40), `scintillator_pc`, `scintillator_lab` (es), `heavy_water` (es, cc_nue_d, nc_d) |
+| `detector`, `channel` | `water` (es, cc_nue_o16), `argon` (es, cc_nue_ar40, nc_ar40), `scintillator_pc`, `scintillator_lab` (es), `heavy_water` (es, cc_nue_d, nc_d) |
 | `es_model`, `xsec_model` | `bks`, `tree`, `snowglobes`; a B4 variant of the channel |
 | `period` | `day`, `night`, `annual` |
+| `night_fraction` | share of the exposure by night (default 0.5): annual = (1 − f) day + f night, and the statistics split the exposure the same way; SOLAR uses 0.507 at SURF |
+| `nu_threshold` | MeV: a cut in true neutrino energy, on top of the observed-energy `threshold` (for tables "above E_ν"); exact inside a flux interval |
 | detector response | `threshold`, `resolution_a`, `resolution_b`, `resolution_poly`, `efficiency`, `efficiency_e50`, `efficiency_width`, `efficiency_table`, `smearing_table` |
 | uncertainties | `energy_scale_error`, `resolution_error`, `normalisation_error` (fractions), `exposure` (kt·yr) |
+
+`nc_ar40` (NC on ⁴⁰Ar, all flavours) is SNOwGLoBES's table, an unpublished
+QRPA calculation (`reference/xsec/snowglobes_nc_ar40.yaml`); it has no
+visible-energy model, so its observed axis is the neutrino energy and
+`threshold` is a cut in E_ν.
+
+`snufish.export.ExactProbabilities(night_mode="solar")` takes the night of
+the SOLAR analysis: detector 1.478 km deep, latitude 44.35°, W(η) sampled at
+the centres of 80 night bins in cos nadir (SOLAR's 40 bins × 4
+oversampling over [−1, 1]); the Earth model is still `setup.earth_model`
+(SOLAR's is set in its NuFast-Earth binding, which is not in its
+repository). `depth_km`, `latitude_deg` and `nadir_bins` override each
+piece. `night_fraction`, `nu_threshold` and the SOLAR night are Python only:
+the calculator does not offer them yet.
 
 Lower-level pieces: `snufish.reference.sun.adiabatic_fractions`,
 `snufish.reference.earth.probabilities_ie`,

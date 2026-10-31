@@ -195,3 +195,7 @@ xsec_model:
       status: current
       summary: "Nakamura et al. (2002), ±1 %."
       refs: [nucl-th/0201062]
+  nc_ar40:
+    default:
+      status: approximation
+      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. Here so that the NC column of SNOwGLoBES rate tables can be reproduced; not validated, and no other calculation to compare with."

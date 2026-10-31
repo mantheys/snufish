@@ -24,7 +24,7 @@ import pandas as pd
 import yaml
 
 from . import crust
-from .exposure import cell_weights, orbital_factors
+from .exposure import cell_weights, orbital_factors, solar_weight
 from .fluxes import components
 from .paths import build_dir, repo_root
 from .reference.radiative import ratio_table
@@ -41,6 +41,9 @@ XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504, "cc_nue_d": 1.442, "nc_d": 2.224}
 # Visible energy of a CC interaction, E_nu - Q (the electron plus the de-excitation gammas, no losses):
 # Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV.
 VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42, "cc_nue_d": 1.442}  # d: d(nu_e, e-)pp threshold
+# NC on 40Ar has no visible-energy model (its de-excitation gammas are not modelled): its observed axis is the
+# neutrino energy itself (offset 0), so a threshold there is a cut in E_nu (engine.NEUTRINO_AXIS).
+VISIBLE_OFFSET["nc_ar40"] = 0.0
 # NC: the energy is the neutron's capture gamma, whatever the neutrino's: 6.25 MeV on the deuteron (pure D2O)
 VISIBLE_FIXED = {"nc_d": 6.25}
 # Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
@@ -133,6 +136,12 @@ def collect_inputs():
     nakamura = _yaml("reference/xsec/nakamura2002.yaml")
     for channel in ("cc_nue_d", "nc_d"):
         xsec.setdefault(channel, {})["default"] = {"energy": nakamura["energy_MeV"], "sigma": nakamura[channel]}
+    # NC on 40Ar: SNOwGLoBES's table (QRPA, unpublished; see the file), its small negative values set to zero
+    nc_ar40 = _yaml("reference/xsec/snowglobes_nc_ar40.yaml")
+    xsec["nc_ar40"] = {"default": {"energy": nc_ar40["energy_MeV"],
+                                   "sigma": np.clip(nc_ar40["sigma_cm2"], 0.0, None).tolist()}}
+    detectors = {**b5["detectors"], **APP_DETECTORS}
+    detectors["argon"] = {**detectors["argon"], "channels": {**detectors["argon"]["channels"], "nc_ar40": "ar40"}}
     ratio = {}
     for flavour in ("nue", "numu"):
         rows = {r.Tool: r for r in sigma[(sigma.Channel == f"es_{flavour}") & (sigma.Variant == "default")].itertuples()}
@@ -147,7 +156,7 @@ def collect_inputs():
         "solar_models": solar,
         "b8_measured": B8_MEASURED,
         "constants": load_spec("B4_xsec")["constants"],
-        "detectors": {**b5["detectors"], **APP_DETECTORS},
+        "detectors": detectors,
         "seconds_per_year": b5["exposure"]["seconds_per_year"],
         "xsec": xsec,
         "xsec_thresholds_MeV": XSEC_THRESHOLDS,
@@ -202,13 +211,38 @@ def efficiency_curves():
 
 
 class ExactProbabilities:
-    """The B2 and B3 solvers (NuFast-Earth for the night), as an engine provider."""
+    """The B2 and B3 solvers (NuFast-Earth for the night), as an engine provider.
+
+    By default the night is B3's: detector at the surface, the exposure W(eta) of Lisi & Montanino
+    integrated over each cell of a 1001-point cos-nadir grid, at the site's latitude. ``night_mode="solar"``
+    takes the conventions of the SOLAR analysis (lib/oscillation_backends.py, physics.json): ``nadir_bins``
+    uniform bins in cos nadir over [-1, 1] (40 x 4 oversampling: 80 by night), W sampled at the bin centres
+    and normalised over them, ``depth_km`` 1.478 and ``latitude_deg`` 44.35. SOLAR's Earth density model
+    (set in its NuFast-Earth binding, not in its repository) is not known: pass the ``earth_model`` as usual."""
+
+    def __init__(self, night_mode="b3", depth_km=None, latitude_deg=None, nadir_bins=160):
+        if night_mode not in ("b3", "solar"):
+            raise ValueError("night_mode is 'b3' or 'solar'")
+        self.night_mode, self.nadir_bins = night_mode, int(nadir_bins)
+        self.depth_km = 1.478 if depth_km is None and night_mode == "solar" else depth_km
+        self.latitude_deg = 44.35 if latitude_deg is None and night_mode == "solar" else latitude_deg
 
     def day(self, osc, solar_model, component, energies):
         return day_fractions(osc, solar_model, energies, component)
 
     def night(self, osc, earth_model, site):
-        return night_probabilities(osc, earth_model, site_latitude(site), site)
+        latitude = site_latitude(site) if self.latitude_deg is None else self.latitude_deg
+        if self.night_mode == "b3" and self.depth_km is None:
+            return night_probabilities(osc, earth_model, latitude, site)
+        if self.night_mode == "b3":
+            energies, cosines, P = night_grid(osc, earth_model, site, depth_km=self.depth_km)
+            return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude)))
+        half = self.nadir_bins // 2   # bins in cos nadir over [0, 1], by night
+        step = 1.0 / half
+        energies, cosines, P = night_grid(osc, earth_model, site, depth_km=self.depth_km,
+                                          cos_grid=(0.5 * step, 1.0 - 0.5 * step, step))
+        w = solar_weight(np.arccos(cosines), np.radians(latitude))
+        return energies, np.einsum("eci,c->ei", P, w / w.sum())
 
 
 def write_table(directory, name, values):
