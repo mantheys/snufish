@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SNUfish Solar Neutrino Rates</title>
+  <meta name="description" content="Solar neutrino rates and their uncertainties, from published models, measurements and tools.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23eda100'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module">
+    import { CREDITS, render } from "./sources.js";
+    document.getElementById("credit-groups").innerHTML = CREDITS.map(([title, items]) =>
+      `<section class="step"><h2>${title}</h2>${render(items)}</section>`).join("");
+    // reference/status.yaml, as exported to data/inputs.json: per choice, the competing state-of-the-art models,
+    // the legacy ones (with what supersedes them) and the approximations
+    const CATEGORIES = { parameter_set: "Oscillation parameters", solar_model: "Solar model", earth_model: "Earth model",
+                         es_model: "ν–e elastic scattering", xsec_model: "CC and NC cross sections" };
+    const BADGE = { current: "state of the art", legacy: "legacy", approximation: "approximation" };
+    const CHANNELS = { cc_nue_ar40: "⁴⁰Ar", cc_nue_o16: "¹⁶O", cc_nue_d: "d CC", nc_d: "d NC", nc_ar40: "⁴⁰Ar NC" };
+    const XS = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
+                 ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "shell model, Kostensalo 2018",
+                 ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley: "SNOwGLoBES MARLEY (p,n)",
+                 ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "KLMV", default: "default table" };
+    const ES = { bks: "BKS", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
+    const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+    fetch("data/inputs.json").then((r) => r.json()).then((d) => {
+      const status = d.status || {}, name = (category, key, channel) => ({
+        parameter_set: d.parameter_sets.sets[key]?.label, solar_model: d.solar_models[key]?.label, earth_model: EARTH[key],
+        es_model: ES[key], xsec_model: `${CHANNELS[channel] || channel}: ${XS[key] || key}` }[category] || key);
+      const rows = [];
+      for (const [category, title] of Object.entries(CATEGORIES)) {
+        const tables = category === "xsec_model" ? Object.entries(status[category] || {}) : [[null, status[category] || {}]];
+        for (const [channel, table] of tables)
+          for (const [key, s] of Object.entries(table))
+            rows.push(`<tr><td>${title}</td><td>${name(category, key, channel)}</td><td><span class="badge ${s.status}">${BADGE[s.status]}</span></td>
+              <td>${s.summary}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
+      }
+      document.getElementById("status-table").innerHTML = rows.length
+        ? `<table><thead><tr><th>Choice</th><th>Input</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";
+    }).catch(() => { /* the section's text stands without the table */ });
+  </script>
+</head>
+<body>
+<header class="top">
+  <h1>SNUfish <span>solar neutrino rates and their uncertainties</span></h1>
+  <div class="actions">
+    <a class="button ghost-link" href="benchmarks.html">Benchmarks</a>
+    <a class="button" href="rates.html">Open the calculator →</a>
+  </div>
+</header>
+
+<main class="home">
+  <section class="hero">
+    <h2>What would my detector see from the Sun?</h2>
+    <p>
+      SNUfish computes solar neutrino interaction rates and day-night asymmetries for a chosen set of oscillation
+      parameters, solar model, site, Earth model, interaction channel and detector response, and propagates the
+      uncertainty of every input to the result: oscillation parameters and solar fluxes (with their correlations) are
+      sampled; the choice between competing state-of-the-art models is shown as a range, never folded into a σ, and
+      legacy models stay selectable but labelled and out of the ranges. The spectra, the sampled values and the error budget are plotted, and can be downloaded as data with
+      <a href="https://github.com/mantheys/plotipus" target="_blank" rel="noopener">plotipus</a> commands.
+    </p>
+    <p class="actions"><a class="button" href="rates.html">Open the calculator →</a>
+      <a class="button ghost-link" href="benchmarks.html">Where the uncertainty comes from →</a></p>
+  </section>
+
+  <section class="step findings">
+    <h2>What we have learned</h2>
+    <ol>
+      <li><b>The tools agree; the inputs do not.</b> Earth solvers agree to 10⁻⁸, the ν–e radiative corrections to
+        0.1 %.</li>
+      <li><b>Most large spreads were outdated inputs.</b> The factor 5–7 between ⁴⁰Ar tables, A<sub>DN</sub> up to 40 %
+        high without a crust, +6.5 % on ⁸B from B16: legacy models and approximations, not uncertainties.</li>
+      <li><b>Solar composition</b> (B23 with MB22 or AAG21) is the open flux uncertainty: ⁸B 16 %, ⁷Be 8 %,
+        CNO 30 %.</li>
+      <li><b>⁴⁰Ar: how much the Gamow–Teller strength is quenched</b>, about 37 %: MARLEY 2 and the Suzuki–Honma
+        shell model agree to 3 %, the Kostensalo shell model (g<sub>A</sub> = 1.00) is 27–35 % lower.</li>
+      <li><b>Earth: the crust under the detector moves A<sub>DN</sub> by −2 to +4 %</b>; the 3D Earth (up to ~8 %) is not
+        yet computed, so no Earth uncertainty is counted.</li>
+      <li><b>JUNO fixes Δm²₂₁</b>; solar data alone sit 1.5σ lower: a physics question, not a choice of input.</li>
+    </ol>
+    <p class="hint">Every input's status and the literature behind it: <a href="#status">below</a> and
+      <code>docs/status-of-inputs.md</code>.</p>
+  </section>
+
+  <section class="home-grid">
+    <section class="step">
+      <h2>How the numbers are made</h2>
+      <ul class="plain">
+        <li>Every input comes from a published model, measurement or tool, credited below and linked from the
+          calculator's information buttons.</li>
+        <li>Oscillations in the Sun come from the SNUfish adiabatic reference solver; through the Earth from
+          NuFast-Earth. The page interpolates tables of their results, which reproduce them to 2×10⁻⁴ for rates and
+          1 % for the day-night asymmetry.</li>
+        <li>The page's engine is a port of the SNUfish Python engine, checked against it to 10⁻¹¹ on the same inputs
+          and random draws.</li>
+        <li>Rates are in observed energy after a generic detector response (threshold, Gaussian resolution,
+          efficiency); there is no background model.</li>
+      </ul>
+    </section>
+    <section class="step">
+      <h2>The benchmarks behind it</h2>
+      <ul class="plain">
+        <li><b>B1</b> standard solar models in one format; <b>B2</b> oscillations in the Sun; <b>B3</b> through the
+          Earth; <b>B4</b> cross sections; <b>B5</b> interaction rates.</li>
+        <li>Each benchmark fixes its inputs, so tools that compute the same thing can be compared on the same plot.</li>
+        <li><a href="benchmarks.html">The benchmark pages</a> show what each step varies, how tools agree on it, and how
+          much it moves the rates and the day-night asymmetry.</li>
+        <li>SNUfish is not a product of any collaboration. Please cite the original work of the results you use.</li>
+      </ul>
+    </section>
+  </section>
+
+  <h2 id="status" class="credits-title">State of the art, legacy and approximations</h2>
+  <section class="step status-section">
+    <p>
+      Not every input SNUfish offers is current. <span class="badge current">state of the art</span> inputs are the
+      latest calculations and measurements; where several exist (the high- and low-metallicity solar models, the
+      measured Gamow–Teller strengths of ⁴⁰Ar, two radiative-correction calculations) they compete, and their spread is
+      the model range the calculator reports. <span class="badge legacy">legacy</span> inputs have been superseded and
+      are kept to reproduce published numbers; <span class="badge approximation">approximation</span>s simplify a
+      current input. A difference between a legacy or approximate input and the state of the art is not an
+      uncertainty, so the calculator labels both, keeps them out of the model ranges and says when a result uses one.
+      The literature behind each entry: <code>docs/status-of-inputs.md</code>.
+    </p>
+    <div id="status-table" class="status-table"></div>
+  </section>
+
+  <h2 id="credits" class="credits-title">Credits</h2>
+  <p class="hint">The experiments, models, calculations and software SNUfish is built on.</p>
+  <div id="credit-groups" class="credits"></div>
+</main>
+</body>
+</html>

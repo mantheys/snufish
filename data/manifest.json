@@ -1,0 +1,44 @@
+{
+ "date": "2026-10-31",
+ "s12": [
+  0.24,
+  0.38,
+  0.01
+ ],
+ "dm21_1e-5eV2": [
+  3.0,
+  11.0,
+  0.2
+ ],
+ "files": [
+  "inputs.json",
+  "day_b16_gs98.json",
+  "day_b16_gs98.bin",
+  "day_b16_agss09met.json",
+  "day_b16_agss09met.bin",
+  "day_bs05_op.json",
+  "day_bs05_op.bin",
+  "day_bs05_agsop.json",
+  "day_bs05_agsop.bin",
+  "day_b23_gs98.json",
+  "day_b23_gs98.bin",
+  "day_b23_agss09.json",
+  "day_b23_agss09.bin",
+  "day_b23_c11.json",
+  "day_b23_c11.bin",
+  "day_b23_aag21.json",
+  "day_b23_aag21.bin",
+  "day_b23_mb22m.json",
+  "day_b23_mb22m.bin",
+  "day_b23_mb22p.json",
+  "day_b23_mb22p.bin",
+  "night_prem_prob3.json",
+  "night_prem_prob3.bin",
+  "night_prem_four.json",
+  "night_prem_four.bin",
+  "night_prem_full.json",
+  "night_prem_full.bin",
+  "night_prem_crust1.json",
+  "night_prem_crust1.bin"
+ ]
+}
