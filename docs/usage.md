@@ -178,9 +178,9 @@ from snufish import engine
 
 inputs = engine.Inputs.load("build/app/inputs.json")
 probs = engine.TableProbabilities("build/app")      # or snufish.export.ExactProbabilities()
-setup = engine.Setup(solar_model="b16_gs98", components=("B8",), detector="water", channel="es",
-                     site="Kamioka", earth_model="prem_full", threshold=3.49, period="annual")
-params = engine.parameters(inputs, "nufit60_global")              # custom={"dm2_21_eV2": 6.1e-5} overrides
+setup = engine.Setup(solar_model="b23_mb22m", components=("B8",), detector="water", channel="es",
+                     site="Kamioka", earth_model="prem_crust1", threshold=3.49, period="annual")
+params = engine.parameters(inputs, "juno_2025")              # custom={"dm2_21_eV2": 6.1e-5} overrides
 osc = engine.oscillation(params)
 
 per = engine.component_totals(inputs, probs, setup, osc)          # {component: {"day", "night"}}
@@ -203,7 +203,7 @@ documented in `src/snufish/engine.py`; the main ones:
 | `solar_model` | a B1 model id |
 | `components` | tuple of pp, pep, hep, Be7, B8, N13, O15, F17 |
 | `b8_flux` | `model` or `sno_nc` (measured) |
-| `site`, `earth_model` | a B3 site; `prem_prob3`, `prem_four`, `prem_full` |
+| `site`, `earth_model` | a B3 site; `prem_crust1` (default), `prem_full`, `prem_four`, `prem_prob3` |
 | `detector`, `channel` | `water` (es, cc_nue_o16), `argon` (es, cc_nue_ar40, nc_ar40), `scintillator_pc`, `scintillator_lab` (es), `heavy_water` (es, cc_nue_d, nc_d) |
 | `es_model`, `xsec_model` | `bks`, `tree`, `snowglobes`; a B4 variant of the channel |
 | `period` | `day`, `night`, `annual` |

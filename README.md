@@ -22,7 +22,7 @@ plotipus.)
    input of each link (grids, oscillation parameters, matter profiles,
    constants) in a benchmark spec, so contributions differ only by the tool.
 2. **Show the spread that matters.** Each benchmark also carries model
-   variants (ten solar models, four Earth models, eight ν<sub>e</sub>–<sup>40</sup>Ar
+   variants (ten solar models, four Earth models, nine ν<sub>e</sub>–<sup>40</sup>Ar
    nuclear models, three ES cross-section treatments), so the difference
    between tools can be read next to the difference between physics inputs.
 3. **Every number traceable.** Every input file records its paper, table or
@@ -55,6 +55,25 @@ plotipus.)
 | **Anyone quoting a rate** | An error budget split into sampled sources and model ranges (`snufish budget`, or the calculator), so the dominant uncertainty and the model dependence are visible separately. |
 | **A reviewer or student** | A one-click reproduction of published numbers (Borexino, Super-K, SNO, JUNO, BKS) in the calculator, each linked to its paper, and the official figures recomputed. |
 
+## What we have learned
+
+Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
+
+1. **The tools agree; the inputs do not.** Earth solvers agree to 10⁻⁸,
+   radiative corrections to 0.1 %.
+2. **Most large spreads were outdated inputs.** The factor 5–7 between
+   <sup>40</sup>Ar tables, A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on
+   <sup>8</sup>B from B16: legacy models and approximations, not uncertainties.
+3. **Solar composition** (B23 MB22 vs AAG21) is the open flux uncertainty:
+   <sup>8</sup>B 16 %, <sup>7</sup>Be 8 %, CNO 30 %.
+4. **<sup>40</sup>Ar: the quenching of the Gamow–Teller strength**, about 37 %:
+   MARLEY 2 and the Suzuki–Honma shell model agree to 3 %; the Kostensalo
+   shell model (g<sub>A</sub> = 1.00) is 27–35 % lower.
+5. **Earth: the local crust moves A<sub>DN</sub> by −2 to +4 %**; the 3D Earth
+   (up to ~8 %) is not yet computed, so the Earth range is missing.
+6. **JUNO fixes Δm²<sub>21</sub>**; solar data alone sit 1.5σ lower, a physics
+   question rather than an input choice.
+
 ## Results so far
 
 One figure per stage of the chain, from the solar model to the rate in a
@@ -67,8 +86,10 @@ detector.
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b1_fluxes.png">
   <img src="docs/images/light/b1_fluxes.png" alt="pp, 7Be, 8B and 15O fluxes of ten solar models relative to B16-GS98, with each model's published uncertainty.">
 </picture>
-<b>B1 · Solar models.</b> The composition moves the <sup>8</sup>B flux from
-0.76 to 1.04 × B16-GS98 and CNO by −30 % to +14 %; pp stays within 1.5 %.
+<b>B1 · Solar models.</b> All ten models (legacy ones included) relative to
+B16-GS98: <sup>8</sup>B from 0.76 to 1.04, CNO −30 % to +14 %, pp within
+1.5 %. The state-of-the-art pair, B23 MB22 and AAG21, differs by 16 % on
+<sup>8</sup>B.
 </td>
 <td width="50%">
 <picture>
@@ -108,20 +129,19 @@ crust (CRUST1.0, the default) moves it by −2.4 % of itself.
   <img src="docs/images/light/b4_ar40.png" alt="Charged-current cross section on argon-40 for five nuclear models, with the ratio to MARLEY 2.">
 </picture>
 <b>B4 · Cross sections.</b> ν<sub>e</sub> CC on <sup>40</sup>Ar: the measured
-B(GT) set moves MARLEY 2 by 8–23 %; SNOwGLoBES's MARLEY table (no Coulomb
-factor) is 30 % low at 10 MeV, KLMV 66 % high at 6 MeV.
+B(GT) set moves MARLEY 2 by 8–23 %; the legacy tables are off by more
+(SNOwGLoBES's MARLEY table, without the Coulomb factor, 30 % low at
+10 MeV; KLMV 66 % high at 6 MeV).
 </td>
 <td width="50%">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b5_rates.png">
   <img src="docs/images/light/b5_rates.png" alt="8B charged-current interactions on argon per kiloton-year for ten solar models and four nuclear models.">
 </picture>
-<b>B5 · Rates.</b> <sup>8</sup>B CC on <sup>40</sup>Ar per kt·yr: the solar
-model moves it by ±16 % (MARLEY 2: 1,757 to 2,409), the nuclear model by
-up to 47 % (1,581 to 2,321 for B16-GS98).
-Counting state-of-the-art inputs only (B23 MB22 against AAG21; MARLEY 2
-with each measured B(GT) set and the shell model of Kostensalo et al.) the
-spreads are about 16 % and 37 %; the rest comes from legacy models.
+<b>B5 · Rates.</b> <sup>8</sup>B CC on <sup>40</sup>Ar per kt·yr, all models:
+the solar model moves it by ±16 %, the nuclear model by up to 47 %. With
+state-of-the-art inputs only: 16 % (composition) and 37 % (Gamow–Teller
+quenching).
 </td>
 </tr>
 </table>

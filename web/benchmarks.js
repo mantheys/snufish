@@ -262,9 +262,12 @@ function b4() {
   const traces = levels.map((n, i) => ({ ...ratio(n), mode: "lines", name: "one level's B(GT) +1σ", showlegend: false,
     line: { color: alpha(c.muted, 0.6), width: 1 }, legendgroup: "levels", hovertemplate: `%{x:.1f} MeV: %{y:.3f}<extra>level ${i + 1}</extra>` }));
   const models = Object.keys(xs).filter((n) => !n.includes("#") && !incomplete.includes(n));
-  models.forEach((n, i) => traces.push({ ...ratio(n), mode: "lines", name: XSEC[n] || n, line: { color: palette()[i % 8], width: 2.2 },
+  const legacy = (n) => (page.inputs.status?.xsec_model?.cc_nue_ar40?.[n]?.status || "current") !== "current";
+  models.forEach((n, i) => traces.push({ ...ratio(n), mode: "lines", name: XSEC[n] || n,  // legacy tables dotted
+                                         line: { color: palette()[i % 8], width: legacy(n) ? 1.4 : 2.2, dash: legacy(n) ? "dot" : undefined },
                                          hovertemplate: `%{x:.1f} MeV: %{y:.3f}<extra>${XSEC[n] || n}</extra>` }));
-  htmlLegend(node, [{ label: "one level's B(GT) +1σ", colour: c.muted }, ...traces.slice(levels.length).map((t) => ({ label: t.name, colour: t.line.color }))]);
+  htmlLegend(node, [{ label: "one level's B(GT) +1σ", colour: c.muted }, ...traces.slice(levels.length).map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash }))],
+             "Solid: state of the art; dotted: legacy.");
   Plotly.react(node, traces, layout(c, node, "νₑ CC on ⁴⁰Ar over MARLEY 2", "Neutrino energy (MeV)", "σ / σ(MARLEY 2, 2009)",
     { showlegend: false, hovermode: "closest", yaxis: { range: [0.3, 2] } }), CONFIG);
   node = $("plot-b4-es");

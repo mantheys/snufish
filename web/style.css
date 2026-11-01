@@ -259,3 +259,7 @@ body[data-tab="discrepancies"] .bench, body[data-tab="discrepancies"] .tabs { ma
 .matrix th.group.update { border-bottom-color: var(--series-5); }
 .matrix td.start { border-left: 1px solid var(--border); }
 .matrix td.muted, .matrix .muted { color: var(--text-muted); }
+.findings { margin-bottom: 16px; }
+.findings ol { margin: 6px 0 0; padding-left: 20px; font-size: 0.9rem; color: var(--text-secondary); }
+.findings li { margin: 4px 0; }
+.findings li b { color: var(--text-primary); }

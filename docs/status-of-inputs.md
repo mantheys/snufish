@@ -1,13 +1,13 @@
 # State of the art, legacy and approximations
 
-SNUfish offers ten solar models, seven oscillation parameter sets, three
-Earth models, three ν–e cross sections and eight ν<sub>e</sub>–⁴⁰Ar models.
+SNUfish offers ten solar models, seven oscillation parameter sets, four
+Earth models, three ν–e cross sections and nine ν<sub>e</sub>–⁴⁰Ar models.
 They are not equals. Some are the current best calculations and
 measurements and compete with each other; some have been superseded and are
 kept because published numbers were computed with them; some are
 simplifications of a current input. Only the first group says anything
 about the uncertainty of a prediction today. This page records which is
-which and why, from the literature as of October 2026. The machine-readable
+which and why, from the literature as of November 2026. The machine-readable
 version is [reference/status.yaml](../reference/status.yaml); the engine,
 the calculator, the benchmark pages and `snufish status` read it.
 
@@ -24,11 +24,35 @@ quoting a legacy result as current biases it. Deviations between
 state-of-the-art inputs are the ones that matter, and the only ones
 SNUfish reports as model ranges.
 
-## What it changes
+## What we have learned
 
-The model ranges, state of the art against everything SNUfish offers, for
-the B23-MB22m fluxes, JUNO 2025 parameters, PREM with the local crust,
-annual rates (app tables):
+1. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
+   reference agree to 10⁻⁸, the two radiative-correction calculations of
+   ν–e scattering to 0.1 %. Every spread that matters comes from physics
+   inputs.
+2. **Most of the large spreads were outdated inputs, not uncertainties.**
+   The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
+   5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
+   models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear
+   rates).
+3. **Solar composition: the open model uncertainty of the fluxes.** B23
+   with MB22 against AAG21: ⁸B −16 %, ⁷Be −8 %, CNO −30 %. The neutrino data
+   prefer MB22 (AAG21 disfavoured by up to 2.5σ on CNO), not decisively.
+4. **⁴⁰Ar: how much the Gamow–Teller strength is quenched, about 37 %.**
+   MARLEY 2 with the measured strengths and the shell model of Suzuki &
+   Honma agree to 3 %; the shell model of Kostensalo et al. with g<sub>A</sub> =
+   1.00 is 27–35 % lower, and with the free g<sub>A</sub> it agrees. The three
+   measured strength sets differ by 11 % among themselves. A cross-section
+   measurement at a stopped-pion source would settle it.
+5. **Earth: the crust under the detector matters at a few per cent; 3D is
+   not yet computed.** The CRUST1.0 column moves A<sub>DN</sub> by −2.4 % (SURF)
+   to +3.8 % (SNOLAB). The crust where neutrinos enter and the 3D mantle
+   (up to ~8 % in the literature) are missing, so there is no Earth range yet.
+6. **Oscillations: JUNO now fixes Δm²₂₁ and θ₁₂.** Solar data alone give
+   Δm²₂₁ about 1.5σ lower: a physics question, not a choice of input.
+
+The model ranges, state of the art against everything SNUfish offers
+(B23-MB22m, JUNO 2025, PREM with the local crust, annual rates):
 
 | Observable | Choice | State of the art | With legacy and approximations |
 |---|---|---|---|
@@ -39,15 +63,6 @@ annual rates (app tables):
 | ⁷Be ES in scintillator | solar model | −7.8 % | −11.5 % to +0.6 % |
 | A<sub>DN</sub>, ⁸B ES at Kamioka | Earth model | none (one current model): 1.52 % | 1.50 % to 2.07 % |
 | A<sub>DN</sub>, ⁸B CC on ⁴⁰Ar at SURF | Earth model | none: 2.84 % | 2.84 % to 4.02 % |
-
-Most of the large spreads SNUfish used to show came from superseded inputs
-or approximations: the factor 5–7 between ⁴⁰Ar tables at 5 MeV, the
-2.9–4.0 % A<sub>DN</sub> at SURF (crustless Earths), the +10 % of B16-GS98 on
-the ⁸B rate. What remains is real and open: the solar composition problem
-(about 16 % on ⁸B, 8 % on ⁷Be) and, for argon, how much the Gamow–Teller
-strength is quenched (about 37 % between the shell model with g<sub>A</sub> =
-1.00 and MARLEY 2 with the measured strengths; 11 % within MARLEY 2). The
-Earth-model uncertainty is not yet computable (3D Earth).
 
 ## Solar models
 

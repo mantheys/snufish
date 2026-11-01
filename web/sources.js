@@ -53,6 +53,11 @@ export const SOURCES = {
   bgt_liu: S("B(GT) from ⁴⁰Ti β decay: Liu et al., Phys. Rev. C 58, 2677 (1998)", "10.1103/PhysRevC.58.2677"),
   bgt_b1998: S("B(GT) from ⁴⁰Ti β decay: Bhattacharya et al., Phys. Rev. C 58, 3677 (1998)", "10.1103/PhysRevC.58.3677"),
   marley_code: S("MARLEY code", null, "https://github.com/MARLEY-MC/marley"),
+  ksz: S("Shell model of νₑ CC on ⁴⁰Ar: Kostensalo, Suhonen & Zuber, Phys. Rev. C 97, 034309 (2018), table I (g_A = 1.00)", "10.1103/PhysRevC.97.034309"),
+  suzuki: S("Shell model cross-check (electrons above 5 MeV): Suzuki & Honma, Phys. Rev. C 87, 014607 (2013)", "arXiv:1211.4078"),
+  crust1: S("CRUST1.0 (local crust under each site): Laske, Masters, Ma & Pasyanos 2013", null, "https://igppweb.ucsd.edu/~gabi/crust1.html"),
+  nufit61: S("NuFIT 6.1 global fit with the first JUNO data", "arXiv:2601.09791"),
+  status: S("Which inputs are the state of the art, legacy or approximations (and why)", null, "https://github.com/mantheys/snufish/blob/main/docs/status-of-inputs.md"),
   klmv: S("KLMV: Kolbe, Langanke, Martínez-Pinedo & Vogel (νₑ CC on ⁴⁰Ar), as tabulated in SNOwGLoBES"),
   plotipus: S("plotipus (figures)", null, "https://github.com/mantheys/plotipus"),
   pyodide: S("Pyodide (Python in the browser, for plotipus figures)", null, "https://pyodide.org"),
@@ -96,12 +101,12 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   if (step === 3) {
     const site = d.sites[setup.site];
     return [S(`${setup.site}: latitude ${site.latitude_deg}° N (${site.source})`, null, link(site.source)),
-            SOURCES.exposure, SOURCES.prem, SOURCES.nufast, SOURCES.nufast_code,
+            SOURCES.exposure, SOURCES.prem, ...(setup.earth_model === "prem_crust1" ? [SOURCES.crust1] : []), SOURCES.nufast, SOURCES.nufast_code,
             ...(setup.orbit ? [SOURCES.orbit, SOURCES.orbit_check] : [])];
   }
   if (step === 4) {
     if (setup.channel === "es") return [...{ bks: [SOURCES.es_radiative], snowglobes: [SOURCES.snowglobes], tree: [SOURCES.es_tree] }[setup.es_model],
-                                        S("Model range: BKS against SNOwGLoBES's tables; tree level is selectable but not in the range")];
+                                        S("Model range: BKS against SNOwGLoBES's tables (Marciano & Parsa); tree level, an approximation, is selectable but not in the range")];
     if (setup.channel === "cc_nue_d") return [SOURCES.nakamura];
     if (setup.channel === "nc_d") return [SOURCES.nakamura, SOURCES.nc_capture];
     if (setup.channel === "nc_ar40") return [SOURCES.snowglobes, S("NC on ⁴⁰Ar: SNOwGLoBES's xs_nc_nue_Ar40.dat, a QRPA calculation by Pirinen & Suhonen given to SNOwGLoBES by private communication (2018), unpublished and without the measured ⁴⁰Ar levels; its negative values (8–9 MeV) are set to zero. No visible-energy model: the threshold is a cut in neutrino energy")];
@@ -113,7 +118,8 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
       out.push(m.endsWith("liu1998") ? SOURCES.bgt_liu : m.endsWith("bhattacharya1998") ? SOURCES.bgt_b1998 : SOURCES.bgt_pn);
       if ((d.xsec_levels?.[setup.channel] || {})[m]) out.push(S(`Measured B(GT) uncertainties of ${d.xsec_levels[setup.channel][m].length} levels, propagated (MARLEY's reaction file)`));
     }
-    if (setup.channel === "cc_nue_ar40") out.push(S("Model range: the selectable models except the two zero below 5 MeV"));
+    if (m === "ar40_ksz2018") out.splice(0, out.length, SOURCES.ksz);
+    if (setup.channel === "cc_nue_ar40") out.push(S("Model range: the state-of-the-art models only, MARLEY 2 with each set of measured B(GT) and the shell model of Kostensalo et al.; MARLEY 2 agrees with the shell model of Suzuki & Honma to 3 % above 5 MeV"), SOURCES.suzuki, SOURCES.status);
     if (setup.xsec_model.includes("klmv")) out.push(SOURCES.klmv);
     return out;
   }
@@ -140,12 +146,12 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
 
 // The home page's credits, grouped
 export const CREDITS = [
-  ["Measurements and fits", [SOURCES.sk_solar, SOURCES.borexino, SOURCES.juno, SOURCES.kamland, SOURCES.nufit]],
+  ["Measurements and fits", [SOURCES.sk_solar, SOURCES.borexino, SOURCES.juno, SOURCES.kamland, SOURCES.nufit, SOURCES.nufit61]],
   ["Solar models and spectra", [SOURCES.b16, SOURCES.bs05, SOURCES.b23, SOURCES.b23_papers, SOURCES.shape_pp_hep, SOURCES.shape_b8, SOURCES.shape_cno]],
-  ["Earth", [SOURCES.prem, SOURCES.nufast, SOURCES.exposure, SOURCES.surf]],
+  ["Earth", [SOURCES.prem, SOURCES.crust1, SOURCES.nufast, SOURCES.exposure, SOURCES.surf]],
   ["Detectors", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.borexino, SOURCES.juno_b8]],
   ["Cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.nakamura, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
-                      SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.klmv]],
+                      SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.ksz, SOURCES.suzuki, SOURCES.klmv]],
   ["Tools", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus]],
   ["Software in this page", [SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
 ];

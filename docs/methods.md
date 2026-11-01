@@ -63,6 +63,16 @@ textbook value, chord lengths, the core-crossing threshold, unitarity, the
 vacuum limit at the horizon, independence of θ₂₃ and δ, and the
 two-flavour constant-density formula.
 
+### Local crust (`prem_crust1`, engine and calculator)
+
+`snufish.crust`: PREM up to the local Moho, then the CRUST1.0 layers of
+the site's 1° × 1° cell (constant density each, Yₑ = 0.494) to the surface
+(`reference/earth/crust1_sites.yaml`). Still radial: the same column
+everywhere along the chord. Solved by NuFast-Earth through the B3 driver's
+`regions:FILE` model (one region per line: outer radius, Yₑ, density
+polynomial), which given PREM's own regions reproduces `prem_full`
+bit for bit.
+
 ## Night exposure
 
 `snufish.exposure`. The fraction of the night the Sun spends at nadir
