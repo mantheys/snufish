@@ -29,6 +29,42 @@ export function interp(x, xp, fp, left = fp[0], right = fp[fp.length - 1]) {
   return fp[lo] + (fp[hi] - fp[lo]) * (x - xp[lo]) / (xp[hi] - xp[lo]);
 }
 
+// numpy.interp of many fp on fixed abscissae: the bracket of every x found once, cached per (xp, xs) arrays
+// (the tables' grids and the components' energies keep their identity), then the same arithmetic as interp()
+const bracketCache = new WeakMap();
+function brackets(xs, xp) {
+  let byXp = bracketCache.get(xp);
+  if (!byXp) { byXp = new WeakMap(); bracketCache.set(xp, byXp); }
+  let b = byXp.get(xs);
+  if (!b) {
+    const m = xs.length, n = xp.length, lo = new Int32Array(m), hi = new Int32Array(m), side = new Int8Array(m);
+    for (let k = 0; k < m; k++) {
+      const x = xs[k];
+      if (x < xp[0]) { side[k] = -1; continue; }
+      if (x > xp[n - 1]) { side[k] = 1; continue; }
+      if (n === 1) { side[k] = 2; continue; }
+      let l = 0, h = n - 1;
+      while (h - l > 1) { const mid = (l + h) >> 1; if (xp[mid] <= x) l = mid; else h = mid; }
+      if (x === xp[h]) { side[k] = 3; hi[k] = h; continue; }
+      lo[k] = l; hi[k] = h;
+    }
+    b = { xs, xp, lo, hi, side };
+    byXp.set(xs, b);
+  }
+  return b;
+}
+
+function interpAt(b, fp, left = fp[0], right = fp[fp.length - 1]) {
+  // interp(x, xp, fp, left, right) for every x of brackets(xs, xp)
+  const { xs, xp, lo, hi, side } = b, out = new Float64Array(xs.length);
+  for (let k = 0; k < xs.length; k++) {
+    const sd = side[k];
+    if (sd === 0) { const l = lo[k], h = hi[k]; out[k] = fp[l] + (fp[h] - fp[l]) * (xs[k] - xp[l]) / (xp[h] - xp[l]); }
+    else out[k] = sd === -1 ? left : sd === 1 ? right : sd === 2 ? fp[0] : fp[hi[k]];
+  }
+  return out;
+}
+
 function trapezoid(y, x) {
   let s = 0;
   for (let i = 1; i < x.length; i++) s += 0.5 * (y[i] + y[i - 1]) * (x[i] - x[i - 1]);
@@ -301,9 +337,22 @@ export function esAbove(E, flavour, c, tMin) {
   return 2 * G ** 2 * me / Math.PI * (primitive(tMax) - primitive(lo)) * hbarc2;
 }
 
+function esAboveEdges(E, flavour, c, edges) {
+  // esAbove(E, flavour, c, t) for every t of edges: the same arithmetic, the constants and the upper end once
+  const me = c.m_e_MeV, sw2 = c.sin2_theta_W, G = c["G_F_GeV-2"] * 1e-6, hbarc2 = (c.hbarc_MeV_fm * 1e-13) ** 2;
+  const g1 = (flavour === "nue" ? 0.5 : -0.5) + sw2, g2 = sw2;
+  const tMax = 2 * E ** 2 / (me + 2 * E), pref = 2 * G ** 2 * me / Math.PI;
+  const primitive = (T) => g1 ** 2 * T - g2 ** 2 * (E / 3) * (1 - T / E) ** 3 - g1 * g2 * me * T ** 2 / (2 * E ** 2);
+  const top = primitive(tMax), out = new Float64Array(edges.length);
+  for (let j = 0; j < edges.length; j++) out[j] = pref * (top - primitive(Math.min(edges[j], tMax))) * hbarc2;
+  return out;
+}
+
 export function bksRatio(d, flavour, e, edges) {
   // ratio of the radiatively corrected (BKS 1995) to the tree-level sigma(E; T > t), linear in ln E and t / T_max
-  const t = d.es_bks, grid = t.energy.map(Math.log), ratio = t[flavour], me = d.constants.m_e_MeV;
+  const t = d.es_bks, ratio = t[flavour], me = d.constants.m_e_MeV;
+  t.logEnergy ||= t.energy.map(Math.log); // once per table
+  const grid = t.logEnergy;
   const x = Math.min(Math.max(Math.log(e), grid[0]), grid[grid.length - 1]);
   let i = 0;
   while (i + 1 < grid.length && grid[i + 1] <= x) i++;
@@ -329,8 +378,13 @@ function kernels(inputs, setup, component, edges) {
     const { energy } = inputs.components[component], d = inputs.data;
     let value;
     if (setup.channel === "es") {
-      value = ["nue", "numu"].map((fl) => energy.map((e) => {
-        let above = edges.map((t) => esAbove(e, fl, d.constants, t));
+      const treeKey = [component, setup.detector, setup.channel, setup.threshold].join("|");
+      inputs.treeCache ||= new Map();
+      if (!inputs.treeCache.has(treeKey)) // tree-level sigma above every edge: the same for every ES model
+        inputs.treeCache.set(treeKey, ["nue", "numu"].map((fl) => energy.map((e) => esAboveEdges(e, fl, d.constants, edges))));
+      const tree = inputs.treeCache.get(treeKey);
+      value = ["nue", "numu"].map((fl, f) => energy.map((e, i) => {
+        let above = tree[f][i];
         if (setup.es_model === "bks") { const r = bksRatio(d, fl, e, edges); above = above.map((a, j) => a * r[j]); }
         let ratio = 1;
         if (setup.es_model === "snowglobes") { // its tables start at 0.5 MeV: BKS below
@@ -465,20 +519,37 @@ export function orbital(inputs, setup) {
   return [site.orbit_day, site.orbit_night];
 }
 
+// survival() per oscillation point: a budget and the spectra of the same draws (one `draws` object passed to both
+// as `given`) then interpolate the tables once per draw. Keyed by the osc object and the tables' provider.
+const survivalCache = new WeakMap();
+
 export function survival(inputs, probabilities, setup, osc, night = true) {
   // {component: [P_ee by day, P_ee by night or null]} at the component's energies
-  const U2 = ue2(osc), nightTable = night ? probabilities.night(osc, setup.earth_model, setup.site) : null;
+  const model = setup.profile_model || setup.solar_model;
+  let byProvider = survivalCache.get(osc);
+  if (!byProvider) { byProvider = new WeakMap(); survivalCache.set(osc, byProvider); }
+  let memo = byProvider.get(probabilities);
+  if (!memo) { memo = new Map(); byProvider.set(probabilities, memo); }
+  const U2 = ue2(osc);
+  let nightCols = null;
   const out = {};
   for (const c of setup.components) {
+    const key = `${c}|${model}|${night ? `${setup.earth_model}|${setup.site}` : "day"}`;
+    if (memo.has(key)) { out[c] = memo.get(key); continue; }
     const { energy } = inputs.components[c];
-    const F = probabilities.day(osc, setup.profile_model || setup.solar_model, c, energy);
+    const F = probabilities.day(osc, model, c, energy);
     let peeNight = null;
     if (night) {
-      const [nE, nP] = nightTable;
-      const P = [0, 1, 2].map((i) => { const col = nP.map((row) => row[i]); return energy.map((e) => interp(e, nE, col, U2[i])); });
+      if (!nightCols) {
+        const [nE, nP] = probabilities.night(osc, setup.earth_model, setup.site);
+        nightCols = [nE, [0, 1, 2].map((i) => Float64Array.from(nP, (row) => row[i]))];
+      }
+      const [nE, cols] = nightCols, b = brackets(energy, nE);
+      const P = [0, 1, 2].map((i) => interpAt(b, cols[i], U2[i]));
       peeNight = F.map((f, k) => f[0] * P[0][k] + f[1] * P[1][k] + f[2] * P[2][k]);
     }
     out[c] = [F.map((f) => f[0] * U2[0] + f[1] * U2[1] + f[2] * U2[2]), peeNight];
+    memo.set(key, out[c]);
   }
   return out;
 }
@@ -569,9 +640,20 @@ function prepared(inputs, setup, component) {
       if (r === null) out[index[j]] = acceptance[j]; else for (let m = 0; m < nb; m++) out[index[m]] += r[m] * acceptance[m];
       return out;
     });
+    // the non-zero span of each row (one bin without resolution): adding v * 0 changes nothing, so it is skipped
+    const span = toDisplay.map((t) => {
+      let first = 0, last = nd - 1;
+      while (first < nd && t[first] === 0) first++;
+      while (last > first && t[last] === 0) last--;
+      return [first, last];
+    });
     const observe = (vec) => { // true bins -> accepted, display-binned observed bins
       const out = new Float64Array(nd);
-      for (let j = 0; j < nb; j++) { const v = vec[j]; if (v === 0) continue; const t = toDisplay[j]; for (let b = 0; b < nd; b++) out[b] += v * t[b]; }
+      for (let j = 0; j < nb; j++) {
+        const v = vec[j]; if (v === 0) continue;
+        const t = toDisplay[j], [first, last] = span[j];
+        for (let b = first; b <= last; b++) out[b] += v * t[b];
+      }
       return out;
     };
     const { kind, energy, weight } = inputs.components[component], k = kernels(inputs, setup, component, edges);
@@ -597,12 +679,18 @@ function fast(inputs, probabilities, setup, osc, night, wantSpectra) {
     const value = (pee) => {
       if (pee === null) return wantSpectra ? null : NaN;
       if (isNC(setup)) pee = pee.map(() => 1); // all active flavours alike
-      if (setup.channel === "es") {
-        const w = prep.q.map((qi, i) => qi * pee[i]);
-        if (!wantSpectra) return scale * (w.reduce((t, wi, i) => t + wi * prep.diffTotal[i], 0) + prep.baseTotal);
-        const out2 = Array.from(prep.baseDisplay);
-        w.forEach((wi, i) => { const row = prep.diffDisplay[i]; for (let b = 0; b < out2.length; b++) out2[b] += wi * row[b]; });
-        return out2.map((v) => scale * v);
+      if (setup.channel === "es") { // typed arrays and plain loops: the same sums in the same order, without boxing
+        const q = prep.q, m = q.length, w = new Float64Array(m);
+        for (let i = 0; i < m; i++) w[i] = q[i] * pee[i];
+        if (!wantSpectra) {
+          const diff = prep.diffTotal;
+          let t = 0;
+          for (let i = 0; i < m; i++) t += w[i] * diff[i];
+          return scale * (t + prep.baseTotal);
+        }
+        const out2 = Float64Array.from(prep.baseDisplay), nb2 = out2.length;
+        for (let i = 0; i < m; i++) { const wi = w[i], row = prep.diffDisplay[i]; for (let b = 0; b < nb2; b++) out2[b] += wi * row[b]; }
+        return Array.from(out2, (v) => scale * v);
       }
       const truth = visible(inputs, setup, kind, energy, energy.map((_, i) => scale * weight[i] * pee[i] * prep.sigma[i]), prep.edges);
       if (!wantSpectra) return truth.reduce((t, v, j) => t + v * prep.accepted[j], 0);
@@ -901,12 +989,18 @@ export class TableProbabilities {
   day(osc, solarModel, component, energies) {
     const t = this.get(`day_${solarModel}`), e = t[`energy_${component}`], F = t[`F_${component}`];
     const F12 = this.blend(F, 0, t.dm21.length, e.length * 2, this.point(t, osc)), [c] = this.theta13(osc);
-    const loge = e.map(Math.log), f1 = e.map((_, k) => F12[2 * k]), f2 = e.map((_, k) => F12[2 * k + 1]);
-    return energies.map((x) => {
-      const l = Math.log(Math.min(Math.max(x, e[0]), e[e.length - 1]));
-      const a = c * interp(l, loge, f1), b = c * interp(l, loge, f2);
-      return [a, b, 1 - a - b];
-    });
+    // the table's log grid and the clamped log energies, once per (table, energies): they keep their identity
+    t.logCache ||= new Map();
+    let logs = t.logCache.get(component);
+    if (!logs) { logs = { loge: e.map(Math.log), at: new WeakMap() }; t.logCache.set(component, logs); }
+    let br = logs.at.get(energies);
+    if (!br) {
+      br = brackets(Float64Array.from(energies, (x) => Math.log(Math.min(Math.max(x, e[0]), e[e.length - 1]))), logs.loge);
+      logs.at.set(energies, br);
+    }
+    const f1 = e.map((_, k) => F12[2 * k]), f2 = e.map((_, k) => F12[2 * k + 1]);
+    const A = interpAt(br, f1), B = interpAt(br, f2);
+    return Array.from(energies, (_, k) => { const a = c * A[k], b = c * B[k]; return [a, b, 1 - a - b]; });
   }
 
   night(osc, earthModel, site) {

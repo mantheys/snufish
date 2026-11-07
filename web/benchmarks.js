@@ -2,11 +2,11 @@
 // much it moves five reference observables. Reads data/sections.json (snufish export-sections) and data/inputs.json;
 // the discrepancies tab recomputes the calculator's result templates (checks.js) on its tables.
 import * as engine from "./engine.js";
+import { DATA, loadTable } from "./load.js";
 import { DISPLAY } from "./engine.js";
 import { CHECKS, PAPER_SETS, UNITS, checkSetup, currentSetup, reproduced } from "./checks.js";
 import { CONFIG, alpha, colours, htmlLegend, layout, math, plain, themeIcon } from "./plots.js";
 
-const DATA = "data/";
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 // the benchmarks are the calculator's steps, under the same names
 const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
@@ -394,19 +394,6 @@ function b5() {
 }
 
 // ------------------------------------------------------------------ discrepancies
-
-async function loadTable(name) {
-  // as app.js: a table's JSON index and its float32 binary (base64 text in a hosted copy)
-  const meta = await (await fetch(`${DATA}${name}.json`)).json();
-  const response = await fetch(`${DATA}${meta.bin}`);
-  if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
-  if (meta.encoding === "base64") {
-    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-    return { meta, buffer: bytes.buffer };
-  }
-  return { meta, buffer: await response.arrayBuffer() };
-}
 
 async function templates() {
   // every template's central value as the calculator computes it (the paper's inputs), and again with every legacy
