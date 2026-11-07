@@ -1,22 +1,41 @@
-# SNUfish benchmark B2: MSW propagation in the Sun.
+# SNUfish benchmark B2: the Sun, from the solar model to the neutrinos leaving it.
 #
-# Each contribution gives F_i(E, r0) = P(nu_e produced at radius r0 -> nu_i at
-# the solar surface), the mass-eigenstate fractions that arrive at the Earth
-# (incoherently: the Sun-Earth distance averages all phases). F_i is the
-# phase-averaged value: the exact pointwise F_i carries O(1/gamma) terms
-# (gamma ~ 1e3, the adiabaticity at the MSW resonance) that oscillate with the
-# phase accumulated across the Sun and vanish over any energy resolution.
-# For these parameters it equals the adiabatic |V_ei(r0)|^2 to O(1e-6). SNUfish averages
-# them over each flux component's production profile and combines them with
-# B3 into day and night P_ee and the day-night asymmetry.
+# Part 1, solar models: a registry of standard solar models in one format
+# (models.yaml, written by scripts/import_ssm.py from the published tables):
+# flux normalisations per component, electron density n_e(r) and the
+# production profile of each component. B5 folds every model into rates, so
+# the spread between solar models sits next to the spread between cross
+# sections and Earth models.
+#
+# Part 2, propagation: each contribution gives F_i(E, r0) = P(nu_e produced at
+# radius r0 -> nu_i at the solar surface), the mass-eigenstate fractions that
+# arrive at the Earth (incoherently: the Sun-Earth distance averages all
+# phases). F_i is the phase-averaged value: the exact pointwise F_i carries
+# O(1/gamma) terms (gamma ~ 1e3, the adiabaticity at the MSW resonance) that
+# oscillate with the phase accumulated across the Sun and vanish over any
+# energy resolution. For these parameters it equals the adiabatic
+# |V_ei(r0)|^2 to O(1e-6); tools agree on it to 3e-8, so the solar model, not
+# the solver, is what moves a result. SNUfish averages F_i over each flux
+# component's production profile and combines them with B3 into day and
+# night P_ee and the day-night asymmetry.
 #
 # Status: DRAFT.
 
 id: B2_sun
-version: 0.2.0
+version: 0.2.0   # part 1 (the solar models, from the former B1_ssm) adds no grid: contributions stay valid
 status: draft
-title: Mass-eigenstate fractions leaving the Sun
+title: "Sun: solar models and the mass-eigenstate fractions leaving the Sun"
 neutrinos_only: true
+
+# Part 1: the solar models
+models_file: benchmarks/B2_sun/models.yaml
+reference_model: b16_gs98          # ratios in the solar-model plots are taken to this model
+components: [pp, pep, hep, Be7, B8, N13, O15, F17]
+# Beyond a table's last radius (B16 and BS05 stop at 0.5 R_sun),
+# log10 n_e = intercept + slope r, fitted to the table for r > 0.4 (models.yaml `tail`).
+# Below the first radius, n_e and the production densities are constant.
+
+# Part 2: propagation
 
 quantities:
   F1: P(nu_e at r0 -> nu_1 at the solar surface)
@@ -47,8 +66,8 @@ sun:
   radius_km: 695700.0           # IAU 2015 nominal solar radius
   path: radial                  # from r0 straight out to the surface
 
-# Solar models: every model of the B1 registry (benchmarks/B1_ssm/models.yaml:
-# n_e(r) and production profiles in SNUfish format), plus analytic profiles
+# Solar models: every model of part 1 (models.yaml: n_e(r) and production
+# profiles in SNUfish format), plus analytic profiles
 # defined here. n_e is in N_A / cm^3, so V = sqrt(2) G_F N_A n_e.
 solar_models:
   exponential:
@@ -65,39 +84,39 @@ variants:
   b16_agss09met:
     required: false
     solar_model: b16_agss09met
-    description: B1 model b16_agss09met.
+    description: solar model b16_agss09met.
   bs05_op:
     required: false
     solar_model: bs05_op
-    description: B1 model bs05_op.
+    description: solar model bs05_op.
   bs05_agsop:
     required: false
     solar_model: bs05_agsop
-    description: B1 model bs05_agsop.
+    description: solar model bs05_agsop.
   b23_gs98:
     required: false
     solar_model: b23_gs98
-    description: B1 model b23_gs98.
+    description: solar model b23_gs98.
   b23_agss09:
     required: false
     solar_model: b23_agss09
-    description: B1 model b23_agss09.
+    description: solar model b23_agss09.
   b23_c11:
     required: false
     solar_model: b23_c11
-    description: B1 model b23_c11.
+    description: solar model b23_c11.
   b23_aag21:
     required: false
     solar_model: b23_aag21
-    description: B1 model b23_aag21.
+    description: solar model b23_aag21.
   b23_mb22m:
     required: false
     solar_model: b23_mb22m
-    description: B1 model b23_mb22m.
+    description: solar model b23_mb22m.
   b23_mb22p:
     required: false
     solar_model: b23_mb22p
-    description: B1 model b23_mb22p.
+    description: solar model b23_mb22p.
   exponential:
     required: false
     solar_model: exponential
@@ -114,8 +133,12 @@ columns:
 checks:
   range: [0.0, 1.0]
   unitarity_tolerance: 1.0e-6   # F1 + F2 + F3 = 1
+  production_normalisation_tolerance: 1.0e-6   # each production profile integrates to 1
+  density_decreasing_beyond: 0.05              # n_e falls monotonically outside the core
 
 # Open questions:
+# - Spectral shapes are shared by all models (B5); add the Ortiz et al. 8B shape
+#   and the 7Be line widths as shape variants.
 # - A validated non-adiabatic solver (e.g. adiabatic-basis integration with
 #   phase averaging) to measure the O(1/gamma^2) corrections directly.
 # - Radial path vs the true line of sight for off-centre production

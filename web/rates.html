@@ -27,8 +27,8 @@
       <label>Result Templates <select id="check"></select></label>
       <p class="hint" id="check-note">Sets every step to a paper's inputs and shows its number next to SNUfish's.</p>
     </section>
-    <section class="step" data-step="0">
-      <h2><span>0</span> Result <button type="button" class="info" data-step="0" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+    <section class="step" data-step="result">
+      <h2>Result <button type="button" class="info" data-step="result" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <div class="seg" role="radiogroup" aria-label="Quantity">
         <label><input type="radio" name="quantity" value="rate" checked><span>Interaction rate</span></label>
@@ -50,16 +50,16 @@
       </select></label>
     </section>
 
-    <section class="step" data-step="1">
-      <h2><span>1</span> Oscillation parameters <button type="button" class="info" data-step="1" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+    <section class="step" data-step="b1">
+      <h2><span>B1</span> Oscillation parameters <button type="button" class="info" data-step="b1" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <label>Parameter set <select id="set"></select></label>
       <p id="set-info" class="hint"></p>
       <p id="set-status" class="hint status-note"></p>
     </section>
 
-    <section class="step" data-step="2">
-      <h2><span>2</span> Sun <button type="button" class="info" data-step="2" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+    <section class="step" data-step="b2">
+      <h2><span>B2</span> Sun <button type="button" class="info" data-step="b2" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <label>Solar model <select id="solar"></select></label>
       <p id="solar-status" class="hint status-note"></p>
@@ -75,10 +75,12 @@
           <label><input type="radio" name="b8" value="sno_nc"><span>Measured (SNO NC)</span></label>
         </div>
       </div>
+      <p class="hint">The oscillations inside the Sun follow from the model's electron density and production profiles
+        (SNUfish's adiabatic solver; solvers agree to 3 × 10⁻⁸, <a href="benchmarks.html#B2">B2</a>).</p>
     </section>
 
-    <section class="step" data-step="3">
-      <h2><span>3</span> Earth <button type="button" class="info" data-step="3" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+    <section class="step" data-step="b3">
+      <h2><span>B3</span> Earth <button type="button" class="info" data-step="b3" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <p id="earth-note" class="hint"></p>
       <label>Site <select id="site"></select></label>
@@ -88,8 +90,8 @@
       <p id="orbit-note" class="hint"></p>
     </section>
 
-    <section class="step" data-step="4">
-      <h2><span>4</span> Interaction <button type="button" class="info" data-step="4" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+    <section class="step" data-step="b4">
+      <h2><span>B4</span> Interaction <button type="button" class="info" data-step="b4" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <label>Target <select id="detector"></select></label>
       <label>Channel <select id="channel"></select></label>
@@ -106,8 +108,8 @@
       <p id="xsec-status" class="hint status-note"></p>
     </section>
 
-    <section class="step" data-step="5">
-      <h2><span>5</span> Detector <button type="button" class="info" data-step="5" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
+    <section class="step" data-step="b5">
+      <h2><span>B5</span> Detector <button type="button" class="info" data-step="b5" aria-expanded="false" aria-label="Sources for this step" title="Sources">i</button></h2>
       <div class="sources-box" hidden></div>
       <div class="seg" role="radiogroup" aria-label="Detector configuration">
         <label><input type="radio" name="config" value="preset" checked><span>Preset</span></label>
@@ -217,8 +219,8 @@
       <div id="plotipus-figures" class="figures"></div>
     </section>
     <p class="hint footnote">
-      Rates are interactions per kiloton-year, in observed energy after the detector response of step 5 (ES: electron
-      kinetic energy; CC: visible energy E_ν − Q, no neutron or binding losses). Probabilities are interpolated from tables of the SNUfish solvers (Sun: B2 reference; Earth: NuFast-Earth), which they reproduce to
+      Rates are interactions per kiloton-year, in observed energy after the detector response of B5 (ES: electron
+      kinetic energy; CC: visible energy E_ν − Q, no neutron or binding losses). Probabilities are interpolated from tables of the solvers (B2 Sun: the SNUfish reference; B3 Earth: NuFast-Earth), which they reproduce to
       2×10⁻⁴ for rates and 1 % for the day-night asymmetry. Sampled (1σ): oscillation parameters, solar fluxes with
       their correlations, statistics. Model ranges are the spread of the competing state-of-the-art models, not probabilities, and are
       never folded into the σ; legacy models and approximations stay selectable, are labelled, and their spread is shown

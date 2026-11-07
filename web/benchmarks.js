@@ -8,8 +8,9 @@ import { CONFIG, alpha, colours, htmlLegend, layout } from "./plots.js";
 
 const DATA = "data/";
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
-const SECTIONS = { oscillation: "Oscillation parameters", B1: "B1 solar models", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 cross sections" };
-const SECTION_SERIES = { oscillation: 9, B1: 2, B2: 1, B3: 6, B4: 5 }; // --series-N of each step
+// the benchmarks are the calculator's steps, under the same names (B5 adds no input of its own)
+const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction" };
+const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
                 scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A_DN, water" };
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
@@ -62,7 +63,7 @@ function largest(rows, central, keep) {
 function matrix() {
   const obs = page.sections.observables, accent = colours().sampled;
   const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && stateOfTheArt(r)]);
-  const heads = { oscillation: "Oscillation", B1: "B1", B2: "B2", B3: "B3", B4: "B4" };
+  const heads = { B1: "B1", B2: "B2", B3: "B3", B4: "B4" };
   const cell = (best) => {
     if (!best) return `<td class="num empty">–</td>`;
     const strength = Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5));
@@ -115,9 +116,11 @@ function impactPlot(node, section) {
              cliponaxis: false, textfont: { size: 10, color: c.secondary }, marker: { color: alpha(colour, opacity) },
              hovertemplate: `%{y}: %{text}<extra>${sup(source)}</extra>` };
   };
-  const traces = [trace("oscillation parameters", c.muted, 0.6), ...sources.map((s, i) => trace(s, colourOf[i % colourOf.length]))];
+  // B1's own sampled spread, in grey for scale on the other steps' pages
+  const scale = section === "B1" ? [] : [trace("oscillation parameters", c.muted, 0.6)];
+  const traces = [...scale, ...sources.map((s, i) => trace(s, section === "B1" ? seriesColour("B1") : colourOf[i % colourOf.length]))];
   const kindOf = (s) => Object.values(obs).flatMap((o) => o.rows).find((r) => r.source === s).kind;
-  htmlLegend(node, traces.map((t, i) => ({ label: i ? `${t.name} <span class="kind">(${kindOf(sources[i - 1])})</span>` : "oscillation parameters (sampled, for scale)",
+  htmlLegend(node, traces.map((t, i) => ({ label: i >= scale.length ? `${t.name} <span class="kind">(${kindOf(sources[i - scale.length])})</span>` : "B1 oscillation parameters (sampled, for scale)",
                                            colour: t.marker.color, fill: true })));
   node.style.height = `${Math.max(380, ids.length * (traces.length * 14 + 18) + 80)}px`;
   return Plotly.react(node, traces, layout(c, node, `Effect of ${SECTIONS[section]} on the reference observables`,
@@ -129,11 +132,46 @@ function impactPlot(node, section) {
 // ------------------------------------------------------------------ B1
 
 function b1() {
+  // B1: what the oscillation parameters move, and the state-of-the-art sets with their 1 sigma
   impactPlot($("plot-b1-impact"), "B1");
+  const c = colours(), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
+  const ref = page.sections.set, current = Object.keys(sets).filter((k) => status[k]?.status === "current");
+  const colourOf = { reactor: palette()[0], global: palette()[1], solar: palette()[2] }, symbol = { reactor: "square", global: "diamond", solar: "circle" };
+  const seen = new Set();
+  const traces = current.map((k) => {
+    const p = sets[k], dm = p.dm2_21_eV2, s12 = p.sin2_theta12, key = `${s12.value}|${dm.value}`;
+    const x = s12.value + (seen.has(key) ? 0.0015 : 0); // two sets on one point: the second a hair to the right
+    seen.add(key);
+    return { x: [x], y: [1e5 * dm.value], mode: "markers", name: p.label,
+             marker: { color: colourOf[p.kind] || palette()[3], size: k === ref ? 12 : 10, symbol: symbol[p.kind] || "circle" },
+             error_x: { type: "data", symmetric: false, array: [s12.error[1]], arrayminus: [s12.error[0]], color: colourOf[p.kind], thickness: 1.4, width: 3 },
+             error_y: { type: "data", symmetric: false, array: [1e5 * dm.error[1]], arrayminus: [1e5 * dm.error[0]], color: colourOf[p.kind], thickness: 1.4, width: 3 },
+             hovertemplate: `sin²θ₁₂ = ${s12.value}, Δm²₂₁ = %{y:.2f} × 10⁻⁵ eV²<extra>${p.label}</extra>` };
+  });
+  const node = $("plot-b1-sets");
+  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })), "State-of-the-art sets, 1σ");
+  Plotly.react(node, traces, layout(c, node, "Δm²₂₁ and sin²θ₁₂ of each set", "sin²θ₁₂", "Δm²₂₁ (10⁻⁵ eV²)",
+    { showlegend: false, hovermode: "closest" }), CONFIG);
+  const badge = (st) => `<span class="badge ${st}">${{ current: "state of the art", legacy: "legacy" }[st] || st}</span>`;
+  const err = (e, k = 1) => (e[0] === e[1] ? `± ${+(k * e[0]).toPrecision(2)}` : `−${+(k * e[0]).toPrecision(2)} +${+(k * e[1]).toPrecision(2)}`);
+  $("b1-table").innerHTML = `<table><thead><tr><th>Set</th><th>Status</th><th class="num">Δm²₂₁ (10⁻⁵ eV²)</th><th class="num">sin²θ₁₂</th><th>Source</th></tr></thead><tbody>${
+    Object.entries(sets).filter(([k]) => status[k]).map(([k, p]) => `<tr><td>${p.label}</td><td>${badge(status[k].status)}</td>
+      <td class="num">${+(1e5 * p.dm2_21_eV2.value).toFixed(2)} ${err(p.dm2_21_eV2.error, 1e5)}</td>
+      <td class="num">${p.sin2_theta12.value} ${err(p.sin2_theta12.error)}</td><td>${p.source}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function b2() {
+  impactPlot($("plot-b2-impact"), "B2");
+  b2Models();
+  b2Propagation();
+}
+
+function b2Models() {
+  // B2, part 1: the solar models
   const c = colours(), models = page.inputs.solar_models, ref = page.sections.solar_model;
   const names = Object.keys(models);
   // fluxes over the reference model, its published 1 sigma as error bars
-  let node = $("plot-b1-flux");
+  let node = $("plot-b2-flux");
   const fluxTraces = names.map((m, i) => ({
     x: ORDER.map((comp) => DISPLAY[comp]), y: ORDER.map((comp) => models[m].fluxes[comp] / models[ref].fluxes[comp]),
     mode: "markers", name: models[m].label, marker: { color: palette()[i % 8], size: m === ref ? 9 : 7, symbol: m === ref ? "diamond" : i >= 8 ? "square" : "circle" },
@@ -143,15 +181,15 @@ function b1() {
   Plotly.react(node, fluxTraces, layout(c, node, `Fluxes over ${models[ref].label}`, "Component", "Flux ratio",
     { showlegend: false, hovermode: "closest", xaxis: { minor: { ticks: "" } } }), CONFIG);
   // where each component is produced, in the chosen model
-  const b1d = page.sections.b1, model = $("b1-model").value;
-  node = $("plot-b1-production");
+  const b1d = page.sections.solar_profiles, model = $("b2-model").value;
+  node = $("plot-b2-production");
   const prodTraces = ORDER.map((comp, i) => ({ x: b1d.radius, y: b1d.models[model].production[comp], mode: "lines", name: DISPLAY[comp],
     line: { color: c.component[comp], width: 2 }, hovertemplate: `r = %{x:.3f}: %{y:.3g}<extra>${DISPLAY[comp]}</extra>` }));
   htmlLegend(node, prodTraces.map((t) => ({ label: t.name, colour: t.line.color })));
   Plotly.react(node, prodTraces, layout(c, node, `Production profiles (${models[model].label})`, "r / R☉", "Fraction per unit r / R☉",
     { showlegend: false, hovermode: "x unified", xaxis: { range: [0, 0.35] } }), CONFIG);
   // electron density
-  node = $("plot-b1-density");
+  node = $("plot-b2-density");
   const neTraces = names.map((m, i) => ({ x: b1d.radius, y: b1d.models[m].log_ne.map((v) => 10 ** v), mode: "lines", name: models[m].label,
     line: { color: palette()[i % 8], width: m === ref ? 2.6 : 1.4, dash: i >= 8 ? "dot" : undefined }, hovertemplate: `r = %{x:.3f}: %{y:.4g}<extra>${models[m].label}</extra>` }));
   htmlLegend(node, neTraces.map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash })));
@@ -188,9 +226,9 @@ function interpLog(log, values, x) {
 
 const energyAxis = { type: "log", tickvals: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20], ticktext: ["0.1", "0.2", "0.5", "1", "2", "5", "10", "20"] };
 
-function b2() {
-  impactPlot($("plot-b2-impact"), "B2");
-  const c = colours(), b2d = page.sections.b2, ref = page.sections.solar_model, models = page.inputs.solar_models;
+function b2Propagation() {
+  // B2, part 2: the oscillations inside the Sun
+  const c = colours(), b2d = page.sections.survival, ref = page.sections.solar_model, models = page.inputs.solar_models;
   const trace = (comp, values, name, colour, dash) => {
     const k = curve(b2d.energy, values, comp);
     return { x: k.x, y: k.y, name, mode: k.line ? "markers" : "lines", line: { color: colour, width: 2.2, dash },
@@ -229,7 +267,7 @@ function toolTable(rows, what, note) {
 
 function b3() {
   impactPlot($("plot-b3-impact"), "B3");
-  const c = colours(), b3d = page.sections.b3, site = $("b3-site").value;
+  const c = colours(), b3d = page.sections.regeneration, site = $("b3-site").value;
   let node = $("plot-b3-models");
   let traces = Object.keys(b3d.models).map((m, i) => ({ x: b3d.energy, y: b3d.models[m][site].map((v) => 100 * v), mode: "lines", name: EARTH[m] || m,
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.3g} MeV: %{y:.3f}<extra>${EARTH[m] || m}</extra>` }));
@@ -530,7 +568,7 @@ async function main() {
     + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages without `
     + `detector response, ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
   fill($("overview-observable"), Object.entries(s.observables).map(([id, o]) => [id, sup(o.label)]), "argon_cc_hep");
-  fill($("b1-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);
+  fill($("b2-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);
   fill($("b2-component"), ORDER.map((comp) => [comp, DISPLAY[comp]]), "hep");
   fill($("b3-site"), Object.keys(page.inputs.sites).map((site) => [site, site]), "Kamioka");
   $("discrepancy-order").addEventListener("change", render);

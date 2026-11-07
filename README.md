@@ -83,10 +83,10 @@ detector.
 <tr>
 <td width="50%">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b1_fluxes.png">
-  <img src="docs/images/light/b1_fluxes.png" alt="pp, 7Be, 8B and 15O fluxes of ten solar models relative to B16-GS98, with each model's published uncertainty.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/dark/b2_fluxes.png">
+  <img src="docs/images/light/b2_fluxes.png" alt="pp, 7Be, 8B and 15O fluxes of ten solar models relative to B16-GS98, with each model's published uncertainty.">
 </picture>
-<b>B1 · Solar models.</b> All ten models (legacy ones included) relative to
+<b>B2 · Sun: solar models.</b> All ten models (legacy ones included) relative to
 B16-GS98: <sup>8</sup>B from 0.76 to 1.04, CNO −30 % to +14 %, pp within
 1.5 %. The state-of-the-art pair, B23 MB22 and AAG21, differs by 16 % on
 <sup>8</sup>B.
@@ -153,13 +153,16 @@ regenerated with `python scripts/readme_images.py` after `snufish build`.
 
 ## Benchmarks
 
-| id | Compares |
-|---|---|
-| **B1_ssm** | Ten standard solar models (B16, BS05, B23 / SF-III) in one format: fluxes, electron density, production profiles |
-| **B2_sun** | Mass-eigenstate fractions leaving the Sun for every B1 model, averaged per flux component |
-| **B3_earth** | P(ν<sub>i</sub> → ν<sub>e</sub>) through the Earth on PREM variants; night averages per detector site |
-| **B4_xsec** | Cross sections per detection channel; nuclear models of <sup>40</sup>Ar as variants |
-| **B5_rates** | Interactions per kton-year by solar model, detector, channel and flux component, for every B4 model |
+The benchmarks are the calculator's steps, in the same order and under the
+same names.
+
+| Step | id | Compares |
+|---|---|---|
+| B1 Oscillation parameters | **B1_osc** | Measurements and global fits of Δm²₂₁ and sin²θ₁₂ in one format, with their status |
+| B2 Sun | **B2_sun** | Ten standard solar models (B16, BS05, B23 / SF-III) in one format (fluxes, electron density, production profiles), and the mass-eigenstate fractions leaving the Sun for every model, averaged per flux component |
+| B3 Earth | **B3_earth** | P(ν<sub>i</sub> → ν<sub>e</sub>) through the Earth on PREM variants; night averages per detector site |
+| B4 Interaction | **B4_xsec** | Cross sections per detection channel; nuclear models of <sup>40</sup>Ar as variants |
+| B5 Detector | **B5_rates** | Interactions per kton-year by solar model, detector, channel and flux component, for every B4 model (the detector response is planned) |
 
 B2 and B3 combine into day and night P<sub>ee</sub> and the day-night
 asymmetry. Tools so far: the SNUfish reference solvers,
@@ -180,7 +183,7 @@ python -m venv .venv && source .venv/bin/activate      # once; then activate in 
 pip install -e ".[dev,plots]"
 snufish validate                 # check every contribution against its spec
 snufish build                    # validated contributions -> build/data/*.parquet for plotipus
-plotipus run b3                  # figures in output/plots (also b1, b2, b45)
+plotipus run b3                  # figures in output/plots (also b2, b45)
 pytest
 ```
 
@@ -203,8 +206,9 @@ described in [docs/usage.md](docs/usage.md).
 
 **[mantheys.github.io/snufish](https://mantheys.github.io/snufish/)**: a
 static site (plain JavaScript, no server) on top of the same engine. The
-calculator takes six steps (result; oscillation parameters; Sun; Earth;
-interaction; detector), each with links to its sources (the Earth step can
+calculator's steps are the result and then the five benchmarks under the
+same names (B1 Oscillation parameters, B2 Sun, B3 Earth, B4 Interaction, B5
+Detector), each with links to its sources (the Earth step can
 include the real Earth–Sun distance:
 [cross-checks](docs/crosschecks.md#earthsun-distance)), and returns the
 spectrum in observed energy, the distribution of the sampled values and the

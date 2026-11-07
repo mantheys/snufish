@@ -52,7 +52,7 @@ def _component_label(value, n_unique):
 
 
 def _model_label(value, n_unique):
-    # `Model` is a solar model in B1 and a cross-section model in B4/B5
+    # `Model` is a solar model in B2 and a cross-section model in B4/B5
     return SOLAR_MODEL_LABELS.get(value) or XSEC_LABELS.get(value)
 
 

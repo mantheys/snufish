@@ -264,7 +264,7 @@ function sync() {
   $("eff-import").hidden = !effImport;
   $("eff-parametric").hidden = $("eff-parametric-hint").hidden = effImport || effCurve;
   if (app.imports.smearing) app.imports.smearing.true_axis = $("smear-neutrino").checked ? "neutrino" : "observed";
-  // step 5: a named preset, or every setting by hand (a preset edited by hand, or set so by a template, is manual)
+  // B5 Detector: a named preset, or every setting by hand (a preset edited by hand, or set so by a template, is manual)
   if ($("preset").value === "custom") setRadio("config", "manual");
   else app.lastPreset = $("preset").value;
   const manual = radio("config") === "manual";
@@ -497,8 +497,8 @@ async function run() {
 async function compute() {
   const setup = readSetup(), quantity = radio("quantity"), d = app.inputs.data;
   saveHash();
-  if ($("res-model").value === "import" && !app.imports.smearing) { status("⚠ Choose a smearing-matrix file (step 5).", true); return; }
-  if ($("eff-model").value === "import" && !app.imports.efficiency) { status("⚠ Choose an efficiency file (step 5).", true); return; }
+  if ($("res-model").value === "import" && !app.imports.smearing) { status("⚠ Choose a smearing-matrix file (B5 Detector).", true); return; }
+  if ($("eff-model").value === "import" && !app.imports.efficiency) { status("⚠ Choose an efficiency file (B5 Detector).", true); return; }
   try { engine.check(app.inputs, setup, quantity); } catch (error) { status(`⚠ ${error.message}`, true); return; }
   const night = engine.needsNight(quantity, setup.period);
   // A rate's solar-model range needs only the fluxes (one table); A_DN, where a single flux cancels,
@@ -605,6 +605,14 @@ function renderOfficial(r) {
   officialPlot($("plot-official"), f);
 }
 
+function stepOf(source) {
+  // the calculator step (and benchmark) a budget row comes from, as the benchmark pages attribute them
+  const id = /^oscillation/.test(source) ? "B1" : /flux|solar model/.test(source) ? "B2" : /Earth/.test(source) ? "B3"
+    : /cross-section|radiative|nuclear|B\(GT\)/.test(source) ? "B4" : /statistics|energy scale|resolution|normalisation/.test(source) ? "B5" : "";
+  return id ? `<span class="bench-id" title="${STEP_NAMES[id]}">${id}</span>` : "";
+}
+const STEP_NAMES = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
+
 function render() {
   const r = app.result;
   if (!r) return;
@@ -631,8 +639,8 @@ function render() {
   budgetPlot($("plot-budget"), r);
   renderOfficial(r);
   const cell = (v) => (Number.isFinite(v) ? fmt(v * scale) : "–");
-  $("table").innerHTML = `<table><thead><tr><th>Source</th><th>Kind</th><th class="num">σ or range</th><th class="num">Relative</th></tr></thead><tbody>${
-    rows.map((x) => `<tr><td>${x.Source}</td><td>${x.Kind}</td><td class="num">${x.Kind === "sampled" ? cell(x.Sigma) : `${cell(x.Low)} to ${cell(x.High)}`}</td><td class="num">${Number.isFinite(x.Relative) ? (100 * x.Relative).toFixed(2) + " %" : "–"}</td></tr>`).join("")
+  $("table").innerHTML = `<table><thead><tr><th>Step</th><th>Source</th><th>Kind</th><th class="num">σ or range</th><th class="num">Relative</th></tr></thead><tbody>${
+    rows.map((x) => `<tr><td>${stepOf(x.Source)}</td><td>${x.Source}</td><td>${x.Kind}</td><td class="num">${x.Kind === "sampled" ? cell(x.Sigma) : `${cell(x.Low)} to ${cell(x.High)}`}</td><td class="num">${Number.isFinite(x.Relative) ? (100 * x.Relative).toFixed(2) + " %" : "–"}</td></tr>`).join("")
   }</tbody></table><p class="hint">Sampled: a 1σ from random draws. Model range: the spread of the state-of-the-art models
   of one choice, never folded into the σ. Legacy spread: the same choice over every model, legacy ones and approximations
   included; context for reading published numbers, not an uncertainty. <a href="index.html#status">Which inputs are which</a>.</p>`;
@@ -846,7 +854,7 @@ function refreshSources() {
   const setup = readSetup(), quantity = radio("quantity");
   document.querySelectorAll(".step").forEach((step) => {
     const box = step.querySelector(".sources-box");
-    if (!box.hidden) box.innerHTML = renderSources(forStep(Number(step.dataset.step), setup, quantity, app.inputs, $("set").value, $("preset").value));
+    if (!box.hidden) box.innerHTML = renderSources(forStep(step.dataset.step, setup, quantity, app.inputs, $("set").value, $("preset").value));
   });
 }
 
@@ -886,7 +894,7 @@ async function init() {
     else if (e.target.closest(".step")) $("check").value = ""; // edited by hand: no longer the published setup
     if (e.target.id === "preset") { applyPreset(e.target.value); if (e.target.value === "thumb") $("check").value = "thumb"; }
     else if (e.target.id === "check") { /* set above */ }
-    else if (e.target.closest('.step[data-step="5"]') || ($("preset").value === "thumb" && e.target.closest('.step[data-step="0"], .step[data-step="2"], .step[data-step="4"]')))
+    else if (e.target.closest('.step[data-step="b5"]') || ($("preset").value === "thumb" && e.target.closest('.step[data-step="result"], .step[data-step="b2"], .step[data-step="b4"]')))
       $("preset").value = "custom"; // edited by hand: no longer the preset
     sync(); refreshSources(); schedule();
   });

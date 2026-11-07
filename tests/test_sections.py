@@ -26,4 +26,6 @@ def test_every_budget_source_has_a_step():
     for source in ("oscillation parameters", "solar fluxes", "8B flux (solar model)", "solar model", "Earth model",
                    "40Ar nuclear model", "ES radiative corrections", "measured B(GT) (11 levels)"):
         assert _section(source) is not None
+    assert _section("oscillation parameters") == "B1"  # the benchmarks are the calculator's steps
+    assert _section("solar fluxes") == _section("solar model") == "B2"
     assert _section("total sampled") is None

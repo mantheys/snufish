@@ -72,9 +72,10 @@ body {
 .picker { background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--measured); border-radius: 10px; padding: 2px 14px 12px; }
 .picker select { font-weight: 600; }
 .step h2 { margin: 0 0 8px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
-.step h2 span {
-  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: 0.8rem;
+/* a benchmark's id (B1–B5), the same chip on the calculator's steps, the home page's findings and the benchmark tabs */
+.step h2 span, .bench-id {
+  display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 6px; border-radius: 11px;
+  background: var(--accent); color: #fff; font-size: 0.78rem; font-weight: 650; text-decoration: none;
 }
 label, .field { display: block; margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }
 .field-label { display: block; margin-bottom: 4px; }
@@ -265,8 +266,8 @@ body[data-tab="discrepancies"] .bench, body[data-tab="discrepancies"] .tabs { ma
 .finding { display: flex; flex-direction: column; overflow: hidden; }
 .finding > p { margin: 4px 6px 8px; font-size: 0.9rem; color: var(--text-secondary); min-height: 3.9em; }
 .finding > p b { color: var(--text-primary); }
-.finding .n {
-  display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: 0.75rem; font-weight: 600; vertical-align: 1px;
-}
+.finding .chips-b { display: flex; gap: 4px; margin: 4px 6px 0; }
+ul.plain ul.plain { margin-top: 4px; padding-left: 4px; list-style: none; }
+ul.plain ul.plain .bench-id { margin-right: 4px; }
 .finding .plot { height: 320px; }
+.hero h2 .bench-id { vertical-align: 3px; margin-right: 4px; font-size: 0.85rem; }

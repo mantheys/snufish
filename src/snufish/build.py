@@ -168,7 +168,7 @@ def _spectrum_row(base, binning, edges, content):
 
 
 def combine_rates(out_dir=None, echo=print):
-    """B5: interaction rates per B1 solar model, B4 model, detector, channel
+    """B5: interaction rates per B2 solar model, B4 model, detector, channel
     and flux component (daytime oscillations from the B2 reference of the
     same solar model), in events per kton-year: spectra in 0.1 MeV bins of
     neutrino energy and totals."""
@@ -282,13 +282,13 @@ def combine_rates(out_dir=None, echo=print):
 
 
 def combine_ssm(out_dir=None, echo=print):
-    """B1: flux ratios to the reference model, electron density and production
+    """B2, part 1: flux ratios to the reference model, electron density and production
     profiles of every solar model in the registry."""
     from .solar import COMPONENTS, electron_density, models, table
 
     out_dir = Path(out_dir) if out_dir else build_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
-    spec = load_spec("B1_ssm")
+    spec = load_spec("B2_sun")
     registry = models()
     reference = registry[spec["reference_model"]]["fluxes"]
     radius = np.round(np.arange(0.0, 0.9001, 0.0025), 6)
@@ -305,11 +305,11 @@ def combine_ssm(out_dir=None, echo=print):
         profiles.append(dict(base, Radius=radius, LogNe=np.log10(electron_density(name, radius))))
         for k, component in enumerate(COMPONENTS):
             production.append(dict(base, Component=component, Radius=data[:, 0], Density=data[:, 2 + k]))
-    frames = {"B1_Fluxes": pd.DataFrame(fluxes), "B1_Profiles": pd.DataFrame(profiles),
-              "B1_Production": pd.DataFrame(production)}
+    frames = {"B2_Fluxes": pd.DataFrame(fluxes), "B2_Profiles": pd.DataFrame(profiles),
+              "B2_Production": pd.DataFrame(production)}
     for name, frame in frames.items():
         _write_frame(frame, out_dir / f"{name}.parquet")
-    echo(f"wrote   {out_dir / 'B1_Fluxes'}.parquet, B1_Profiles, B1_Production ({len(registry)} models)")
+    echo(f"wrote   {out_dir / 'B2_Fluxes'}.parquet, B2_Profiles, B2_Production ({len(registry)} models)")
     return frames
 
 

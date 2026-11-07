@@ -1,6 +1,6 @@
 // Published numbers the page can reproduce with one selection (the same as scripts/crosscheck.py and
 // docs/crosschecks.md): each entry sets every step to the paper's inputs and states what the paper found.
-// published.kind: "rate" (in published.unit, a key of the page's UNITS), "events" (in the exposure of step 5),
+// published.kind: "rate" (in published.unit, a key of the page's UNITS), "events" (in the exposure of B5 Detector),
 // "ratio" (to the unoscillated rate) or "adn" (in the paper's convention (D - N)/mean, as a fraction).
 // arxiv: the paper (linked in the page); figure: the official figure recreated with it (official.js);
 // electron: count the electron of a CC event alone (gammas undetected), with this fractional resolution.

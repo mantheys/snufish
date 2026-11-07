@@ -1,4 +1,4 @@
-"""Standard solar models: the B1 registry (benchmarks/B1_ssm/models.yaml)
+"""Standard solar models: the registry of B2 (benchmarks/B2_sun/models.yaml)
 and analytic profiles defined in a B2 spec (``solar_models`` block)."""
 
 import functools
@@ -14,13 +14,13 @@ COMPONENTS = ("pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17")
 
 @functools.lru_cache(maxsize=4)
 def _registry(root):
-    spec = load_spec("B1_ssm", root=root)
+    spec = load_spec("B2_sun", root=root)
     with (repo_root(root) / spec["models_file"]).open() as handle:
         return yaml.safe_load(handle)
 
 
 def models():
-    """{name: model entry} of every B1 solar model."""
+    """{name: model entry} of every B2 solar model."""
     return _registry(str(repo_root()))
 
 
@@ -30,7 +30,7 @@ def _table(path):
 
 
 def table(name):
-    """Array [r, log10 n_e, production densities...] of a B1 model."""
+    """Array [r, log10 n_e, production densities...] of a B2 solar model."""
     return _table(str(repo_root() / models()[name]["table"]))
 
 
@@ -41,7 +41,7 @@ def _analytic(spec, name):
 
 
 def electron_density(name, r, spec=None):
-    """n_e in N_A / cm^3 at r / R_sun (array-friendly): a B1 model, or an
+    """n_e in N_A / cm^3 at r / R_sun (array-friendly): a B2 solar model, or an
     analytic profile of ``spec`` (a B2 spec)."""
     r = np.asarray(r, dtype=float)
     analytic = _analytic(spec, name)
@@ -78,5 +78,5 @@ def production_weights(name, radius_grid, spec=None):
 
 
 def fluxes(name):
-    """{component: flux in cm^-2 s^-1} of a B1 model."""
+    """{component: flux in cm^-2 s^-1} of a B2 solar model."""
     return models()[name]["fluxes"]

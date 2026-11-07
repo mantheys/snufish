@@ -1,7 +1,7 @@
 # Standard solar model tables in SNUfish format, written by scripts/import_ssm.py.
 # Columns: r/R_sun, log10 n_e [N_A cm^-3], production densities per unit r/R_sun
 # (pp, pep, hep, Be7, B8, N13, O15, F17; each integrates to 1).
-# Per-model sources, checksums, fluxes and licences: benchmarks/B1_ssm/models.yaml.
+# Per-model sources, checksums, fluxes and licences: benchmarks/B2_sun/models.yaml.
 retrieved: 2026-10-28
 sources:
   B16: {reference: "Vinyoles et al., ApJ 835, 202 (2017), arXiv:1611.09867",

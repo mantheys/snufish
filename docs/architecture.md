@@ -23,7 +23,7 @@ SNUfish has two halves that share their inputs:
   snufish validate  ──►  snufish build  ──►  build/data/*.parquet       snufish.engine  ◄──►  web/engine.js
                                                  │                       │         │              │
                                                  ▼                       ▼         ▼              ▼
-                                         plotipus run b1|b2|b3|b45   snufish scan  snufish budget  rates.html
+                                         plotipus run b2|b3|b45   snufish scan  snufish budget  rates.html
 ```
 
 ## Specs
@@ -79,12 +79,12 @@ at the first invalid one unless `--skip_invalid`), then pivots the long
 format into plotipus frames, one row per series with whole arrays in the
 cells, in `build/data/` (never committed). It also derives:
 
-- `B1_*`: flux ratios to the reference solar model, electron density and
+- `B2_Fluxes`, `B2_Profiles`, `B2_Production`: flux ratios to the reference solar model, electron density and
   production profiles;
 - `B23_DayNight`: day and night P_ee and A_DN from every B2 × B3 pair
   (tool, solar model, Earth model, site, component);
 - `B5_Spectrum`, `B5_Totals`: SNUfish's folding of every B4 cross-section
-  model with every B1 solar model and the B2 reference oscillations;
+  model with every B2 solar model and the B2 reference oscillations;
 - `B5_Chain`: full-chain tool rates next to SNUfish's folding of the same
   inputs.
 
@@ -155,5 +155,5 @@ cross sections and rate folding, the scan and budget, the engine against
 the exact solvers (`test_engine.py`) and the JavaScript port
 (`test_web_engine.py`, `web/test/engine.test.mjs`). CI
 (`.github/workflows/ci.yml`) runs the tests, validates and builds every
-contribution and regenerates the plots of `b1`, `b2`, `b3` and `b45` as an
+contribution and regenerates the plots of `b2`, `b3` and `b45` as an
 artifact.

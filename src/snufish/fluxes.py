@@ -8,7 +8,7 @@ from .paths import repo_root
 
 def components(spec, solar_model=None):
     """{name: (flux in cm^-2 s^-1, energies MeV, shape per MeV) or
-    (flux, [(line energy, branching)])}; fluxes of the B1 ``solar_model``
+    (flux, [(line energy, branching)])}; fluxes of the B2 ``solar_model``
     (default: the spec's reference model)."""
     from .solar import fluxes
 

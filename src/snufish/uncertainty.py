@@ -4,14 +4,14 @@ budget``), computed by :mod:`snufish.engine` with the exact B2/B3 solvers
 
 Two kinds of input uncertainty are kept apart:
 
-- sampled (Monte Carlo): solar fluxes (each B1 model's published fractional
+- sampled (Monte Carlo): solar fluxes (each B2 solar model's published fractional
   errors, with its correlation matrix where published, i.e. B23; or the
   measured SNO NC 8B flux) and the oscillation parameters of a parameter
   set (split-normal for asymmetric errors, independent, as the sources
   publish no correlation). Reported as a standard deviation.
 - model choices: the nu_e-40Ar nuclear model (B4 variants), ES radiative
   corrections (BKS vs SNOwGLoBES's tables), the Earth model (B3 variants)
-  and the solar model (B1). Reported as the range of the state-of-the-art
+  and the solar model (B2). Reported as the range of the state-of-the-art
   alternatives (reference/status.yaml) around the nominal, never folded
   into a sigma: the range depends on which models exist, not on a
   probability. Legacy models and approximations are not part of it.
