@@ -83,12 +83,12 @@ uncertainties only; BS05 neither.
 
 | Channel | Model | Source |
 |---|---|---|
-| ES, all flavours | tree level, sin²θ_W = 0.23857 | Standard Model; PDG 2024 (SNUfish reference, B4) |
+| ES, all flavours | tree level, sin²θ<sub>W</sub> = 0.23857 | Standard Model; PDG 2024 (SNUfish reference, B4) |
 | ES, all flavours | BKS radiative corrections | Bahcall, Kamionkowski & Sirlin, PRD 51, 6146 (1995), [astro-ph/9502003](https://arxiv.org/abs/astro-ph/9502003), appendices A and B |
 | ES, all flavours | SNOwGLoBES tables (from 0.5 MeV) | [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) `xscns/` |
 | νₑ ⁴⁰Ar CC | KLMV | Kolbe, Langanke, Martínez-Pinedo & Vogel, as tabulated by SNOwGLoBES (`xs_nue_Ar40_klmv.dat`) |
 | νₑ ⁴⁰Ar CC | MARLEY (SNOwGLoBES 2018 tables, zero below 5 MeV) | [arXiv:2101.11867](https://arxiv.org/abs/2101.11867); B(GT): Bhattacharya et al., PRC 80, 055501 (2009) (`marley`), ⁴⁰Ti β decay (`marley1`; SNOwGLoBES does not say which measurement) |
-| νₑ ⁴⁰Ar CC | Shell model, Kostensalo, Suhonen & Zuber (g_A = 1.00) | Phys. Rev. C 97, 034309 (2018), table I (open-access copy [jyx.jyu.fi/handle/123456789/57301](https://jyx.jyu.fi/handle/123456789/57301)), `reference/xsec/kostensalo2018.yaml`; 5–60 MeV in 5–10 MeV steps, interpolated log-log in E − Q (folded ⁸B: 1.725 against the paper's 1.777 × 10⁻⁴² cm²) |
+| νₑ ⁴⁰Ar CC | Shell model, Kostensalo, Suhonen & Zuber (g<sub>A</sub> = 1.00) | Phys. Rev. C 97, 034309 (2018), table I (open-access copy [jyx.jyu.fi/handle/123456789/57301](https://jyx.jyu.fi/handle/123456789/57301)), `reference/xsec/kostensalo2018.yaml`; 5–60 MeV in 5–10 MeV steps, interpolated log-log in E − Q (folded ⁸B: 1.725 against the paper's 1.777 × 10⁻⁴² cm²) |
 | νₑ ⁴⁰Ar CC | MARLEY 2.0.0 (HF-CRPA + measured B(GT)) | MARLEY 2.0.0 (31 July 2026), [doi:10.5281/zenodo.21880925](https://doi.org/10.5281/zenodo.21880925); Gardiner, PRC 103, 044604 (2021); B(GT): Bhattacharya 2009, Liu et al. PRC 58, 2677 (1998), Bhattacharya et al. PRC 58, 3677 (1998) |
 | νₑ ¹⁶O, ¹³C CC | SNOwGLoBES tables | SNOwGLoBES `xscns/` |
 | νₑ d CC, ν d NC | Nakamura et al., Nucl. Phys. A 707, 561 (2002), [nucl-th/0201062](https://arxiv.org/abs/nucl-th/0201062), table 1 (AV18, ±1 %) | `reference/xsec/nakamura2002.yaml`; SNOwGLoBES's `xs_nue_d.dat` is the same table from 5 MeV |
@@ -104,11 +104,25 @@ Targets per kiloton:
 |---|---|---|
 | `argon` | 2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar | natural argon, 99.60 % ⁴⁰Ar, M = 39.948 g/mol (B5 spec) |
 | `water` | 3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O | H₂O, M = 18.015 g/mol, 99.757 % ¹⁶O (B5 spec) |
-| `scintillator_pc` | 3.307 × 10³² e⁻ | Borexino pseudocumene + PPO, [arXiv:1707.09279](https://arxiv.org/abs/1707.09279) |
+| `scintillator_pc` | 3.307 × 10³² e⁻ | Borexino pseudocumene + PPO, [arXiv:1707.09279](https://arxiv.org/abs/1707.09279) (B5 spec) |
 | `scintillator_lab` | 3.38 × 10³² e⁻ | JUNO LAB, arXiv:2006.11760 |
-| `heavy_water` | 3.007 × 10³² e⁻, 6.014 × 10³¹ d | D₂O, 99.92 % isotopic purity ([arXiv:1109.0763](https://arxiv.org/abs/1109.0763)), M = 20.03 g/mol |
+| `heavy_water` | 3.007 × 10³² e⁻, 6.014 × 10³¹ d | D₂O, 99.92 % isotopic purity ([arXiv:1109.0763](https://arxiv.org/abs/1109.0763)), M = 20.03 g/mol (B5 spec) |
 
-Calculator presets (`PRESETS` in `web/app.js`), from published numbers
+### Detector responses
+
+The published response of each detector in the B5 spec (part 2,
+`response.detectors`), which SNUfish folds into observed spectra
+(`B5_Observed`) and the calculator's presets use. Resolutions are Gaussian
+widths at the true (unsmeared) energy.
+
+| Detector | Experiment | Resolution σ (MeV) | Efficiency | Threshold | Uncertainties | Source |
+|---|---|---|---|---|---|---|
+| `water` | Super-K IV | −0.05525 + 0.3162√E + 0.04572 E, E the total electron energy (eq. 9) | fig. 28, final sample (`sk4_final`) | T > 3.49 MeV | scale ±0.48 %, σ ±3 %, rate ±1.1 % | [arXiv:2312.12907](https://arxiv.org/abs/2312.12907) |
+| `heavy_water` | SNO salt phase | −0.131 + 0.383√T + 0.03731 T, T the true kinetic energy (eq. A3) | 1 (no CC curve published; selection-efficiency systematic −0.1/+0.2 %, table XXXIV) | T<sub>eff</sub> > 5.5 MeV (sec. IX) | scale ±1.15 %, σ ±3.4 % (table V) | [nucl-ex/0502021](https://arxiv.org/abs/nucl-ex/0502021) |
+| `scintillator_pc` | Borexino Phase-II | 0.05 √E ("~50 keV at 1 MeV", sec. II; the √E scaling is photostatistics, ~500 p.e./MeV, not a published curve) | 0.999 (cuts remove ~0.1 % of good events, sec. II) | T > 0.05 MeV (trigger N_p > 20, ~50 keV) | — | [arXiv:1707.09279](https://arxiv.org/abs/1707.09279) |
+| `argon` | DUNE far detector | 0.20 E ("realistic energy resolution is closest to the 20 % level", sec. 6) | 1 above the threshold (step efficiency, fig. 15) | 5 MeV detected energy | — (none published for solar neutrinos) | [arXiv:2008.06647](https://arxiv.org/abs/2008.06647) |
+
+Calculator presets (`PRESETS` in `web/checks.js`), from published numbers
 only:
 
 | Preset | Source | What it sets |
@@ -117,7 +131,7 @@ only:
 | Hyper-K (one tank) | [arXiv:1805.04163](https://arxiv.org/abs/1805.04163) | 187 kt, 10 years, 4.5 MeV, scale ±0.5 %, resolution ±0.6 % (Super-K IV's resolution as a stand-in) |
 | DUNE far detector | [arXiv:2008.06647](https://arxiv.org/abs/2008.06647), [arXiv:1808.08232](https://arxiv.org/abs/1808.08232) | 40 kt LAr, 100 kt·yr, 5 MeV, 20 % resolution, MARLEY 2 |
 | SNO phases I + II | arXiv:1109.0763 | 770 t D₂O, 3.5 MeV, 277.3 + 391.4 days, scale ±0.41 % |
-| SNO salt | [nucl-ex/0502021](https://arxiv.org/abs/nucl-ex/0502021) | φ_CC/φ_NC above 5.5 MeV, 391.4 days |
+| SNO salt | [nucl-ex/0502021](https://arxiv.org/abs/nucl-ex/0502021) | φ<sub>CC</sub>/φ<sub>NC</sub> above 5.5 MeV, 391.4 days, resolution eq. A3, scale ±1.15 %, resolution ±3.4 % |
 | Borexino Phase-II | arXiv:1707.09279 | 71.3 t, 1291.51 days, all recoil energies, ~5 %/√E |
 | JUNO ⁸B | arXiv:2006.11760 | 2 MeV, 3 %/√E, scale ±0.3 %, efficiency ±1 %, SNO NC ⁸B flux |
 
@@ -133,10 +147,10 @@ Efficiency curves (`reference/detectors/efficiency_curves.yaml`):
 
 | Entry | Measurement | Source |
 |---|---|---|
-| `sk_day_night` | Super-K ⁸B ES A_DN = −2.86 ± 0.85 (stat) ± 0.32 (syst) % in SK convention, all phases, 3.49 MeV kinetic threshold | arXiv:2312.12907, sec. VIII |
-| `sk_sno_pee_quadratic` | daytime ⁸B P_ee(E) = c₀ + c₁(E − 10) + c₂(E − 10)², c = (0.308, −0.0044, 0.0016), with errors and correlations, valid 3–15 MeV | arXiv:2312.12907, table VIII |
+| `sk_day_night` | Super-K ⁸B ES A<sub>DN</sub> = −2.86 ± 0.85 (stat) ± 0.32 (syst) % in SK convention, all phases, 3.49 MeV kinetic threshold | arXiv:2312.12907, sec. VIII |
+| `sk_sno_pee_quadratic` | daytime ⁸B P<sub>ee</sub>(E) = c₀ + c₁(E − 10) + c₂(E − 10)², c = (0.308, −0.0044, 0.0016), with errors and correlations, valid 3–15 MeV | arXiv:2312.12907, table VIII |
 | `borexino_rates` | pp 134, ⁷Be 48.3, pep 2.43 cpd/100 t with errors, inverse covariance, and Borexino's B16-GS98 predictions | arXiv:1707.09279, table II (Nature 562, 505 (2018)); covariance as used in arXiv:2312.12907 sec. VII D |
-| `sno_cc_nc` | φ_CC/φ_NC = 0.340 ± 0.023 (stat) −0.031 +0.029 (syst), T_eff > 5.5 MeV | nucl-ex/0502021, sec. XI |
+| `sno_cc_nc` | φ<sub>CC</sub>/φ<sub>NC</sub> = 0.340 ± 0.023 (stat) −0.031 +0.029 (syst), T<sub>eff</sub> > 5.5 MeV | nucl-ex/0502021, sec. XI |
 | `sk4_events` | 65,443 ⁸B + hep ES events in 3.49–19.49 MeV, 22.5 kt, 2970 days | arXiv:2312.12907, sec. V B |
 | measured ⁸B flux | 5.25 × 10⁶ cm⁻² s⁻¹ ± 3.81 % (SNO NC, as Super-K applies it) | arXiv:2312.12907, fig. 42 (`B8_MEASURED` in `snufish/export.py`) |
 
@@ -150,8 +164,8 @@ Efficiency curves (`reference/detectors/efficiency_curves.yaml`):
 | [NuFast-Earth](https://github.com/PeterDenton/NuFast-Earth) (Denton & Parke, [arXiv:2511.04735](https://arxiv.org/abs/2511.04735)) | B2, B3 | 1.2.0-3-g327586d (git submodule) | verified |
 | [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) | B4, B5 | git 6fa928e | verified |
 | [MARLEY](https://github.com/MARLEY-MC/marley) ([arXiv:2101.11867](https://arxiv.org/abs/2101.11867)) | B4 | 2.0.0 | verified |
-| nuSQuIDS | B2, B3 (planned) | — | draft entry, no contribution |
-| PEANUTS ([arXiv:2303.15527](https://arxiv.org/abs/2303.15527)) | B2, B3 (planned) | — | draft entry, no contribution (its data directory supplies the B16 and BS05 tables) |
+| [PEANUTS](https://github.com/michelelucente/PEANUTS) (Gonzalo & Lucente, [arXiv:2303.15527](https://arxiv.org/abs/2303.15527)) | B2, B3 (`prem_prob3`) | 1.6 = 39ef11f (git submodule) | verified (its data directory also supplies the B16 and BS05 tables) |
+| [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) (Argüelles, Salvado & Weaver, [arXiv:2112.13804](https://arxiv.org/abs/2112.13804)) | B3 | 1.13.3 = 104914d on SQuIDS 1.3.1 (`build_nusquids.sh`) | verified |
 
 Notes on each tool's wrapper (what it computes, what it assumes) are in
 its catalogue entry and in `contributions/<tool>/scripts/`.

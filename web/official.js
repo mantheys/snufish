@@ -42,7 +42,7 @@ function superK(ctx, check, combined) {
   return {
     title: combined ? "Super-K fig. 52: SK-I–IV day-night asymmetry against Δm²₂₁" : "Super-K fig. 49: SK-IV day-night asymmetry against Δm²₂₁",
     source: `Super-K, arXiv:2312.12907, fig. ${combined ? 52 : 49} and sec. VIII`, url: ARXIV("2312.12907"),
-    caption: "SNUfish's expected A_DN (plain rate asymmetry, (D − N)/mean) over the Δm²₂₁ range of its tables (3–11 × 10⁻⁵ eV²; "
+    caption: "SNUfish's expected A<sub>DN</sub> (plain rate asymmetry, (D − N)/mean) over the Δm²₂₁ range of its tables (3–11 × 10⁻⁵ eV²; "
            + "the figure spans 2–22). Points: the expected and measured asymmetries the paper prints (measured: stat ⊕ syst); "
            + "its measured best-fit line over Δm²₂₁ is only drawn, not tabulated.",
     columns: table(rows), xLabel: "Δm²₂₁ (10⁻⁵ eV²)", yLabel: "Day/night asymmetry (%)",
@@ -65,11 +65,11 @@ function junoProbabilities(ctx) {
     });
   }
   return {
-    title: "JUNO fig. 3: ⁸B νe survival probability by day and night",
+    title: "JUNO fig. 3: ⁸B νₑ survival probability by day and night",
     source: "JUNO, arXiv:2006.11760, fig. 3", url: ARXIV("2006.11760"),
-    caption: "SNUfish's P_ee(E_ν) at Jiangmen with JUNO's PDG 2018 mixing, for the two Δm²₂₁ of the paper. The figure shades the "
+    caption: "SNUfish's P<sub>ee</sub>(E<sub>ν</sub>) at Jiangmen with JUNO's PDG 2018 mixing, for the two Δm²₂₁ of the paper. The figure shades the "
            + "spread over solar zenith angles; SNUfish gives the day and the night average.",
-    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "νe survival probability P_ee", points: [],
+    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "νₑ survival probability P<sub>ee</sub>", points: [],
   };
 }
 
@@ -86,9 +86,9 @@ function junoAsymmetry(ctx) {
   return {
     title: "JUNO table 7: day-night asymmetry per energy window",
     source: "JUNO, arXiv:2006.11760, table 7", url: ARXIV("2006.11760"),
-    caption: "A_DN = (D − N)/mean at Δm²₂₁ = 4.8 × 10⁻⁵ eV² in JUNO's visible-energy windows. JUNO's errors are its expected "
+    caption: "A<sub>DN</sub> = (D − N)/mean at Δm²₂₁ = 4.8 × 10⁻⁵ eV² in JUNO's visible-energy windows. JUNO's errors are its expected "
            + "ten-year uncertainties.",
-    columns: table(rows), xLabel: "Visible-energy window", yLabel: "A_DN (%)", points: ["JUNO (table 7)", "SNUfish"], horizontal: 0,
+    columns: table(rows), xLabel: "Visible-energy window", yLabel: "A<sub>DN</sub> (%)", points: ["JUNO (table 7)", "SNUfish"], horizontal: 0,
   };
 }
 
@@ -109,11 +109,11 @@ function sno(ctx) {
     rows.push({ series: "SNUfish, day", x: e, y: day[k] });
   });
   return {
-    title: "SNO fig. 10: daytime νe survival probability",
+    title: "SNO fig. 10: daytime νₑ survival probability",
     source: "SNO, arXiv:1109.0763, fig. 10, tables VII and VIII", url: ARXIV("1109.0763"),
-    caption: "SNO's quadratic P_ee^day with its 1σ band (stat ⊕ syst, with the fit's correlations), and SNUfish's daytime P_ee at "
+    caption: "SNO's quadratic P<sub>ee</sub><sup>day</sup> with its 1σ band (stat ⊕ syst, with the fit's correlations), and SNUfish's daytime P<sub>ee</sub> at "
            + "SNOLAB for the selected parameter set.",
-    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "P_ee (day)", points: [], band: "SNO fit (c₀, c₁, c₂)",
+    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "P<sub>ee</sub> (day)", points: [], band: "SNO fit (c₀, c₁, c₂)",
   };
 }
 

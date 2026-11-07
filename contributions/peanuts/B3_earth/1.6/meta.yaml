@@ -1,0 +1,25 @@
+tool: peanuts
+tool_version: '1.6'
+tool_commit: 39ef11f
+benchmark: B3_earth
+benchmark_version: 0.3.0
+contributor: SNUfish maintainers (wrapper); PEANUTS by T. E. Gonzalo and M. Lucente
+date: '2026-11-07'
+command: cd contributions/peanuts/scripts && python run_b3.py
+settings:
+  quantity: peanuts.earth.Pearth(e_i, mode='analytical', massbasis=True)[0], depth
+    0
+  matter_potential: V/(hbar c) = 3.868e-7 m^-1 per mol/cm^3, hard-coded (potentials.py);
+    1.8e-5 above the spec's constants
+  earth_models:
+    prem_prob3: 'the spec''s four shells as a PEANUTS density file (alpha = rho Ye,
+      beta = gamma = 0): exact'
+    prem_four: 'not computed: PREM''s odd powers of r are not in PEANUTS''s even-polynomial
+      parametrisation'
+    prem_full: 'not computed: as prem_four'
+    native: 'not contributed: PEANUTS Data/Earth_Density.csv: five shells, n_e = alpha
+      + beta r^2 + gamma r^4 (Lisi & Montanino, hep-ph/9702343, fit to PREM); the
+      first-order analytical evolutor on its non-constant shells breaks unitarity
+      by up to 9.7e-4 (python run_b3.py --native)'
+license: CC-BY-4.0
+reference: arXiv:2303.15527

@@ -17,12 +17,12 @@ custom values.
 
 `snufish.reference.sun`. In the flavour basis
 
-  H = U diag(0, Δm²₂₁, Δm²₃₁) U† / 2E + diag(V, 0, 0),  V = √2 G_F N_e,
+  H = U diag(0, Δm²₂₁, Δm²₃₁) U† / 2E + diag(V, 0, 0),  V = √2 G<sub>F</sub> N<sub>e</sub>,
 
-with N_e = n_e N_A from the B2 solar-model table (or the analytic profile of the spec).
+with N<sub>e</sub> = n<sub>e</sub> N<sub>A</sub> from the B2 solar-model table (or the analytic profile of the spec).
 The reference gives the **adiabatic** fractions
 
-  F_i(E, r₀) = |V_eᵢ(r₀)|²,
+  F<sub>i</sub>(E, r₀) = |V<sub>ei</sub>(r₀)|²,
 
 with V the eigenvectors of H at the production point ordered by
 eigenvalue: in normal ordering there is no level crossing, so the k-th
@@ -35,25 +35,25 @@ its step-boundary kicks converge only like √step and were larger than the
 effect.
 
 **Production average.** For a flux component c,
-F_i^c(E) = Σ_r w_c(r) F_i(E, r), with w_c the fraction of the component's
+F<sub>i</sub><sup>c</sup>(E) = Σ<sub>r</sub> w<sub>c</sub>(r) F<sub>i</sub>(E, r), with w<sub>c</sub> the fraction of the component's
 flux produced in each radius cell (`snufish.solar.production_weights`,
 from the B2 solar-model production densities; each profile integrates to 1). The
-daytime survival probability is P_ee^day = Σᵢ F_i |U_eᵢ|².
+daytime survival probability is P<sub>ee</sub><sup>day</sup> = Σᵢ F<sub>i</sub> |U<sub>ei</sub>|².
 
 NuFast-Earth's B2 contribution uses its `Calculate_Solar_Probability`
-(adiabatic |V_eᵢ|² at one density, F₁ = 1 − F₂ − F₃ by construction).
+(adiabatic |V<sub>ei</sub>|² at one density, F₁ = 1 − F₂ − F₃ by construction).
 
 ## Earth crossing (B3 reference)
 
 `snufish.reference.earth`. The chord to a surface detector at nadir
-angle η has length 2R_⊕ cos η; `chord_segments` cuts it into ordered
+angle η has length 2R<sub>⊕</sub> cos η; `chord_segments` cuts it into ordered
 segments of constant density and Yₑ at the shell boundaries. Each segment
-contributes the exact propagator S_k = exp(−iH_k L_k) (one matrix
+contributes the exact propagator S<sub>k</sub> = exp(−iH<sub>k</sub> L<sub>k</sub>) (one matrix
 exponential per segment, no stepping). A mass eigenstate νᵢ arriving at the
 Earth is the column `U[:, i]`; after the chord its νₑ amplitude is
 `(S U)[e, i]`, so
 
-  P_iₑ = |(S_N ⋯ S_1 U)_eᵢ|².
+  P<sub>ie</sub> = |(S<sub>N</sub> ⋯ S<sub>1</sub> U)<sub>ei</sub>|².
 
 This is exact for piecewise-constant models (`prem_prob3`). For the
 polynomial models (`prem_four`, `prem_full`) `chord_regions` cuts the
@@ -66,10 +66,12 @@ t = ½ ∓ √3/6,
   α₁,₂ = (3 ∓ 2√3)/12,
 
 the right factor first. For constant density it is exactly the shell
-propagator. Steps of 6.25 km (`CONVERGED_STEP_KM`) give P_iₑ within
+propagator. Steps of 6.25 km (`CONVERGED_STEP_KM`) give P<sub>ie</sub> within
 4 × 10⁻⁷ of a 1.5625 km solution over 43 chords and the 39 exposure
 energies; the convergence is slowest at low energy, where the Δm²₃₁ mode
-oscillates over ~2 km. Independently, the exact solver on 1 km constant
+oscillates over ~2 km. On the `map` grid's energies in between it reaches
+1.5 × 10⁻⁶ (5.4 × 10⁻⁷ at the exposure energies on all chords) (found by the nuSQuIDS contribution,
+[crosschecks.md](crosschecks.md#peanuts-and-nusquids)). Independently, the exact solver on 1 km constant
 shells agrees to 3 × 10⁻⁶. The tests check the matter potential against its
 textbook value, chord lengths, the core-crossing threshold, unitarity, the
 vacuum limit at the horizon, independence of θ₂₃ and δ, the
@@ -118,7 +120,7 @@ axial tilt).
 Averages over a nadir grid therefore use the exposure integrated over each
 grid cell (`cell_weights`), not W sampled at grid points:
 
-  ⟨P_iₑ⟩_night(E) = Σ_cells w_cell P_iₑ(E, cos η_cell).
+  ⟨P<sub>ie</sub>⟩<sub>night</sub>(E) = Σ<sub>cells</sub> w<sub>cell</sub> P<sub>ie</sub>(E, cos η<sub>cell</sub>).
 
 This is why B3 has the fine `exposure` grid (cos η step 0.001). The tests
 check agreement with NuFast-Earth, the normalisation, the absence of core
@@ -129,11 +131,11 @@ crossings near the poles and zero weight above the horizon.
 For each component (`snufish.build.combine_day_night`,
 `snufish.engine.survival`):
 
-  P_ee^day = Σᵢ F_i |U_eᵢ|²,  P_ee^night = Σᵢ F_i ⟨P_iₑ⟩_night,
+  P<sub>ee</sub><sup>day</sup> = Σᵢ F<sub>i</sub> |U<sub>ei</sub>|²,  P<sub>ee</sub><sup>night</sup> = Σᵢ F<sub>i</sub> ⟨P<sub>ie</sub>⟩<sub>night</sub>,
 
-and for a rate R, A_DN = 2(R_N − R_D)/(R_N + R_D). The annual rate is
-(R_D + R_N)/2. Below the B3 energy grid (1 MeV) the night probabilities
-take their vacuum value |U_eᵢ|² (no Earth effect).
+and for a rate R, A<sub>DN</sub> = 2(R<sub>N</sub> − R<sub>D</sub>)/(R<sub>N</sub> + R<sub>D</sub>). The annual rate is
+(R<sub>D</sub> + R<sub>N</sub>)/2. Below the B3 energy grid (1 MeV) the night probabilities
+take their vacuum value |U<sub>ei</sub>|² (no Earth effect).
 
 ## Cross sections
 
@@ -141,10 +143,10 @@ take their vacuum value |U_eᵢ|² (no Earth effect).
 
 `snufish.reference.xsec`:
 
-  dσ/dT = (2G_F² m_e / π) [g₁² + g₂² (1 − T/E)² − g₁g₂ m_e T / E²],
+  dσ/dT = (2G<sub>F</sub>² m<sub>e</sub> / π) [g₁² + g₂² (1 − T/E)² − g₁g₂ m<sub>e</sub> T / E²],
 
-g₁ = ½ + s²_W (νₑ: CC + NC), −½ + s²_W (ν_μ, ν_τ: NC only), g₂ = s²_W,
-T_max = 2E²/(m_e + 2E), sin²θ_W = 0.23857. `es_above(E, t)` integrates it
+g₁ = ½ + s²<sub>W</sub> (νₑ: CC + NC), −½ + s²<sub>W</sub> (ν<sub>μ</sub>, ν<sub>τ</sub>: NC only), g₂ = s²<sub>W</sub>,
+T<sub>max</sub> = 2E²/(m<sub>e</sub> + 2E), sin²θ<sub>W</sub> = 0.23857. `es_above(E, t)` integrates it
 analytically over T > t (recoil thresholds).
 
 ### ν–e elastic scattering with radiative corrections (BKS)
@@ -152,11 +154,11 @@ analytically over T > t (recoil thresholds).
 `snufish.reference.radiative`: Bahcall, Kamionkowski & Sirlin, PRD 51,
 6146 (1995), appendices A and B, with electroweak, QCD and QED corrections
 and the inelastic ν e → ν e γ (photon not detected):
-ρ = 1.0126, κₑ(T) = 0.9791 + 0.0097 I(T), κ_μ(T) = 0.9970 − 0.00037 I(T),
-sin²θ_W(m_Z) MS-bar = 0.2317. The QED functions diverge logarithmically at
+ρ = 1.0126, κₑ(T) = 0.9791 + 0.0097 I(T), κ<sub>μ</sub>(T) = 0.9970 − 0.00037 I(T),
+sin²θ<sub>W</sub>(m<sub>Z</sub>) MS-bar = 0.2317. The QED functions diverge logarithmically at
 the end point; the differential cross section is clipped at zero there
 (the last ~10⁻³ of the recoil range). The engine uses it as a ratio to the
-tree level, σ_BKS(E; T > u T_max)/σ_tree(E; T > u T_max), tabulated in E
+tree level, σ<sub>BKS</sub>(E; T > u T<sub>max</sub>)/σ<sub>tree</sub>(E; T > u T<sub>max</sub>), tabulated in E
 and u (`ratio_table`), and reproduces the paper's averaged cross sections
 ([crosschecks.md](crosschecks.md)).
 
@@ -185,22 +187,23 @@ total flux, 5.25 × 10⁶ cm⁻² s⁻¹ ± 3.81 % (as Super-K applies it).
 
 ## Rate folding
 
-For component c with flux Φ_c and shape s_c, per target:
+For component c with flux Φ<sub>c</sub> and shape s<sub>c</sub>, per target:
 
-- **CC** (νₑ only): dR/dE = N Φ_c s_c(E) P_ee(E) σ(E).
-- **ES**: dR/dE = N Φ_c s_c(E) [P_ee(E) σ_e(E) + (1 − P_ee(E)) σ_μ(E)],
-  using ν_μ and ν_τ having the same NC cross section.
-- **NC on deuterium**: flavour-blind, dR/dE = N Φ_c s_c(E) σ_NC(E)
+- **CC** (νₑ only): dR/dE = N Φ<sub>c</sub> s<sub>c</sub>(E) P<sub>ee</sub>(E) σ(E).
+- **ES**: dR/dE = N Φ<sub>c</sub> s<sub>c</sub>(E) [P<sub>ee</sub>(E) σ<sub>e</sub>(E) + (1 − P<sub>ee</sub>(E)) σ<sub>μ</sub>(E)],
+  using ν<sub>μ</sub> and ν<sub>τ</sub> having the same NC cross section.
+- **NC on deuterium**: flavour-blind, dR/dE = N Φ<sub>c</sub> s<sub>c</sub>(E) σ<sub>NC</sub>(E)
   (three active flavours; sterile mixing is not modelled).
 
 Continua are integrated with trapezoid weights on the shape's grid (the
 engine's `_quadrature`), lines as points. Rates are per kiloton-year with
-the detector's targets per kt (B5 spec and `export.APP_DETECTORS`).
+the detector's targets per kt (B5 spec; JUNO's LAB in `export.APP_DETECTORS`).
 
 The B5 build (`combine_rates`) folds in true neutrino energy with the B2
 reference daytime oscillations, and with the B3 reference night excess of
-each site for `B5_DayNight` ([benchmarks.md](benchmarks.md#b5_rates-interaction-rates));
-the engine adds the detector response below.
+each site for `B5_DayNight` ([benchmarks.md](benchmarks.md#b5-detector-b5_rates-interaction-rates-and-the-detector-response));
+the engine adds the detector response below, and B5 part 2 (`combine_observed`)
+passes the same daytime rates through each detector's published response.
 
 ## Observed energy
 
@@ -208,9 +211,9 @@ The engine reports spectra in **observed energy**:
 
 - **ES**: the electron's kinetic energy T. For each neutrino energy the
   cross section into each recoil bin is σ(E; T in bin) =
-  σ(E; T > T_lo) − σ(E; T > T_hi), exact for the tree-level formula and
+  σ(E; T > T<sub>lo</sub>) − σ(E; T > T<sub>hi</sub>), exact for the tree-level formula and
   scaled bin by bin by the BKS ratio.
-- **CC**: the visible energy E_ν − Q (the electron plus de-excitation
+- **CC**: the visible energy E<sub>ν</sub> − Q (the electron plus de-excitation
   gammas, no neutron or binding losses): Q = 1.504 MeV (⁴⁰Ar), 15.42 MeV
   (¹⁶O), 1.442 MeV (d).
 - **NC on deuterium**: the neutron's capture gamma, 6.25 MeV, whatever the
@@ -226,9 +229,12 @@ as a fine edge, so the cut is exact (`observed_edges`).
 and an acceptance per observed bin:
 
 - **Energy scale** k: observed = k × true (for the scale uncertainty).
-- **Resolution**: Gaussian with σ(E) = √((a√E)² + (bE)²), or Super-K's
-  σ = c₀ + c₁√E_tot + c₂E_tot with E_tot = T + m_e for ES (the SK-IV
-  preset: −0.05525, 0.3162, 0.04572), times a resolution scale. What smears
+- **Resolution**: Gaussian with σ(E) = √((a√E)² + (bE)²), or a published
+  σ = c₀ + c₁√E + c₂E: Super-K's in E = E<sub>tot</sub> = T + m<sub>e</sub> for ES
+  (`resolution_energy` "total"; SK IV: −0.05525, 0.3162, 0.04572), SNO's in
+  E = T ("kinetic"; salt phase: −0.131, 0.383, 0.03731), the observed energy
+  itself for CC; times a resolution scale. σ is taken at the true energy of
+  each bin, as both experiments define it. What smears
   below zero goes to the first bin, above the last edge to the last bin.
 - **Imported smearing matrix** (CSV) in place of the resolution: each fine
   true bin takes the row of the imported true bin holding its centre, and
@@ -244,12 +250,32 @@ and an acceptance per observed bin:
 A perfect detector (no resolution, flat efficiency 1, no threshold)
 reproduces the true-energy rates (tested).
 
+### Published responses (B5 part 2)
+
+The B5 spec's `response` gives each detector one published response
+(Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II
+for scintillator, DUNE's far detector for argon; numbers and sources in
+[sources.md](sources.md#detector-responses)); `engine.published_response`
+turns it into setup fields, and the calculator's presets take the same
+values (`tests/test_b5_response.py`). `build.combine_observed` folds the
+part 1 daytime rates (B2 reference F_i averaged over production, NuFIT 6.0,
+the cross sections the spec names) through it with `engine.observed_rates`
+on the spec's observed grid: 0–20 MeV in 0.01 MeV bins, true and observed
+bins alike, so every preset threshold is a bin edge. The threshold is not
+part of the spectrum; the rate above a threshold is the spectrum summed
+over the bins above it. A contribution with its own response gives it as a
+binned matrix and efficiency (`response.parquet`), which `response_tables`
+turns into an imported matrix and efficiency curve for the same folding.
+
 ## Uncertainties
 
 `snufish.engine.budget` (and `snufish.uncertainty` for the `snufish
 budget` command). Two kinds are kept apart.
 
-**Sampled** (Monte Carlo, n = 400 draws by default, fixed seed), each
+**Sampled** (Monte Carlo, fixed seed; a sampled σ from n draws is uncertain by
+about 1/√(2n): 1000 draws on the benchmark pages and in the calculator, which
+shows 400 at once and replaces them with 1000 computed in a background worker;
+400 in `snufish budget` for now), each
 reported as a standard deviation and combined in "total sampled", in the
 order of the calculator's steps (B1 to B5):
 
@@ -260,14 +286,14 @@ order of the calculator's steps (B1 to B5):
   model's fractional errors and, for B23, its published correlation
   matrix (Cholesky). BS05 publishes no errors: no flux row. With the SNO
   NC ⁸B flux, ⁸B is drawn independently with its 3.81 %. A single
-  component's flux cancels in A_DN and in the ratio, so it gets no row
+  component's flux cancels in A<sub>DN</sub> and in the ratio, so it gets no row
   there.
 - **Measured nuclear strengths** (B4, MARLEY 2 models): see below.
 - **Statistics** (B5), when an exposure is given: Poisson, half the exposure by
-  day and half by night, no backgrounds. For A_DN,
+  day and half by night, no backgrounds. For A<sub>DN</sub>,
   σ² = (4D/S²)² N + (4N/S²)² D with S = D + N in counts.
 - **Detector** (B5): energy scale and resolution as half the difference of the
-  quantity at ±1σ; the normalisation scales a rate (and cancels in A_DN).
+  quantity at ±1σ; the normalisation scales a rate (and cancels in A<sub>DN</sub>).
   Each is applied as one Gaussian draw per sample.
 
 **Model ranges**, reported as [min, max] over the state-of-the-art
@@ -298,11 +324,11 @@ produces (levels independent).
 0.2), each parameter set, each Earth model and a site (default Kamioka),
 for ⁸B with the solar model's production profile:
 
-- daytime P_ee(E) and its quadratic coefficients around 10 MeV
+- daytime P<sub>ee</sub>(E) and its quadratic coefficients around 10 MeV
   (c₀, c₁, c₂ of a fit over 3–15 MeV), with the χ² against the SK + SNO
   measurement and its correlation matrix;
-- the upturn P_ee(4 MeV) − P_ee(10 MeV);
-- A_DN of P_ee (5–15 MeV, flux-weighted) and of the ES rate above the
+- the upturn P<sub>ee</sub>(4 MeV) − P<sub>ee</sub>(10 MeV);
+- A<sub>DN</sub> of P<sub>ee</sub> (5–15 MeV, flux-weighted) and of the ES rate above the
   Super-K recoil threshold (3.49 MeV kinetic, tree level), compared with
   Super-K's measurement.
 
@@ -312,7 +338,7 @@ B3 reference) for the night.
 ### `snufish budget`
 
 `snufish.uncertainty`. Budgets of the daytime ⁸B rates (true neutrino
-energy, ES recoil threshold, no detector response) and the ES A_DN for
+energy, ES recoil threshold, no detector response) and the ES A<sub>DN</sub> for
 several parameter sets (default `juno_2025`, `solar_global_2024`) and both
 ⁸B flux treatments (solar model, SNO NC), with the exact solvers or, with
 `--tables`, the app tables.
@@ -325,16 +351,16 @@ the solvers, so `snufish export-app` tabulates them on a (sin²θ₁₂,
 
 - `day_<solar model>`: F₁, F₂ per component on 72 log-spaced energies
   (0.1–20 MeV, the component's part of it; lines at their own energies);
-- `night_<Earth model>`: night-averaged P_iₑ for every site.
+- `night_<Earth model>`: night-averaged P<sub>ie</sub> for every site.
 
 The provider interpolates bilinearly in (sin²θ₁₂, Δm²₂₁), linearly in
 log E (day) or E (night), and clamps (and counts) points outside the grid.
 The tables are computed at the default θ₁₃, θ₂₃, δ and Δm²₃₁; θ₁₃ is
 followed as ν₃ decouples: F₁,₂ and P₁ₑ,₂ₑ scale with cos²θ₁₃, F₃ and P₃ₑ
-with sin²θ₁₃ (P_ee = c₁₃⁴ P_ee^(2ν) + s₁₃⁴, without the c₁₃² in the matter
-potential); the others enter only through |U_eᵢ|². The tables reproduce
+with sin²θ₁₃ (P<sub>ee</sub> = c₁₃⁴ P<sub>ee</sub><sup>(2ν)</sup> + s₁₃⁴, without the c₁₃² in the matter
+potential); the others enter only through |U<sub>ei</sub>|². The tables reproduce
 the exact solvers to 2 × 10⁻⁴ for rates and 1 % (3 × 10⁻⁴ absolute) for
-A_DN, and A_DN within 1.6 % over sin²θ₁₃ = 0.015–0.03.
+A<sub>DN</sub>, and A<sub>DN</sub> within 1.6 % over sin²θ₁₃ = 0.015–0.03.
 
 Each table is `<name>.json` (small arrays, an index) with `<name>.bin`
 (large arrays, little-endian float32), read the same way by

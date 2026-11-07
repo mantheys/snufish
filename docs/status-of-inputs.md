@@ -26,10 +26,13 @@ SNUfish reports as model ranges.
 
 ## What we have learned
 
-1. **Oscillations: JUNO now fixes Δm²₂₁ and θ₁₂.** Solar data alone give
-   Δm²₂₁ about 1.5σ lower: a physics question, not a choice of input.
-2. **Solar composition: the open model uncertainty of the fluxes.** B23
-   with MB22 against AAG21: ⁸B −16 %, ⁷Be −8 %, CNO −30 %. The neutrino data
+1. **Reactors fix Δm²₂₁; the Sun prefers it 1.5σ lower.** JUNO measures
+   7.50 × 10⁻⁵ eV² to 1.6 %, solar data alone give 6.1 × 10⁻⁵ eV² to about
+   15 %, and both agree on sin²θ₁₂. The gap is physics to resolve, not an
+   input to choose.
+2. **Solar composition is the largest open flux uncertainty.** AAG21
+   predicts 16 % less ⁸B, 8 % less ⁷Be and 30 % less CNO than MB22m, each
+   beyond MB22m's own 1σ; MB22p and MB22m agree to 1 %. The neutrino data
    prefer MB22 (AAG21 disfavoured by up to 2.5σ on CNO), not decisively.
 3. **Earth: the crust near the detector matters at a few per cent; the
    rest of the chord hardly.** The CRUST1.0 crust moves A<sub>DN</sub> by −2.5 %
@@ -38,26 +41,36 @@ SNUfish reports as model ranges.
    The literature's "up to ~8 %" for the 3D Earth is mostly this local
    crust; a second crust model (LITHO1.0, ~3 % different at LNGS and SURF)
    and a 3D mantle are still missing.
-4. **⁴⁰Ar: how much the Gamow–Teller strength is quenched, about 37 %.**
-   MARLEY 2 with the measured strengths and the shell model of Suzuki &
+4. **⁴⁰Ar CC is uncertain by 37 % because the Gamow–Teller quenching is
+   unsettled.** MARLEY 2 with the measured strengths and the shell model of Suzuki &
    Honma agree to 3 %; the shell model of Kostensalo et al. with g<sub>A</sub> =
    1.00 is 27–35 % lower, and with the free g<sub>A</sub> it agrees. The three
    measured strength sets differ by 11 % among themselves. A cross-section
    measurement at a stopped-pion source would settle it.
-5. **Folding: the detector step adds no input yet.** On the same fluxes and
-   cross sections, SNOwGLoBES's full chain agrees with SNUfish's folding to
-   0.4 % for ⁸B and hep (ES, CC on ⁴⁰Ar); below 2 MeV (⁷Be, pep, ¹³N) it is
-   16–21 % lower, and its ⁷Be and pep rates depend on how a line is written
-   into its flux table (−52 % to +55 %). The detector response is not yet
-   benchmarked.
-6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
-   reference agree to 10⁻⁸ on constant shells, the two radiative-correction
-   calculations of ν–e scattering to 0.1 %. On PREM's continuous density
-   NuFast-Earth takes each crossing's mean density: up to 2 % in the ⁸B
-   A<sub>DN</sub> at one energy, 0.3 % over the Super-K spectrum (Kamioka);
-   cut into 50 km shells, as the calculator's night now is, 0.05 %. Every
-   spread that matters comes from physics inputs.
-7. **Most of the large spreads were outdated inputs, not uncertainties.**
+5. **SNOwGLoBES matches SNUfish to 0.4 % for ⁸B and hep, not below 2 MeV;
+   the detector response matters more.** On the same fluxes and cross
+   sections its full chain agrees with SNUfish's folding for ⁸B and hep (ES,
+   CC on ⁴⁰Ar) and is 16–21 % lower for ⁷Be, pep and ¹³N, and its ⁷Be and pep
+   rates depend on how a line is written into its flux table (−52 % to
+   +55 %): GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its
+   midpoint (an emulation reproduces it to 10⁻⁵;
+   [crosschecks.md](crosschecks.md#snowglobes-below-2-mev)). The published
+   responses benchmarked in B5 move rates above threshold by much more:
+   Super-K IV's efficiency keeps 52 % of the ⁸B ES interactions above
+   3.49 MeV; SNO's and DUNE's resolutions take 3.6 % and 4.4 % off the CC rate
+   above 5.5 and 5 MeV.
+6. **The tools agree; the inputs do not.** On the same constant-density
+   Earth, NuFast-Earth, nuSQuIDS and PEANUTS agree with the SNUfish reference
+   to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶; in the Sun, NuFast-Earth and PEANUTS to
+   3 × 10⁻⁸ and 1.2 × 10⁻⁴; the two radiative-correction calculations of
+   ν–e scattering to 0.1 %. The residuals are each tool's hard-coded
+   constants (PEANUTS's matter potential, 3.6 × 10⁻⁴ high in the Sun), not
+   its method ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)). On
+   PREM's continuous density NuFast-Earth takes each crossing's mean density:
+   up to 2 % in the ⁸B A<sub>DN</sub> at one energy, 0.3 % over the Super-K
+   spectrum (Kamioka); cut into 50 km shells, as the calculator's night now
+   is, 0.05 %. Every spread that matters comes from physics inputs.
+7. **Most large spreads were outdated inputs, not uncertainties.**
    The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
    5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
    models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear

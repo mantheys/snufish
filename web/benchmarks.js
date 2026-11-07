@@ -2,29 +2,30 @@
 // much it moves five reference observables. Reads data/sections.json (snufish export-sections) and data/inputs.json;
 // the discrepancies tab recomputes the calculator's result templates (checks.js) on its tables.
 import * as engine from "./engine.js";
+import { DATA, loadTable } from "./load.js";
 import { DISPLAY } from "./engine.js";
 import { CHECKS, PAPER_SETS, UNITS, checkSetup, currentSetup, reproduced } from "./checks.js";
-import { CONFIG, alpha, colours, htmlLegend, layout, themeIcon } from "./plots.js";
+import { CONFIG, alpha, colours, htmlLegend, layout, math, plain, themeIcon } from "./plots.js";
 
-const DATA = "data/";
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 // the benchmarks are the calculator's steps, under the same names
 const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
 const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
-                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A_DN, water" };
-const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water" };
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)",
+                native: "The tool's own Earth model" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
                ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model (Kostensalo 2018)", ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed",
                default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES KLMV" };
-const CHANNELS = { es: "ES", cc_nue_ar40: "CC ⁴⁰Ar", cc_nue_o16: "CC ¹⁶O" };
+const CHANNELS = { es: "ES", cc_nue_ar40: "CC ⁴⁰Ar", cc_nue_o16: "CC ¹⁶O", cc_nue_d: "CC d" };
 
 const $ = (id) => document.getElementById(id);
 // the palette without its two greys (series 4 and 9), which read as the oscillation bars and muted lines
 const palette = () => [1, 2, 3, 5, 6, 7, 8, 10].map((n) => getComputedStyle(document.documentElement).getPropertyValue(`--series-${n}`).trim());
 const page = { sections: null, inputs: null, tab: "overview" };
-const sup = (s) => s.replace(/\b(7Be|8B|40Ar|16O|13N|15O|17F)\b/g, (m) => ({ "7Be": "⁷Be", "8B": "⁸B", "40Ar": "⁴⁰Ar", "16O": "¹⁶O",
+const sup = (s) => math(s).replace(/\b(7Be|8B|40Ar|16O|13N|15O|17F)\b/g, (m) => ({ "7Be": "⁷Be", "8B": "⁸B", "40Ar": "⁴⁰Ar", "16O": "¹⁶O",
                                                                            "13N": "¹³N", "15O": "¹⁵O", "17F": "¹⁷F" })[m]);
 
 // ------------------------------------------------------------------ sizes
@@ -68,8 +69,8 @@ function matrix() {
     const strength = best.value ? Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5)) : 0;
     return `<td class="num" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}</td>`;
   };
-  $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; A_DN in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
-    Object.entries(obs).map(([id, o]) => `<tr><th title="${sup(o.label)}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
+  $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; day-night asymmetry in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
+    Object.entries(obs).map(([id, o]) => `<tr><th title="${plain(sup(o.label))}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
       columns.map(([, , keep]) => cell(largest(o.rows, o.central, keep))).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
@@ -200,7 +201,7 @@ function b2Models() {
   const neTraces = names.map((m, i) => ({ x: b1d.radius, y: b1d.models[m].log_ne.map((v) => 10 ** v), mode: "lines", name: models[m].label,
     line: { color: palette()[i % 8], width: m === ref ? 2.6 : 1.4, dash: i >= 8 ? "dot" : undefined }, hovertemplate: `r = %{x:.3f}: %{y:.4g}<extra>${models[m].label}</extra>` }));
   htmlLegend(node, neTraces.map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash })));
-  Plotly.react(node, neTraces, layout(c, node, "Electron density", "r / R☉", "n_e (N_A / cm³)",
+  Plotly.react(node, neTraces, layout(c, node, "Electron density", "r / R☉", "n<sub>e</sub> (N<sub>A</sub> / cm³)",
     { showlegend: false, hovermode: "closest", yaxis: { type: "log" }, xaxis: { range: [0, 0.4] } }), CONFIG);
 }
 
@@ -244,29 +245,44 @@ function b2Propagation() {
   let node = $("plot-b2-components");
   let traces = ORDER.map((comp) => trace(comp, b2d.treatments.own[comp], DISPLAY[comp], c.component[comp]));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color, fill: t.mode === "markers" })), "Lines: monoenergetic (points)");
-  Plotly.react(node, traces, layout(c, node, `Daytime P_ee by component (${models[ref].label})`, "Neutrino energy (MeV)", "P_ee (day)",
+  Plotly.react(node, traces, layout(c, node, `Daytime P<sub>ee</sub> by component (${models[ref].label})`, "Neutrino energy (MeV)", "P<sub>ee</sub> (day)",
     { showlegend: false, hovermode: "closest", xaxis: energyAxis }), CONFIG);
 
   const comp = $("b2-component").value, labels = b2d.treatment_labels;
   node = $("plot-b2-treatments");
   traces = Object.keys(b2d.treatments).map((t, i) => trace(comp, b2d.treatments[t][comp], labels[t], i ? palette()[i] : c.text, i ? "dash" : undefined));
   htmlLegend(node, traces.map((t) => ({ label: sup(t.name), colour: t.line.color, dash: t.line.dash === "dash" })));
-  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: where it is produced`, "Neutrino energy (MeV)", "P_ee (day)",
+  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: where it is produced`, "Neutrino energy (MeV)", "P<sub>ee</sub> (day)",
     { showlegend: false, hovermode: "x unified", xaxis: energyAxis }), CONFIG);
 
   node = $("plot-b2-models");
   const base = b2d.models[ref][comp];
   traces = Object.keys(b2d.models).map((m, i) => trace(comp, b2d.models[m][comp].map((v, k) => 1e3 * (v - base[k])), models[m].label, palette()[i % 8], i >= 8 ? "dot" : undefined));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash, fill: t.mode === "markers" })));
-  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: density and production of each model`, "Neutrino energy (MeV)", `P_ee − P_ee(${models[ref].label}) (×10⁻³)`,
+  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: density and production of each model`, "Neutrino energy (MeV)", `P<sub>ee</sub> − P<sub>ee</sub>(${models[ref].label}) (×10⁻³)`,
     { showlegend: false, hovermode: "closest", xaxis: energyAxis }), CONFIG);
-  $("b2-tools").innerHTML = toolTable(page.sections.tools.B2_sun, "F_i", "B2 fixes the production radius and energy grid; every solver gets the same n_e(r).");
+  $("b2-tools").innerHTML = toolTable(page.sections.tools.B2_sun, "F<sub>i</sub>",
+    "B2 fixes the production radius and energy grid; every solver gets the same n<sub>e</sub>(r). NuFast-Earth and PEANUTS both " +
+    "use the adiabatic fractions; PEANUTS's 1.2 × 10⁻⁴ is its hard-coded matter potential (3.6 × 10⁻⁴ high, 1.1 × 10⁻⁴ of it) " +
+    "and its approximate matter angles (1.3 × 10⁻⁵): docs/crosschecks.md.");
 }
 
 function toolTable(rows, what, note) {
+  // one row per tool and variant; the spec's tool comparison (identical inputs for every tool) first
   if (!rows?.length) return `<p class="hint">No tool other than the reference has contributed yet.</p>`;
+  // a tool's many other variants (B2: the other solar models) in one row
+  const merged = [];
+  for (const tool of [...new Set(rows.map((r) => r.tool))]) {
+    const own = rows.filter((r) => r.tool === tool), others = own.filter((r) => !r.comparison);
+    merged.push(...own.filter((r) => r.comparison));
+    if (others.length > 3) merged.push({ ...others[0], variant: `the other ${others.length} variants`, others: true,
+      points: others.reduce((n, r) => n + r.points, 0), max_abs: Math.max(...others.map((r) => r.max_abs)) });
+    else merged.push(...others);
+  }
+  const sorted = merged.sort((a, b) => (b.comparison - a.comparison) || (a.others || 0) - (b.others || 0) || a.variant.localeCompare(b.variant) || a.name.localeCompare(b.name));
+  const label = (r) => (r.others ? r.variant : `${page.inputs.solar_models[r.variant]?.label || EARTH[r.variant] || r.variant}${r.comparison ? " (tool comparison)" : ""}`);
   return `<table><thead><tr><th>Tool</th><th>Variant</th><th class="num">Points</th><th class="num">Largest |Δ${what}| from the SNUfish reference</th></tr></thead><tbody>${
-    rows.map((r) => `<tr><td>${r.tool}</td><td>${page.inputs.solar_models[r.variant]?.label || EARTH[r.variant] || r.variant}</td><td class="num">${r.points.toLocaleString()}</td><td class="num">${r.max_abs.toExponential(1)}</td></tr>`).join("")
+    sorted.map((r) => `<tr><td>${r.name || r.tool}</td><td>${label(r)}</td><td class="num">${r.points.toLocaleString()}</td><td class="num">${r.max_abs.toExponential(1)}</td></tr>`).join("")
   }</tbody></table><p class="hint">${note}</p>`;
 }
 
@@ -280,15 +296,20 @@ function b3() {
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.3g} MeV: %{y:.3f}<extra>${EARTH[m] || m}</extra>` }));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
   const axis = { ...energyAxis, range: [Math.log10(1), Math.log10(20)] };
-  Plotly.react(node, traces, layout(c, node, `⁸B regeneration at ${site}`, "Neutrino energy (MeV)", "P_ee(night) − P_ee(day) (%)",
+  Plotly.react(node, traces, layout(c, node, `⁸B regeneration at ${site}`, "Neutrino energy (MeV)", "P<sub>ee</sub>(night) − P<sub>ee</sub>(day) (%)",
     { showlegend: false, hovermode: "x unified", xaxis: axis }), CONFIG);
   node = $("plot-b3-sites");
   traces = Object.keys(page.inputs.sites).map((s, i) => ({ x: b3d.energy, y: b3d.models.prem_full[s].map((v) => 100 * v), mode: "lines", name: s,
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.3g} MeV: %{y:.3f}<extra>${s}</extra>` }));
   htmlLegend(node, traces.map((t) => ({ label: `${t.name} (${page.inputs.sites[t.name].latitude_deg.toFixed(1)}° N)`, colour: t.line.color })));
-  Plotly.react(node, traces, layout(c, node, "⁸B regeneration by site (PREM, ten regions)", "Neutrino energy (MeV)", "P_ee(night) − P_ee(day) (%)",
+  Plotly.react(node, traces, layout(c, node, "⁸B regeneration by site (PREM, ten regions)", "Neutrino energy (MeV)", "P<sub>ee</sub>(night) − P<sub>ee</sub>(day) (%)",
     { showlegend: false, hovermode: "x unified", xaxis: axis }), CONFIG);
-  $("b3-tools").innerHTML = toolTable(page.sections.tools.B3_earth, "P", "P(νᵢ → νₑ) on B3's energy × nadir grids, for the Earth models both tools compute.");
+  $("b3-tools").innerHTML = toolTable(page.sections.tools.B3_earth, "P",
+    "P(νᵢ → νₑ) on B3's energy × nadir grids, for the Earth models each tool computes. Four shells: every solver is exact; " +
+    "what is left is each tool's constants (PEANUTS's matter potential is 1.8 × 10⁻⁵ high: 9 × 10⁻⁶). On PREM's continuous " +
+    "regions NuFast-Earth takes each crossing's mean density; nuSQuIDS integrates the polynomials and agrees within the " +
+    "reference's Magnus step error (1.5 × 10⁻⁶; 10⁻⁸ against a 4× finer step). PEANUTS cannot take PREM's odd powers of r and its own Earth breaks unitarity " +
+    "by 10⁻³, so it has no continuous variant: docs/crosschecks.md.");
 }
 
 // ------------------------------------------------------------------ B4
@@ -315,9 +336,10 @@ function b4() {
              "Solid: state of the art; dotted: legacy.");
   Plotly.react(node, traces, layout(c, node, "νₑ CC on ⁴⁰Ar over MARLEY 2", "Neutrino energy (MeV)", "σ / σ(MARLEY 2, 2009)",
     { showlegend: false, hovermode: "closest", yaxis: { range: [0.3, 2] } }), CONFIG);
+  $("b4-tools").innerHTML = esTable(page.sections.tools.B4_xsec);
   node = $("plot-b4-es");
   const es = page.inputs.es_radiative_ratio;
-  const esTraces = [["nue", "νₑ"], ["numu", "ν_μ,τ"]].map(([f, label], i) => ({ x: es[f].energy, y: es[f].ratio, mode: "lines", name: label,
+  const esTraces = [["nue", "νₑ"], ["numu", "ν<sub>μ,τ</sub>"]].map(([f, label], i) => ({ x: es[f].energy, y: es[f].ratio, mode: "lines", name: label,
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.2f} MeV: %{y:.4f}<extra>${label}</extra>` }));
   htmlLegend(node, esTraces.map((t) => ({ label: t.name, colour: t.line.color })));
   Plotly.react(node, esTraces, layout(c, node, "ES: SNOwGLoBES over tree level", "Neutrino energy (MeV)", "σ(SNOwGLoBES) / σ(tree)",
@@ -325,13 +347,91 @@ function b4() {
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
 }
 
+function esTable(rows) {
+  if (!rows?.length) return `<p class="hint">No tool other than the reference has contributed ES with radiative corrections.</p>`;
+  const flavour = { es_nue: "ν<sub>e</sub>", es_numu: "ν<sub>μ</sub>", es_nutau: "ν<sub>τ</sub>" };
+  const signed = (v) => `${v < 0 ? "−" : "+"}${Math.abs(100 * v).toFixed(2)} %`;
+  return `<table><thead><tr><th>Tool</th><th>ES</th><th class="num">Energies</th><th class="num">σ / σ(BKS) − 1</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td>${r.name || r.tool}</td><td>${flavour[r.quantity] || r.quantity}</td><td class="num">${r.points.toLocaleString()} (from ${r.energy_min} MeV)</td>` +
+                    `<td class="num">${signed(r.min_rel)} to ${signed(r.max_rel_signed)}</td></tr>`).join("")
+  }</tbody></table><p class="hint">Total cross sections with radiative corrections: SNOwGLoBES's tables (Marciano &amp; Parsa) against the reference's ` +
+    `Bahcall–Kamionkowski–Sirlin, point by point. SNOwGLoBES gives ν<sub>μ</sub> and ν<sub>τ</sub> different corrections (their charge radii differ); BKS gives ν<sub>τ</sub> ` +
+    `the ν<sub>μ</sub> values, so the two move in opposite directions and largely cancel for the oscillated solar flux (about 0.1 % on the ⁸B rates). ` +
+    `Tomalak &amp; Hill (arXiv:1907.03379), the most precise calculation (0.2–0.4 %), publishes no cross-section tables, only a Mathematica ` +
+    `notebook: not yet a contribution.</p>`;
+}
+
 // ------------------------------------------------------------------ B5
 
+const DETECTOR_LABEL = { water: "Water", heavy_water: "Heavy water", scintillator_pc: "Scintillator", argon: "Argon" };
+const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visible energy E<sub>ν</sub> − 1.504 MeV",
+                     cc_nue_o16: "CC: visible energy E<sub>ν</sub> − 15.42 MeV", cc_nue_d: "CC: visible energy E<sub>ν</sub> − 1.442 MeV" };
+
+function b5Observed() {
+  // part 2: observed spectra through each detector's published response (B5_Observed), one line per detector and channel
+  const c = colours(), data = page.sections.observed, node = $("plot-b5-observed");
+  if (!data || !data.cases) { $("b5-observed").innerHTML = `<p class="hint">Run snufish build and export-sections for part 2.</p>`; return; }
+  const select = $("b5-component");
+  if (!select.options.length) {
+    for (const k of ["all", ...ORDER]) select.add(new Option(k === "all" ? "All components" : DISPLAY[k], k));
+    select.addEventListener("change", b5Observed);
+  }
+  const comp = select.value || "all";
+  // not CC on 16O (hep only, 4e-5 per kt yr); a component that does not reach a detector has no spectrum (sections.json)
+  const cases = data.cases.filter((k) => k.totals.all.interactions > 1e-3 && k.spectra[comp]);
+  const traces = cases.map((k, i) => {
+    // the last bin also holds what the resolution moves above 20 MeV: not drawn
+    const x = k.edges.slice(0, -2).map((e, b) => 0.5 * (e + k.edges[b + 1])), y = k.spectra[comp].slice(0, -1).map((v) => (v > 0 ? v : null));
+    const name = `${DETECTOR_LABEL[k.detector]} ${CHANNELS[k.channel] || k.channel} (${k.preset})`;
+    return { x, y, mode: "lines", line: { shape: "hvh", color: palette()[i % 8], width: 2, dash: k.channel === "es" ? "solid" : "dash" }, name,
+             hovertemplate: `%{x:.2f} MeV: %{y:.4g} /(kt·yr·MeV)<extra>${name}</extra>` };
+  });
+  const shapes = cases.map((k, i) => ({ type: "line", x0: k.threshold, x1: k.threshold, yref: "paper", y0: 0, y1: 1,
+                                         line: { color: palette()[i % 8], dash: "dot", width: 1 } }));
+  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
+  Plotly.react(node, traces, layout(c, node, `Observed spectra, ${comp === "all" ? "all components" : DISPLAY[comp]} (B16-GS98, by day)`,
+    "Observed energy (MeV)", "Interactions / (kt·yr·MeV)",
+    { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: [-3, 7] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
+  const fmt = (v) => (v >= 100 ? v.toFixed(0) : v.toPrecision(3));
+  $("b5-observed").innerHTML = `<table><thead><tr><th>Detector</th><th>Response</th><th>Channel</th><th class="num">Threshold (MeV)</th>
+    <th class="num">Interactions</th><th class="num">Above threshold, perfect detector</th><th class="num">Observed above threshold</th><th class="num">Ratio</th></tr></thead><tbody>${
+    data.cases.filter((k) => k.totals[comp]).map((k) => { const t = k.totals[comp]; return `<tr><td>${DETECTOR_LABEL[k.detector]}</td><td>${k.preset}</td><td>${OBSERVABLE[k.channel] || k.channel}</td>
+      <td class="num">${k.threshold}</td><td class="num">${fmt(t.interactions)}</td><td class="num">${fmt(t.true_above)}</td><td class="num">${fmt(t.above)}</td>
+      <td class="num">${t.true_above > 0 ? (t.above / t.true_above).toFixed(3) : "—"}</td></tr>`; }).join("")
+  }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for part 2 (BKS for ES,
+    MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Observed energy: for ES the electron's kinetic energy T, for CC
+    E<sub>ν</sub> − Q. Solid lines ES, dashed CC; dotted lines: the thresholds. The ratio is the response's effect above the threshold:
+    resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>`;
+}
+
+function whenVisible(node, draw) {
+  // draw a figure the first time it scrolls into view (once per call): the B5 tab opens on its part-2 figure, so the
+  // part-1 figure further down costs nothing until it is seen
+  node.visibilityObserver?.disconnect();
+  const observer = new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) { observer.disconnect(); draw(); }
+  }, { rootMargin: "200px" });
+  node.visibilityObserver = observer;
+  observer.observe(node);
+}
+
 function b5() {
-  const c = colours(), rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98");
+  b5Observed();
+  const rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98");
   const node = $("plot-b5-chain");
   const cases = [...new Set(rows.map((r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`))];
   const key = (r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`;
+  const title = "Part 1: SNOwGLoBES full chain over SNUfish's folding (B16-GS98)";
+  node.previousElementSibling.innerHTML = title;
+  whenVisible(node, () => b5Chain(node, rows, cases, key, title));
+  $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
+  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; part 1 rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
+    : `<p class="hint">No full-chain tool has contributed yet.</p>`;
+}
+
+function b5Chain(node, rows, cases, key, title) {
+  const c = colours();
   const traces = cases.map((name, i) => {
     const mine = rows.filter((r) => key(r) === name).sort((a, b) => ORDER.indexOf(a.component) - ORDER.indexOf(b.component));
     return { x: mine.map((r) => ORDER.indexOf(r.component) + 0.08 * (i - (cases.length - 1) / 2)), y: mine.map((r) => r.ratio), mode: "markers", name,
@@ -339,29 +439,12 @@ function b5() {
              hovertemplate: `%{text}: %{y:.4f}<extra>${name}</extra>` };
   });
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })));
-  Plotly.react(node, traces, layout(c, node, "SNOwGLoBES full chain over SNUfish's folding (B16-GS98)", "Component", "Rate ratio",
+  Plotly.react(node, traces, layout(c, node, title, "Component", "Rate ratio",
     { showlegend: false, hovermode: "closest", xaxis: { tickvals: ORDER.map((_, i) => i), ticktext: ORDER.map((x) => DISPLAY[x]), range: [-0.5, ORDER.length - 0.5], minor: { ticks: "" } },
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
-  $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
-    rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
-  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; B5 rates are daytime, in true neutrino energy, before any detector response.</p>`
-    : `<p class="hint">No full-chain tool has contributed yet.</p>`;
 }
 
 // ------------------------------------------------------------------ discrepancies
-
-async function loadTable(name) {
-  // as app.js: a table's JSON index and its float32 binary (base64 text in a hosted copy)
-  const meta = await (await fetch(`${DATA}${name}.json`)).json();
-  const response = await fetch(`${DATA}${meta.bin}`);
-  if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
-  if (meta.encoding === "base64") {
-    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-    return { meta, buffer: bytes.buffer };
-  }
-  return { meta, buffer: await response.arrayBuffer() };
-}
 
 async function templates() {
   // every template's central value as the calculator computes it (the paper's inputs), and again with every legacy
@@ -412,7 +495,7 @@ function paperNumber(p, v) {
   return minus(Number(v.toPrecision(4)).toString());
 }
 
-const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A_DN" };
+const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A<sub>DN</sub>" };
 const ES = { bks: "BKS radiative corrections", tree: "ES at tree level", snowglobes: "SNOwGLoBES ES" };
 const STATUS_LABEL = { legacy: "legacy", approximation: "approximation", reproduction: "paper's parameters" }; // as app.js
 const ORDERS = { size: (r) => -Math.abs(r.relative), shift: (r) => -Math.abs(r.shift), calculator: (r) => r.order };
@@ -500,7 +583,7 @@ async function discrepancies() {
         + `<td class="num start">${published}<span class="unit">${UNIT_OF[p.kind](p)}${p.measured ? ", measured" : ""}</span></td><td class="num">${paperNumber(p, r.ours)}</td>`
         + `<td class="num" style="background:${shade("reproduction", heat(r.relative))}" title="SNUfish ÷ published − 1${points}">${signedPct(r.relative)}</td>`
         + `<td class="inputs">${inputsCell(r)}</td>`
-        + `<td class="inputs start">${replaced.length ? replaced.map((f) => `<span class="input" title="${f.summary.replace(/"/g, "&quot;")}">${inputName(f.category, f.name)} → ${inputName(f.category, f.by)}</span>`).join("") : `<span class="muted">nothing</span>`}</td>`
+        + `<td class="inputs start">${replaced.length ? replaced.map((f) => `<span class="input" title="${plain(math(f.summary)).replace(/"/g, "&quot;")}">${inputName(f.category, f.name)} → ${inputName(f.category, f.by)}</span>`).join("") : `<span class="muted">nothing</span>`}</td>`
         + (changed ? `<td class="num">${paperNumber(p, r.current)}</td>`
             + `<td class="num" style="background:${shade("update", heat(r.shift))}" title="State of the art ÷ published − 1: ${signedPct(r.currentRelative)}">${signedPct(r.shift)}</td>`
           : `<td class="num muted">same</td>${empty}`) + `</tr>`;
@@ -544,7 +627,7 @@ function setupTheme() {
 }
 
 const fill = (select, entries, value) => {
-  select.replaceChildren(...entries.map(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; o.selected = v === value; return o; }));
+  select.replaceChildren(...entries.map(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = plain(l); o.selected = v === value; return o; }));
   select.addEventListener("change", render);
 };
 
@@ -568,8 +651,8 @@ async function main() {
   for (const m of Object.keys(XSEC)) XSEC[m] += tag(status.xsec_model?.cc_nue_ar40?.[m]);
   const s = page.sections, set = page.inputs.parameter_sets.sets[s.set];
   $("reference-note").textContent = `Reference: ${set?.label || s.set} oscillation parameters, ${page.inputs.solar_models[s.solar_model].label} `
-    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages without `
-    + `detector response, ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
+    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages through `
+    + `each detector's published response (B5), ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
   fill($("overview-observable"), Object.entries(s.observables).map(([id, o]) => [id, sup(o.label)]), "argon_cc_hep");
   fill($("b2-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);
   fill($("b2-component"), ORDER.map((comp) => [comp, DISPLAY[comp]]), "hep");

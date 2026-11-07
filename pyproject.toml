@@ -28,7 +28,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 150
-extend-exclude = ["contributions/nufast-earth/scripts/NuFast-Earth"]
+extend-exclude = ["contributions/nufast-earth/scripts/NuFast-Earth", "contributions/peanuts/scripts/PEANUTS"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B"]

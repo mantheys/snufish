@@ -1,0 +1,17 @@
+tool: peanuts
+tool_version: '1.6'
+tool_commit: 39ef11f
+benchmark: B2_sun
+benchmark_version: 0.2.0
+contributor: SNUfish maintainers (wrapper); PEANUTS by T. E. Gonzalo and M. Lucente
+date: '2026-11-07'
+command: cd contributions/peanuts/scripts && python run_b2.py
+settings:
+  quantity: peanuts.solar.Tei (adiabatic weights (c13m c12m)^2, (c13m s12m)^2, s13m^2
+    from the matter angles th13_M, th12_M_given_th13_M at n_e(r0))
+  matter_potential: 2EV/dm^2 = 3.868e-7/2.533 n_e[mol/cm^3] E[MeV]/dm^2[eV^2], hard-coded
+    (matter_mixing.Vk); 3.6e-4 above the spec's 1.526493e-7
+  electron_density: the spec's n_e(r0) (snufish.solar.electron_density), passed in
+    mol/cm^3
+license: CC-BY-4.0
+reference: arXiv:2303.15527

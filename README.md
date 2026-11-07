@@ -50,7 +50,7 @@ plotipus.)
 | You are… | SNUfish gives you |
 |---|---|
 | **A tool developer** (oscillation, cross-section or rate code) | A fixed problem to run, a validator with physics checks (unitarity, vacuum limit at the horizon, normalisation), and plots of your tool against the others and the reference solvers. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). |
-| **A detector physicist** planning or checking a solar analysis | Rates and spectra in observed energy for water, argon, scintillator and heavy water, with threshold, resolution, efficiency (or an imported smearing matrix and efficiency curve), exposure and detector uncertainties; presets for Super-K IV, Hyper-K, DUNE, SNO, Borexino and JUNO. |
+| **A detector physicist** planning or checking a solar analysis | Rates and spectra in observed energy for water, argon, scintillator and heavy water, with threshold, resolution, efficiency (or an imported smearing matrix and efficiency curve), exposure and detector uncertainties; presets for Super-K IV, Hyper-K, DUNE, SNO, Borexino and JUNO. B5 benchmarks the published responses of Super-K IV, SNO (salt), Borexino and DUNE, and takes a tool's own. |
 | **A phenomenologist** asking what separates solar and reactor Δm²<sub>21</sub> | `snufish scan`: the <sup>8</sup>B day-night asymmetry, the slope and curvature of the daytime P<sub>ee</sub> and the upturn, against Δm²<sub>21</sub> and at each published parameter set, next to the measurements. |
 | **Anyone quoting a rate** | An error budget split into sampled sources and model ranges (`snufish budget`, or the calculator), so the dominant uncertainty and the model dependence are visible separately. |
 | **A reviewer or student** | A one-click reproduction of published numbers (Borexino, Super-K, SNO, JUNO, BKS) in the calculator, each linked to its paper, and the official figures recomputed. |
@@ -59,26 +59,35 @@ plotipus.)
 
 Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
 
-1. **JUNO fixes Δm²<sub>21</sub>**; solar data alone sit 1.5σ lower, a physics
-   question rather than an input choice.
-2. **Solar composition** (B23 MB22 vs AAG21) is the open flux uncertainty:
-   <sup>8</sup>B 16 %, <sup>7</sup>Be 8 %, CNO 30 %.
-3. **Earth: the crust near the detector moves A<sub>DN</sub> by −2.5 to +3.7 %**;
-   along each chord instead of under the detector, by at most 0.2 % more (the
-   Earth range). A second crust model and a 3D mantle are still missing.
-4. **<sup>40</sup>Ar: the quenching of the Gamow–Teller strength**, about 37 %:
-   MARLEY 2 and the Suzuki–Honma shell model agree to 3 %; the Kostensalo
-   shell model (g<sub>A</sub> = 1.00) is 27–35 % lower.
-5. **Folding: SNOwGLoBES agrees to 0.4 % for <sup>8</sup>B and hep** (ES, CC on <sup>40</sup>Ar) on the
-   same fluxes and cross sections; below 2 MeV (<sup>7</sup>Be, pep,
-   <sup>13</sup>N) its full chain is 16–21 % lower.
-6. **The tools agree; the inputs do not.** Earth solvers agree to 10⁻⁸
-   on constant shells, radiative corrections to 0.1 %; NuFast-Earth's mean
-   density on continuous PREM moves the <sup>8</sup>B A<sub>DN</sub> by 0.3 %, removed
-   by cutting it into 50 km shells, as the calculator's night does.
-7. **Most large spreads were outdated inputs.** The factor 5–7 between
-   <sup>40</sup>Ar tables, A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on
-   <sup>8</sup>B from B16: legacy models and approximations, not uncertainties.
+1. **Reactors fix Δm²₂₁; the Sun prefers it 1.5σ lower.** JUNO measures
+   it to 1.6 %, solar data alone to about 15 %; the gap is physics to
+   resolve, not an input to choose.
+2. **Solar composition is the largest open flux uncertainty.** AAG21
+   predicts 16 % less <sup>8</sup>B, 8 % less <sup>7</sup>Be and 30 % less CNO than
+   MB22m, each beyond MB22m's own 1σ.
+3. **The crust near the detector shifts A<sub>DN</sub> by −2.5 % to +3.7 %**,
+   with a size and sign set by the site. Taking it along each night chord
+   instead of under the detector moves it by at most 0.2 %: the Earth range.
+   A second crust model and a 3D mantle are not included yet.
+4. **<sup>40</sup>Ar CC is uncertain by 37 % because the Gamow–Teller quenching is
+   unsettled.** MARLEY 2 and the Suzuki–Honma shell model agree within 3 %;
+   Kostensalo's shell model is 27–35 % lower with g<sub>A</sub> = 1.00.
+5. **SNOwGLoBES matches SNUfish to 0.4 % for <sup>8</sup>B and hep, not below
+   2 MeV.** On the same fluxes and cross sections its full chain is 16–21 %
+   lower for <sup>7</sup>Be, pep and <sup>13</sup>N, because GLoBES evaluates
+   flux × σ once per 0.5 MeV bin, at its midpoint (reproduced to 10⁻⁵). The
+   detector response matters more: Super-K IV's efficiency halves the
+   <sup>8</sup>B rate above its threshold, DUNE's 20 % resolution takes 4 % off.
+6. **The tools agree; the inputs do not.** Three Earth solvers (NuFast-Earth,
+   PEANUTS, nuSQuIDS) agree with the reference to 10⁻⁸–10⁻⁵ on the same
+   shells, two Sun solvers to 10⁻⁴ and the ES radiative corrections to 0.1 %,
+   orders of magnitude below the spread of competing inputs; what is left is
+   each tool's hard-coded constants. NuFast-Earth's mean density per crossing
+   on PREM (0.3 % on the <sup>8</sup>B A<sub>DN</sub>) is removed in the calculator by
+   50 km shells.
+7. **Most large spreads were outdated inputs, not uncertainties.** The
+   <sup>40</sup>Ar tables of SNOwGLoBES differ by a factor 5–7, Earth models without
+   a crust overstate A<sub>DN</sub> by up to 40 %, and B16 gives 6.5 % more <sup>8</sup>B.
 
 ## Results so far
 

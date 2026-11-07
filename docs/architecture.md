@@ -50,8 +50,8 @@ were computed with.
 
 `snufish.contribution.write_contribution` writes both. The scripts that
 produced a contribution live in the tool's repository or under
-`contributions/<tool>/scripts/` (NuFast-Earth is pinned as a git
-submodule there).
+`contributions/<tool>/scripts/` (NuFast-Earth and PEANUTS are pinned as
+git submodules there; nuSQuIDS by tag in its `build_nusquids.sh`).
 
 ## Validation
 
@@ -69,8 +69,8 @@ contribution against its spec:
   table);
 - physics checks: B2 and B3 unitarity (F₁ + F₂ + F₃ = 1,
   P₁ₑ + P₂ₑ + P₃ₑ = 1 to 10⁻⁶), the B3 vacuum limit at the horizon
-  (P_iₑ = |U_eᵢ|² at cos η = 0, to 10⁻⁶), and for B4
-  σ(νₑe) > σ(ν_μe), σ(ν_τe) wherever given.
+  (P<sub>ie</sub> = |U<sub>ei</sub>|² at cos η = 0, to 10⁻⁶), and for B4
+  σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e) wherever given.
 
 ## Build
 
@@ -81,7 +81,7 @@ cells, in `build/data/` (never committed). It also derives:
 
 - `B2_Fluxes`, `B2_Profiles`, `B2_Production`: flux ratios to the reference solar model, electron density and
   production profiles;
-- `B23_DayNight`: day and night P_ee and A_DN from every B2 × B3 pair
+- `B23_DayNight`: day and night P<sub>ee</sub> and A<sub>DN</sub> from every B2 × B3 pair
   (tool, solar model, Earth model, site, component);
 - `B5_Spectrum`, `B5_Totals`: SNUfish's folding of every B4 cross-section
   model with every B2 solar model and the B2 reference oscillations;
@@ -110,7 +110,7 @@ The methods are in [methods.md](methods.md).
 
 ## Engine
 
-`snufish.engine` computes observed spectra, totals, A_DN, flux ratios and
+`snufish.engine` computes observed spectra, totals, A<sub>DN</sub>, flux ratios and
 error budgets from two things:
 
 - an **inputs dict** (fluxes, spectral shapes, cross-section tables,
@@ -136,11 +136,17 @@ allowed. Everything is NumPy, so the same code ports to JavaScript.
 `web/` is a static site: `index.html` (home and credits) and `rates.html`
 (the calculator). `web/engine.js` ports `snufish.engine`;
 `tests/test_web_engine.py` runs both on the same inputs and random draws and
-requires agreement to 10⁻⁹ (it is ~10⁻¹⁴). Other modules:
+requires agreement to 10⁻⁹ (it is ~10⁻¹⁴). For speed it keeps, per input set, the
+oscillation-independent products (cross-section kernels, the response, their
+products), and per draw the interpolated survival probabilities, so a budget
+and the spectra of the same draws (`engine.draws`, passed to both as `given`)
+interpolate the tables once. Other modules:
 
 | File | Role |
 |---|---|
-| `app.js` | the form, presets, published checks, sharing links, result rendering |
+| `app.js` | the form, presets, published checks, sharing links, result rendering; the last 12 results kept by setup |
+| `budget-worker.js` | the calculator's refinement: the budget and spectra with 1000 draws off the main thread |
+| `load.js` | the table loader shared by the pages and the worker |
 | `plots.js` | Plotly figures in plotipus's look |
 | `sources.js` | the source of every input, per calculator step, and the home page credits |
 | `checks.js` | published numbers the page reproduces with one selection |

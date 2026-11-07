@@ -1,16 +1,18 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
-import { budgetPlot, distributionPlot, officialPlot, spectrumPlot, themeIcon } from "./plots.js";
+import { DATA, loadTable } from "./load.js";
+import { ADN, budgetPlot, distributionPlot, math, officialPlot, plain, spectrumPlot, themeIcon } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
-import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
+import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, UNITS, publishedResolution,
          reproduced } from "./checks.js";
 import { officialFigure } from "./official.js";
 
-const DATA = "data/";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted build carries its own copy (build.py)
-const N_DRAWS = 400, SEED = 1;
-const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O",
-                   cc_nue_d: "νe CC on deuterium", nc_d: "NC on deuterium (all flavours)",
+// the budget at once with FIRST_DRAWS, then refined to N_DRAWS in a worker (budget-worker.js): a sampled sigma
+// from n draws is uncertain by about 1/sqrt(2n), 3.5 % at 400, 2.2 % at 1000
+const FIRST_DRAWS = 400, N_DRAWS = 1000, SEED = 1;
+const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νₑ CC on ⁴⁰Ar", cc_nue_o16: "νₑ CC on ¹⁶O",
+                   cc_nue_d: "νₑ CC on deuterium", nc_d: "NC on deuterium (all flavours)",
                    nc_ar40: "NC on ⁴⁰Ar (all flavours; SNOwGLoBES table, in neutrino energy)" };
 const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
                     scintillator_lab: "Liquid scintillator: LAB (JUNO)", heavy_water: "Heavy water, D₂O (SNO)" };
@@ -18,7 +20,7 @@ const XSEC = {
   ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
   ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
   ar40_marley2_bhattacharya1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Bhattacharya 1998)",
-  ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g_A = 1.00)",
+  ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g<sub>A</sub> = 1.00)",
   ar40_marley1_bhattacharya2009: "MARLEY v1 model, B(GT) from (p,n) (run by MARLEY 2)",
   ar40_marley1_allowed: "MARLEY v1 model, allowed approximation (MARLEY v1.2.1, DUNE's samples)",
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
@@ -54,18 +56,19 @@ const PRESET_NOTES = {
   juno: "JUNO ⁸B study (arXiv:2006.11760): LAB with 3.38 × 10³² electrons per kt, a 2 MeV recoil threshold, 3 %/√E resolution, "
       + "the SNO NC ⁸B flux, energy scale ±0.3 % and efficiency ±1 %. Not included: its energy-dependent fiducial volume, the 48 % "
       + "muon-veto dead time and the scintillator non-linearity. All energies, this reproduces its 4.36 counts per day per kt to 2 %.",
-  sno: "SNO phases I and II (arXiv:1109.0763): νe CC on deuterium in 770 t of fiducial D₂O (r < 550 cm), T_eff > 3.5 MeV, "
+  sno: "SNO phases I and II (arXiv:1109.0763): νₑ CC on deuterium in 770 t of fiducial D₂O (r < 550 cm), T<sub>eff</sub> > 3.5 MeV, "
      + "277.3 + 391.4 days live, energy scale ±0.41 %. Not included: SNO's resolution function (the paper gives only extra "
      + "smearing terms) and its efficiencies. The CC cross section is Nakamura et al. 2002 down to its 1.44 MeV threshold. "
      + "Switch the channel to NC on deuterium for the neutral-current rate (set its neutron efficiency).",
-  sno_salt: "SNO salt phase (nucl-ex/0502021): the CC rate on deuterium above T_eff = 5.5 MeV over the rate without oscillations, "
-          + "which is SNO's φ_CC/φ_NC (both fluxes inferred for an undistorted ⁸B spectrum). The total flux and the detector "
-          + "normalisation cancel; statistics are for 770 t and 391.4 live days without backgrounds or efficiencies. No "
-          + "resolution is applied (T_eff is smeared by ~ 0.4 √E in SNO), which moves the ratio by under 0.1 %.",
-  dune: "DUNE far detector from published numbers only: four 10 kt fiducial liquid-argon modules at SURF, νe CC on ⁴⁰Ar "
+  sno_salt: "SNO salt phase (nucl-ex/0502021): the CC rate on deuterium above T<sub>eff</sub> = 5.5 MeV over the rate without oscillations, "
+          + "which is SNO's φ<sub>CC</sub>/φ<sub>NC</sub> (both fluxes inferred for an undistorted ⁸B spectrum). The total flux and the detector "
+          + "normalisation cancel; statistics are for 770 t and 391.4 live days without backgrounds or efficiencies. SNO's "
+          + "resolution σ<sub>T</sub> = −0.131 + 0.383√T + 0.03731 T (eq. A3), energy scale ±1.15 % and resolution ±3.4 % (table V): "
+          + "the B5 benchmark's response of heavy water. The visible energy is E<sub>ν</sub> − 1.442 MeV (the two protons' share is not modelled).",
+  dune: "DUNE far detector from published numbers only: four 10 kt fiducial liquid-argon modules at SURF, νₑ CC on ⁴⁰Ar "
       + "(MARLEY 2), a 5 MeV detected-energy threshold and a 20 % energy-independent resolution (DUNE's supernova-burst paper, "
       + "arXiv:2008.06647: \"realistic energy resolution is closest to the 20 % level\"), and 100 kt·yr as in Capozzi et al. "
-      + "(arXiv:1808.08232), who assume 7 % (set b = 7). Visible energy here is Eν − 1.504 MeV (gammas included); Capozzi et al. "
+      + "(arXiv:1808.08232), who assume 7 % (set b = 7). Visible energy here is E<sub>ν</sub> − 1.504 MeV (gammas included); Capozzi et al. "
       + "count the electron alone. No efficiency, backgrounds or detector uncertainties: none is published for solar neutrinos.",
   hyperk: "Hyper-K, one tank (design report, arXiv:1805.04163): 187 kt fiducial, 4.5 MeV kinetic threshold, energy scale ±0.5 % "
         + "and resolution ±0.6 %, 10 years. Its resolution is not published as a function and is expected to be better than "
@@ -82,25 +85,13 @@ const $ = (id) => document.getElementById(id);
 // setup in the address: those controls are hidden there and the files below say how to run the site locally.
 const HOSTED = document.querySelector('meta[name="snufish-host"]')?.content === "artifact";
 const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
-              worker: null, rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
+              worker: null, refiner: null, refineId: 0, cache: new Map(), rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
 
 // ------------------------------------------------------------------ loading
 
-async function loadTable(name) {
-  const meta = await (await fetch(`${DATA}${name}.json`)).json();
-  const response = await fetch(`${DATA}${meta.bin}`);
-  if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
-  if (meta.encoding === "base64") { // hosted copies keep the float32 tables as base64 text
-    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-    return { meta, buffer: bytes.buffer };
-  }
-  return { meta, buffer: await response.arrayBuffer() };
-}
-
 function option(value, label, selected = false) {
   const o = document.createElement("option");
-  o.value = value; o.textContent = label; o.selected = selected;
+  o.value = value; o.textContent = plain(label); o.selected = selected;
   return o;
 }
 
@@ -132,7 +123,7 @@ function statusNote(id, category, name, channel = null) {
   // the status of the selected choice under its control: badge, why, and what to use instead
   const s = statusOf(category, name, channel);
   const instead = s.superseded_by ? ` State of the art instead: ${nameOf(category, s.superseded_by, channel)}.` : "";
-  $(id).innerHTML = `${badge(s.status)} ${s.summary}${instead}`;
+  $(id).innerHTML = `${badge(s.status)} ${math(s.summary)}${instead}`;
 }
 
 function currencyLine(r) {
@@ -161,7 +152,7 @@ function buildControls() {
   $("check").replaceChildren(option("", "None: set the steps by hand"), envelope, ...Object.entries(groups).map(([name, list]) => {
     const group = document.createElement("optgroup");
     group.label = name;
-    list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
+    list.forEach((c) => group.append(option(c.id, plain(`${c.group}: ${c.label}`))));
     return group;
   }));
   // state-of-the-art choices first; legacy ones (kept to reproduce papers) and approximations apart, and labelled
@@ -213,7 +204,7 @@ function readSetup() {
     b8_flux: radio("b8"), site: $("site").value, earth_model: $("earth").value, detector: $("detector").value,
     channel: $("channel").value, xsec_model: $("xsec").value || "default", es_model: radio("es"),
     period: radio("period"), threshold: number("threshold"), resolution_a: number("res-a"),
-    resolution_b: number("res-b") / 100, resolution_poly: $("res-model").value === "sk4" ? SK4_RESOLUTION : [],
+    resolution_b: number("res-b") / 100, ...publishedResolution(app.inputs, $("res-model").value),
     efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"), efficiency_width: number("eff-width", 0.5),
     smearing_table: $("res-model").value === "import" ? app.imports.smearing : null,
     efficiency_table: efficiencyTable(),
@@ -236,7 +227,7 @@ function presetSummary(es) {
   // the preset's detector settings in one line, for the Preset view (Manual shows them all)
   const s = readSetup(), parts = [];
   parts.push(s.threshold > 0 ? `threshold ${s.threshold} MeV (${es ? "T" : "visible energy"})` : "no threshold");
-  if (s.resolution_poly.length) parts.push("Super-K IV resolution");
+  if (s.resolution_poly.length) parts.push(`${s.resolution_energy === "kinetic" ? "SNO salt" : "Super-K IV"} resolution`);
   else if (s.smearing_table) parts.push("imported smearing");
   else if (s.resolution_a > 0 || s.resolution_b > 0)
     parts.push(`resolution ${[s.resolution_a > 0 ? `${s.resolution_a} √E` : "", s.resolution_b > 0 ? `${+(100 * s.resolution_b).toFixed(1)} % E` : ""].filter(Boolean).join(" ⊕ ")}`);
@@ -270,13 +261,13 @@ function sync() {
   const manual = radio("config") === "manual";
   $("manual-fields").hidden = !manual;
   $("preset-row").hidden = $("preset-summary").hidden = manual;
-  $("preset-note").textContent = manual ? "" : PRESET_NOTES[$("preset").value];
+  $("preset-note").innerHTML = manual ? "" : PRESET_NOTES[$("preset").value];
   if (!manual) $("preset-summary").textContent = presetSummary(es);
   $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
   const q = d.visible_offset_MeV[$("channel").value];
-  $("observable-note").textContent = es
+  $("observable-note").innerHTML = es
     ? "Observed: the recoil electron's kinetic energy T."
-    : `Observed: the visible energy E_ν − Q (Q = ${q} MeV; electron and de-excitation gammas, no neutron or binding losses).`;
+    : `Observed: the visible energy E<sub>ν</sub> − Q (Q = ${q} MeV; electron and de-excitation gammas, no neutron or binding losses).`;
   const exp = exposure();
   $("exposure-note").textContent = exp ? `Exposure ${fmt(exp)} kt·yr (half by night).` : "Set both for a statistical error.";
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
@@ -408,7 +399,7 @@ function measuredBand(setup, quantity) {
   const sno = meas.sno_cc_nc;
   if (quantity === "ratio" && sno && setup.channel === "cc_nue_d" && c.includes("B8") && Math.abs(setup.threshold - sno.threshold_MeV) < 0.01) {
     return { value: sno.value, minus: Math.hypot(sno.stat, sno.syst[0]), plus: Math.hypot(sno.stat, sno.syst[1]),
-             label: "SNO salt ±1σ", source: `SNO salt phase φ_CC/φ_NC, ${sno.source}` };
+             label: "SNO salt ±1σ", source: `SNO salt phase φ<sub>CC</sub>/φ<sub>NC</sub>, ${sno.source}` };
   }
   return null;
 }
@@ -450,14 +441,14 @@ function publishedLine(r) {
     shown = `Measured: <b>${digits(p.value)}</b> −${digits(p.minus, 2)} +${digits(p.plus, 2)}${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff}), `
           + `${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it`;
   } else shown = `Published: <b>${digits(p.value)}</b>${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff})`;
-  const convention = p.kind === "adn" ? " A_DN here in the paper's convention (D − N)/mean, the opposite sign of the headline's." : "";
+  const convention = p.kind === "adn" ? ` ${ADN} here in the paper's convention (D − N)/mean, the opposite sign of the headline's.` : "";
   return `<div class="sub check-line"><b>${c.group}: ${c.label}</b> (${sourceLink(c)}). ${shown}.${convention}</div>`;
 }
 
 function describe(setup, quantity) {
   const comps = setup.components.map((c) => engine.DISPLAY[c]).join(", ");
   const response = [];
-  if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E_vis"} > ${setup.threshold} MeV`);
+  if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E<sub>vis</sub>"} > ${setup.threshold} MeV`);
   if (setup.resolution_a > 0 || setup.resolution_b > 0 || setup.resolution_poly.length || setup.smearing_table) response.push("smeared");
   if (setup.efficiency < 1 || setup.efficiency_e50 > 0 || setup.efficiency_table) response.push("efficiency");
   const what = CHANNELS[setup.channel] + (response.length ? `, ${response.join(", ")}` : "");
@@ -479,6 +470,47 @@ function lineMarks(setup) {
                                    x: setup.channel === "es" ? 2 * E * E / (me + 2 * E) : E - q, edge: setup.channel === "es" }))
       .filter((m) => m.x > 0 && m.x >= setup.threshold);
   }).sort((a, b) => a.x - b.x);
+}
+
+// the last results by setup (budget, spectra, flux), most recent last; refined entries are updated in place
+const CACHE_SIZE = 12;
+function remembered(key) {
+  const hit = app.cache.get(key);
+  if (hit) { app.cache.delete(key); app.cache.set(key, hit); } // most recently used
+  return hit;
+}
+function remember(key, entry) {
+  app.cache.set(key, entry);
+  while (app.cache.size > CACHE_SIZE) app.cache.delete(app.cache.keys().next().value);
+}
+
+function refine(result, { solarRange, night, tableNames }) {
+  // the same budget and spectra with N_DRAWS, in a worker; the result on screen is replaced when they come, unless
+  // the setup changed meanwhile (a later compute() bumps refineId). Without workers the first draws stay.
+  const id = ++app.refineId;
+  try {
+    if (!app.refiner) {
+      app.refiner = new Worker("budget-worker.js", { type: "module" });
+      app.refiner.onmessage = ({ data }) => {
+        const r = app.result;
+        if (data.id !== app.refineId || !r || !r.refining) return;
+        r.refining = false;
+        if (data.error) { console.warn("refinement:", data.error); render(); return; }
+        Object.assign(r, { rows: data.rows, samples: data.samples, spectra: data.spectra, ms: data.ms, draws: N_DRAWS });
+        const entry = app.cache.get(r.key);
+        if (entry) Object.assign(entry, { rows: data.rows, samples: data.samples, spectra: data.spectra, ms: data.ms, draws: N_DRAWS });
+        render();
+        if (app.rendered.length || !$("plotipus").hidden) renderPlotipus();
+      };
+      app.refiner.onerror = () => { app.refiner = null; if (app.result) { app.result.refining = false; render(); } };
+    }
+    result.refining = true;
+    app.refiner.postMessage({ id, setup: result.setup, quantity: result.quantity, set: result.set, solarRange, night,
+                              n: N_DRAWS, seed: SEED, tableNames });
+  } catch (error) {
+    console.warn("no refinement worker:", error);
+    result.refining = false;
+  }
 }
 
 function schedule() {
@@ -504,26 +536,41 @@ async function compute() {
   // A rate's solar-model range needs only the fluxes (one table); A_DN, where a single flux cancels,
   // needs every model's density profile (all day tables).
   const solarRange = quantity === "adn" ? "full" : "fluxes";
-  const needed = [...(solarRange === "full" ? Object.keys(d.solar_models) : [setup.solar_model]).map((m) => `day_${m}`),
-                  ...(night ? d.earth_models.map((e) => `night_${e}`) : [])].filter((n) => !app.tables.has(n));
+  const tableNames = [...(solarRange === "full" ? Object.keys(d.solar_models) : [setup.solar_model]).map((m) => `day_${m}`),
+                      ...(night ? d.earth_models.map((e) => `night_${e}`) : [])];
+  const needed = tableNames.filter((n) => !app.tables.has(n));
   if (needed.length) {
     status(`Downloading ${needed.length} table${needed.length > 1 ? "s" : ""}…`);
     try { await app.tables.ensure(needed); } catch (error) { status(`Could not load the tables: ${error.message}`, true); return; }
   }
-  status("Computing…");
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-  const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
-  app.tables.clamped = 0;
-  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange, legacy: true });
-  const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
-  const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
-  const ms = performance.now() - t0;
+  // a setup computed before (e.g. a setting changed and changed back) is taken from the cache, refined or not
+  const key = JSON.stringify([setup, quantity, $("set").value]), hit = remembered(key);
+  let rows, samples, spectra, flux, ms, draws;
+  if (hit) {
+    ({ rows, samples, spectra, flux, ms, draws } = hit);
+    app.tables.clamped = hit.clamped;
+  } else {
+    status("Computing…");
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
+    app.tables.clamped = 0;
+    // one set of draws for the budget and the spectra: the tables are interpolated once per draw (engine.survival)
+    const given = engine.draws(app.inputs, setup, params, FIRST_DRAWS, SEED);
+    ({ rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { given, solarRange, legacy: true }));
+    spectra = engine.spectra(app.inputs, app.tables, setup, params, { given, night });
+    flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
+    ms = performance.now() - t0;
+    draws = FIRST_DRAWS;
+    remember(key, { rows, samples, spectra, flux, ms, draws, clamped: app.tables.clamped });
+  }
   const [scale, unit] = { adn: [100, "%"], ratio: [1, "of the unoscillated rate"] }[quantity] || UNITS[$("unit").value];
   const [spectrumScale, spectrumUnit] = quantity === "ratio" ? UNITS.kt : [scale, unit]; // the ratio's spectrum: the rate's
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
   const check = CHECKS.find((c) => c.id === $("check").value) || null;
   app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check,
-                 lines: lineMarks(setup) };
+                 lines: lineMarks(setup), draws, refining: false, key, cached: Boolean(hit) };
+  if (draws < N_DRAWS) refine(app.result, { solarRange, night, tableNames });
+  else app.refineId++; // a refinement still running for another setup no longer applies
   app.result.official = await officialFigure(check, { inputs: app.inputs, tables: app.tables, setup, set: $("set").value });
   render();
   if (thumbShown()) setTimeout(thumb, 0); // the all-components example, after the result is on screen
@@ -627,7 +674,8 @@ function render() {
     ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
     <div class="what"><span>${describe(setup, quantity)}${thumbShown() ? "" : ` · ${app.inputs.data.parameter_sets.sets[r.set].label}`}</span>
-      <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
+      <span class="timing">${r.refining ? `${r.draws} draws in ${Math.round(r.ms)} ms; refining to ${N_DRAWS}…`
+        : `Computed with ${r.draws} draws in ${Math.round(r.ms)} ms${r.cached ? " (kept from before)" : ""}.`}</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
     <div class="ranges"><b>Model ranges: the competing state-of-the-art models</b>${ranges.join("<br>") || "none: one state-of-the-art model per choice here"}${
@@ -688,7 +736,7 @@ async function renderPlotipus() {
     const wheel = new URL(`py/${(await (await fetch("py/manifest.json")).json()).plotipus}`, location.href).href;
     const encoded = HOSTED ? await (await fetch("encoded.json")).json() : null; // base64 wheels and zips (build.py)
     const { plotipusProject } = await import("./export.js");
-    const { files, commands } = await plotipusProject(result, describe(result.setup, result.quantity), location.href);
+    const { files, commands } = await plotipusProject(result, plain(describe(result.setup, result.quantity)), location.href);
     const t0 = performance.now();
     const answer = await new Promise((resolve) => {
       app.onWorker = (msg) => { if (msg.type === "progress") { if (id === app.renderId) say(msg.text); } else if (msg.id === id) resolve(msg); };
@@ -843,7 +891,7 @@ function applyCheck(id) {
     app.imports.smearing = engine.electronSmearing(app.inputs, $("channel").value, $("xsec").value, c.electron);
     $("res-model").value = "import";
     $("smear-neutrino").checked = true;
-    $("smear-info").textContent = `The ${app.imports.smearing.summary} (set by the published check): T = Eν − Q − E_level.`;
+    $("smear-info").innerHTML = `The ${app.imports.smearing.summary} (set by the published check): T = E<sub>ν</sub> − Q − E<sub>level</sub>.`;
   }
   if (c.window || c.electron || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
 }
@@ -869,7 +917,7 @@ async function init() {
   app.tables = new engine.TableProbabilities(loadTable, app.inputs.data.parameter_sets.defaults.sin2_theta13.value);
   buildControls();
   for (const [name, c] of Object.entries(app.inputs.data.efficiency_curves || {})) // published curves, before "Imported curve"
-    $("eff-model").insertBefore(new Option(`Published: ${c.label}`, `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));
+    $("eff-model").insertBefore(new Option(plain(`Published: ${c.label}`), `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));
   sync();
   applyCheck($("check").value); // the opening example (the thumb), unless the link carries a setup
   sync();
@@ -915,7 +963,7 @@ async function init() {
     try {
       const { downloadResult } = await import("./export.js");
       const save = app.downloads && ((blob, filename) => app.downloads.save({ filename, data: blob }));
-      await downloadResult(app.result, describe(app.result.setup, app.result.quantity), location.href, app.rendered, save);
+      await downloadResult(app.result, plain(describe(app.result.setup, app.result.quantity)), location.href, app.rendered, save);
       status("Downloaded: Parquet data, plotipus commands (plotipus run app) and the figures.");
     } catch (error) {
       if (error?.code === "declined") status("Download cancelled.");
