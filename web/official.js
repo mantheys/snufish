@@ -65,11 +65,11 @@ function junoProbabilities(ctx) {
     });
   }
   return {
-    title: "JUNO fig. 3: ⁸B νe survival probability by day and night",
+    title: "JUNO fig. 3: ⁸B νₑ survival probability by day and night",
     source: "JUNO, arXiv:2006.11760, fig. 3", url: ARXIV("2006.11760"),
-    caption: "SNUfish's P_ee(E_ν) at Jiangmen with JUNO's PDG 2018 mixing, for the two Δm²₂₁ of the paper. The figure shades the "
+    caption: "SNUfish's P<sub>ee</sub>(E<sub>ν</sub>) at Jiangmen with JUNO's PDG 2018 mixing, for the two Δm²₂₁ of the paper. The figure shades the "
            + "spread over solar zenith angles; SNUfish gives the day and the night average.",
-    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "νe survival probability P_ee", points: [],
+    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "νₑ survival probability P<sub>ee</sub>", points: [],
   };
 }
 
@@ -109,11 +109,11 @@ function sno(ctx) {
     rows.push({ series: "SNUfish, day", x: e, y: day[k] });
   });
   return {
-    title: "SNO fig. 10: daytime νe survival probability",
+    title: "SNO fig. 10: daytime νₑ survival probability",
     source: "SNO, arXiv:1109.0763, fig. 10, tables VII and VIII", url: ARXIV("1109.0763"),
-    caption: "SNO's quadratic P_ee^day with its 1σ band (stat ⊕ syst, with the fit's correlations), and SNUfish's daytime P_ee at "
+    caption: "SNO's quadratic P<sub>ee</sub><sup>day</sup> with its 1σ band (stat ⊕ syst, with the fit's correlations), and SNUfish's daytime P<sub>ee</sub> at "
            + "SNOLAB for the selected parameter set.",
-    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "P_ee (day)", points: [], band: "SNO fit (c₀, c₁, c₂)",
+    columns: table(rows), xLabel: "Neutrino energy (MeV)", yLabel: "P<sub>ee</sub> (day)", points: [], band: "SNO fit (c₀, c₁, c₂)",
   };
 }
 

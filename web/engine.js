@@ -251,9 +251,9 @@ export function observedEdges(threshold = 0) {
 
 // channels without a visible-energy model: the observed axis is E_nu itself (engine.NEUTRINO_AXIS in Python)
 export const NEUTRINO_AXIS = ["nc_ar40"];
-export const observable = (channel) => (NEUTRINO_AXIS.includes(channel) ? "Neutrino energy E_nu (MeV)"
+export const observable = (channel) => (NEUTRINO_AXIS.includes(channel) ? "Neutrino energy E<sub>ν</sub> (MeV)"
   : channel.startsWith("nc_") ? "Neutron-capture gamma energy (MeV)"
-  : channel === "es" ? "Electron kinetic energy T (MeV)" : "Visible energy E_nu - Q (MeV)");
+  : channel === "es" ? "Electron kinetic energy T (MeV)" : "Visible energy E<sub>ν</sub> − Q (MeV)");
 
 export function erf(x) {
   // series for |x| < 3, continued fraction for erfc beyond: ~1e-15 relative

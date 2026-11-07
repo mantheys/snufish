@@ -23,9 +23,22 @@ const FONT = '"DejaVu Sans", Verdana, Geneva, sans-serif';
 // Symbols with a subscript, as HTML: Plotly titles, hover labels and the HTML legends render <sub>. A <select> option
 // cannot, so plain() spells them out there; tex() writes them for plotipus (matplotlib mathtext).
 export const ADN = "A<sub>DN</sub>";
-export const plain = (s) => s.replace(/^A<sub>DN<\/sub>/, "Day-night asymmetry").replace(/A<sub>DN<\/sub>/g, "day-night asymmetry")
-  .replace(/<sub>(.*?)<\/sub>/g, "$1");
-export const tex = (s) => s.replace(/(\w+)<sub>(.*?)<\/sub>/g, "$$$1_{$2}$$");
+// math(): the symbols that text from the data files (status.yaml, sections.json) writes plainly, as HTML subscripts
+const SYMBOLS = /(^|[^\w])(A_DN|P_ee|E_vis|T_eff|E_nu|E_ν|g_A|n_e|N_A|θ_W|φ_CC|φ_NC|φ_ES|m_Z|p_e|E_e|E_level|T_e)(?![\w])/g;
+export const math = (s) => String(s ?? "").replace(SYMBOLS, (m, pre, sym) => {
+  const [base, index] = sym.split("_");
+  return `${pre}${base}<sub>${index === "nu" ? "ν" : index}</sub>`;
+});
+const SUBSCRIPT = { a: "ₐ", e: "ₑ", h: "ₕ", i: "ᵢ", j: "ⱼ", k: "ₖ", l: "ₗ", m: "ₘ", n: "ₙ", o: "ₒ", p: "ₚ", r: "ᵣ", s: "ₛ", t: "ₜ",
+                    u: "ᵤ", v: "ᵥ", x: "ₓ", 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉" };
+export const plain = (s) => String(s ?? "").replace(/^A<sub>DN<\/sub>/, "Day-night asymmetry").replace(/A<sub>DN<\/sub>/g, "day-night asymmetry")
+  .replace(/<sub>(.*?)<\/sub>/g, (m, x) => ([...x].every((ch) => SUBSCRIPT[ch]) ? [...x].map((ch) => SUBSCRIPT[ch]).join("")
+    : /^[α-ω]$/.test(x) ? x : `(${x})`))
+  .replace(/<sup>(.*?)<\/sup>/g, "^$1").replace(/<[^>]+>/g, "");
+const TEX = { "ν": "\\nu", "μ": "\\mu", "τ": "\\tau" };
+const texIndex = (x) => [...x].map((ch) => TEX[ch] || ch).join("");
+export const tex = (s) => String(s ?? "").replace(/<sub>(.*?)<\/sub><sup>(.*?)<\/sup>/g, (m, a, b) => `$_{${texIndex(a)}}^{${b}}$`)
+  .replace(/<sub>(.*?)<\/sub>/g, (m, a) => `$_{${texIndex(a)}}$`).replace(/<sup>(.*?)<\/sup>/g, (m, b) => `$^{${b}}$`);
 
 export function layout(c, node, title, xTitle, yTitle, extra = {}) {
   node.previousElementSibling.innerHTML = title; // the card's heading: Plotly's toolbar would cover a title in the plot

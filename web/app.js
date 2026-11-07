@@ -1,6 +1,6 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
-import { ADN, budgetPlot, distributionPlot, officialPlot, plain, spectrumPlot, themeIcon } from "./plots.js";
+import { ADN, budgetPlot, distributionPlot, math, officialPlot, plain, spectrumPlot, themeIcon } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
 import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
          reproduced } from "./checks.js";
@@ -9,8 +9,8 @@ import { officialFigure } from "./official.js";
 const DATA = "data/";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted build carries its own copy (build.py)
 const N_DRAWS = 400, SEED = 1;
-const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νe CC on ⁴⁰Ar", cc_nue_o16: "νe CC on ¹⁶O",
-                   cc_nue_d: "νe CC on deuterium", nc_d: "NC on deuterium (all flavours)",
+const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νₑ CC on ⁴⁰Ar", cc_nue_o16: "νₑ CC on ¹⁶O",
+                   cc_nue_d: "νₑ CC on deuterium", nc_d: "NC on deuterium (all flavours)",
                    nc_ar40: "NC on ⁴⁰Ar (all flavours; SNOwGLoBES table, in neutrino energy)" };
 const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
                     scintillator_lab: "Liquid scintillator: LAB (JUNO)", heavy_water: "Heavy water, D₂O (SNO)" };
@@ -18,7 +18,7 @@ const XSEC = {
   ar40_marley2_bhattacharya2009: "MARLEY 2 (recommended): HF-CRPA + B(GT) from (p,n), 2009",
   ar40_marley2_liu1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Liu 1998)",
   ar40_marley2_bhattacharya1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Bhattacharya 1998)",
-  ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g_A = 1.00)",
+  ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g<sub>A</sub> = 1.00)",
   ar40_marley1_bhattacharya2009: "MARLEY v1 model, B(GT) from (p,n) (run by MARLEY 2)",
   ar40_marley1_allowed: "MARLEY v1 model, allowed approximation (MARLEY v1.2.1, DUNE's samples)",
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
@@ -54,18 +54,18 @@ const PRESET_NOTES = {
   juno: "JUNO ⁸B study (arXiv:2006.11760): LAB with 3.38 × 10³² electrons per kt, a 2 MeV recoil threshold, 3 %/√E resolution, "
       + "the SNO NC ⁸B flux, energy scale ±0.3 % and efficiency ±1 %. Not included: its energy-dependent fiducial volume, the 48 % "
       + "muon-veto dead time and the scintillator non-linearity. All energies, this reproduces its 4.36 counts per day per kt to 2 %.",
-  sno: "SNO phases I and II (arXiv:1109.0763): νe CC on deuterium in 770 t of fiducial D₂O (r < 550 cm), T_eff > 3.5 MeV, "
+  sno: "SNO phases I and II (arXiv:1109.0763): νₑ CC on deuterium in 770 t of fiducial D₂O (r < 550 cm), T<sub>eff</sub> > 3.5 MeV, "
      + "277.3 + 391.4 days live, energy scale ±0.41 %. Not included: SNO's resolution function (the paper gives only extra "
      + "smearing terms) and its efficiencies. The CC cross section is Nakamura et al. 2002 down to its 1.44 MeV threshold. "
      + "Switch the channel to NC on deuterium for the neutral-current rate (set its neutron efficiency).",
-  sno_salt: "SNO salt phase (nucl-ex/0502021): the CC rate on deuterium above T_eff = 5.5 MeV over the rate without oscillations, "
-          + "which is SNO's φ_CC/φ_NC (both fluxes inferred for an undistorted ⁸B spectrum). The total flux and the detector "
+  sno_salt: "SNO salt phase (nucl-ex/0502021): the CC rate on deuterium above T<sub>eff</sub> = 5.5 MeV over the rate without oscillations, "
+          + "which is SNO's φ<sub>CC</sub>/φ<sub>NC</sub> (both fluxes inferred for an undistorted ⁸B spectrum). The total flux and the detector "
           + "normalisation cancel; statistics are for 770 t and 391.4 live days without backgrounds or efficiencies. No "
-          + "resolution is applied (T_eff is smeared by ~ 0.4 √E in SNO), which moves the ratio by under 0.1 %.",
-  dune: "DUNE far detector from published numbers only: four 10 kt fiducial liquid-argon modules at SURF, νe CC on ⁴⁰Ar "
+          + "resolution is applied (T<sub>eff</sub> is smeared by ~ 0.4 √E in SNO), which moves the ratio by under 0.1 %.",
+  dune: "DUNE far detector from published numbers only: four 10 kt fiducial liquid-argon modules at SURF, νₑ CC on ⁴⁰Ar "
       + "(MARLEY 2), a 5 MeV detected-energy threshold and a 20 % energy-independent resolution (DUNE's supernova-burst paper, "
       + "arXiv:2008.06647: \"realistic energy resolution is closest to the 20 % level\"), and 100 kt·yr as in Capozzi et al. "
-      + "(arXiv:1808.08232), who assume 7 % (set b = 7). Visible energy here is Eν − 1.504 MeV (gammas included); Capozzi et al. "
+      + "(arXiv:1808.08232), who assume 7 % (set b = 7). Visible energy here is E<sub>ν</sub> − 1.504 MeV (gammas included); Capozzi et al. "
       + "count the electron alone. No efficiency, backgrounds or detector uncertainties: none is published for solar neutrinos.",
   hyperk: "Hyper-K, one tank (design report, arXiv:1805.04163): 187 kt fiducial, 4.5 MeV kinetic threshold, energy scale ±0.5 % "
         + "and resolution ±0.6 %, 10 years. Its resolution is not published as a function and is expected to be better than "
@@ -100,7 +100,7 @@ async function loadTable(name) {
 
 function option(value, label, selected = false) {
   const o = document.createElement("option");
-  o.value = value; o.textContent = label; o.selected = selected;
+  o.value = value; o.textContent = plain(label); o.selected = selected;
   return o;
 }
 
@@ -132,7 +132,7 @@ function statusNote(id, category, name, channel = null) {
   // the status of the selected choice under its control: badge, why, and what to use instead
   const s = statusOf(category, name, channel);
   const instead = s.superseded_by ? ` State of the art instead: ${nameOf(category, s.superseded_by, channel)}.` : "";
-  $(id).innerHTML = `${badge(s.status)} ${s.summary}${instead}`;
+  $(id).innerHTML = `${badge(s.status)} ${math(s.summary)}${instead}`;
 }
 
 function currencyLine(r) {
@@ -270,13 +270,13 @@ function sync() {
   const manual = radio("config") === "manual";
   $("manual-fields").hidden = !manual;
   $("preset-row").hidden = $("preset-summary").hidden = manual;
-  $("preset-note").textContent = manual ? "" : PRESET_NOTES[$("preset").value];
+  $("preset-note").innerHTML = manual ? "" : PRESET_NOTES[$("preset").value];
   if (!manual) $("preset-summary").textContent = presetSummary(es);
   $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
   const q = d.visible_offset_MeV[$("channel").value];
-  $("observable-note").textContent = es
+  $("observable-note").innerHTML = es
     ? "Observed: the recoil electron's kinetic energy T."
-    : `Observed: the visible energy E_ν − Q (Q = ${q} MeV; electron and de-excitation gammas, no neutron or binding losses).`;
+    : `Observed: the visible energy E<sub>ν</sub> − Q (Q = ${q} MeV; electron and de-excitation gammas, no neutron or binding losses).`;
   const exp = exposure();
   $("exposure-note").textContent = exp ? `Exposure ${fmt(exp)} kt·yr (half by night).` : "Set both for a statistical error.";
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
@@ -408,7 +408,7 @@ function measuredBand(setup, quantity) {
   const sno = meas.sno_cc_nc;
   if (quantity === "ratio" && sno && setup.channel === "cc_nue_d" && c.includes("B8") && Math.abs(setup.threshold - sno.threshold_MeV) < 0.01) {
     return { value: sno.value, minus: Math.hypot(sno.stat, sno.syst[0]), plus: Math.hypot(sno.stat, sno.syst[1]),
-             label: "SNO salt ±1σ", source: `SNO salt phase φ_CC/φ_NC, ${sno.source}` };
+             label: "SNO salt ±1σ", source: `SNO salt phase φ<sub>CC</sub>/φ<sub>NC</sub>, ${sno.source}` };
   }
   return null;
 }
@@ -457,7 +457,7 @@ function publishedLine(r) {
 function describe(setup, quantity) {
   const comps = setup.components.map((c) => engine.DISPLAY[c]).join(", ");
   const response = [];
-  if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E_vis"} > ${setup.threshold} MeV`);
+  if (setup.threshold > 0) response.push(`${setup.channel === "es" ? "T" : "E<sub>vis</sub>"} > ${setup.threshold} MeV`);
   if (setup.resolution_a > 0 || setup.resolution_b > 0 || setup.resolution_poly.length || setup.smearing_table) response.push("smeared");
   if (setup.efficiency < 1 || setup.efficiency_e50 > 0 || setup.efficiency_table) response.push("efficiency");
   const what = CHANNELS[setup.channel] + (response.length ? `, ${response.join(", ")}` : "");
@@ -688,7 +688,7 @@ async function renderPlotipus() {
     const wheel = new URL(`py/${(await (await fetch("py/manifest.json")).json()).plotipus}`, location.href).href;
     const encoded = HOSTED ? await (await fetch("encoded.json")).json() : null; // base64 wheels and zips (build.py)
     const { plotipusProject } = await import("./export.js");
-    const { files, commands } = await plotipusProject(result, describe(result.setup, result.quantity), location.href);
+    const { files, commands } = await plotipusProject(result, plain(describe(result.setup, result.quantity)), location.href);
     const t0 = performance.now();
     const answer = await new Promise((resolve) => {
       app.onWorker = (msg) => { if (msg.type === "progress") { if (id === app.renderId) say(msg.text); } else if (msg.id === id) resolve(msg); };
@@ -843,7 +843,7 @@ function applyCheck(id) {
     app.imports.smearing = engine.electronSmearing(app.inputs, $("channel").value, $("xsec").value, c.electron);
     $("res-model").value = "import";
     $("smear-neutrino").checked = true;
-    $("smear-info").textContent = `The ${app.imports.smearing.summary} (set by the published check): T = Eν − Q − E_level.`;
+    $("smear-info").innerHTML = `The ${app.imports.smearing.summary} (set by the published check): T = E<sub>ν</sub> − Q − E<sub>level</sub>.`;
   }
   if (c.window || c.electron || Object.keys(values).some((k) => STEP5.includes(k))) $("preset").value = "custom"; // changed from the preset
 }
@@ -869,7 +869,7 @@ async function init() {
   app.tables = new engine.TableProbabilities(loadTable, app.inputs.data.parameter_sets.defaults.sin2_theta13.value);
   buildControls();
   for (const [name, c] of Object.entries(app.inputs.data.efficiency_curves || {})) // published curves, before "Imported curve"
-    $("eff-model").insertBefore(new Option(`Published: ${c.label}`, `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));
+    $("eff-model").insertBefore(new Option(plain(`Published: ${c.label}`), `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));
   sync();
   applyCheck($("check").value); // the opening example (the thumb), unless the link carries a setup
   sync();
@@ -915,7 +915,7 @@ async function init() {
     try {
       const { downloadResult } = await import("./export.js");
       const save = app.downloads && ((blob, filename) => app.downloads.save({ filename, data: blob }));
-      await downloadResult(app.result, describe(app.result.setup, app.result.quantity), location.href, app.rendered, save);
+      await downloadResult(app.result, plain(describe(app.result.setup, app.result.quantity)), location.href, app.rendered, save);
       status("Downloaded: Parquet data, plotipus commands (plotipus run app) and the figures.");
     } catch (error) {
       if (error?.code === "declined") status("Download cancelled.");

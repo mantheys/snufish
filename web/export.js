@@ -33,7 +33,7 @@ function commands(result) {
   const spectrum = `line --no_error --datafile AppSpectrum -x Energy -y ${column} --hue Component --plot_type step --logx `
     + (adn ? "--select Component -s total --labely '$A_{DN}$ (%)' "  // rates: the components alone, as on the page
            : `--select Component -s ${result.setup.components.map((c) => DISPLAY[c]).join(" ")} --logy --labely 'Interactions / (kt yr) per bin' `)
-    + `--labelx '${result.spectra.observable}' --output_suffix spectrum`;
+    + `--labelx '${tex(result.spectra.observable)}' --output_suffix spectrum`;
   const size = adn ? "Uncertainty (%)" : "Relative uncertainty (%)";
   const official = result.official ? [officialCommand(result.official)] : [];
   return [

@@ -2,7 +2,7 @@
 // export-sections) and data/inputs.json, and the About tab (how the numbers are made, the status of every input,
 // credits).
 import * as engine from "./engine.js";
-import { ADN, CONFIG, colours, htmlLegend, layout, themeIcon } from "./plots.js";
+import { ADN, CONFIG, colours, htmlLegend, layout, math, themeIcon } from "./plots.js";
 import { CREDITS, render as renderSources } from "./sources.js";
 
 const DATA = "data/";
@@ -153,7 +153,7 @@ function argon() {
 function earth() {
   // 3. (B3) the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
   const c = colours(), node = $("plot-f3"), sites = Object.keys(page.inputs.sites);
-  const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E_vis > 5 MeV", c.range]];
+  const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV", c.range]];
   const traces = page.adn ? kinds.map(([kind, name, colour]) => {
     const y = sites.map((site) => 100 * (page.adn[site][kind].prem_crust1 / page.adn[site][kind].prem_full - 1));
     return { type: "bar", x: sites, y, name, marker: { color: colour }, text: y.map(pct), textposition: "outside", cliponaxis: false,
@@ -269,7 +269,7 @@ function statusTable(d) {
     for (const [channel, table] of tables)
       for (const [key, s] of Object.entries(table))
         rows.push(`<tr><td><span class="bench-id">${STEP_OF[category]}</span></td><td>${title}</td><td>${name(category, key, channel)}</td><td><span class="badge ${s.status}">${BADGE[s.status]}</span></td>
-          <td>${s.summary}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
+          <td>${math(s.summary)}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
   }
   $("status-table").innerHTML = rows.length
     ? `<table><thead><tr><th>Step</th><th>Choice</th><th>Input</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";

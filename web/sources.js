@@ -37,13 +37,13 @@ export const SOURCES = {
   sno: S("SNO combined analysis: D₂O, fiducial volume, thresholds, live times, energy scale", "arXiv:1109.0763"),
   dune_snb: S("DUNE supernova-burst paper: 40 kt LAr, 5 MeV detected-energy threshold, resolution ~20 % (MARLEY + LArSoft)", "arXiv:2008.06647"),
   dune_solar: S("Capozzi, Li, Zhu & Beacom, DUNE as the next-generation solar neutrino experiment: 7 % resolution, 5 MeV, 100 kt·yr", "arXiv:1808.08232"),
-  sno_salt: S("SNO salt phase: φ_CC/φ_NC = 0.340 ± 0.023 (stat) −0.031 +0.029 (syst) above T_eff = 5.5 MeV, 391 live days", "nucl-ex/0502021"),
+  sno_salt: S("SNO salt phase: φ<sub>CC</sub>/φ<sub>NC</sub> = 0.340 ± 0.023 (stat) −0.031 +0.029 (syst) above T<sub>eff</sub> = 5.5 MeV, 391 live days", "nucl-ex/0502021"),
   nakamura: S("ν-deuteron CC and NC cross sections: Nakamura et al., Nucl. Phys. A 707, 561 (2002), table 1 (±1 %; SNOwGLoBES's xs_nue_d.dat is the same table from 5 MeV)", "nucl-th/0201062"),
   nc_capture: S("NC on deuterium: the neutron's capture γ (6.25 MeV on ²H, pure D₂O) is the visible energy, whatever the neutrino's; set the efficiency to the neutron capture × detection probability (SNO D₂O: 49 % of neutrons capture on ²H at the centre)", "nucl-ex/0502021"),
   hyperk: S("Hyper-K design report: fiducial volume, solar threshold, energy-scale and resolution uncertainties, site", "arXiv:1805.04163"),
   juno_b8: S("JUNO ⁸B study: LAB electron density, 2 MeV threshold, 3 %/√E, energy scale and efficiency uncertainties", "arXiv:2006.11760"),
-  es_tree: S("ES at tree level in the Standard Model, sin²θ_W = 0.23857 (PDG 2024, MS-bar at Q² → 0)"),
-  es_radiative: S("ES with electroweak, QCD and QED radiative corrections: Bahcall, Kamionkowski & Sirlin, PRD 51, 6146 (1995); sin²θ_W(m_Z) = 0.2317, ρ = 1.0126, κ(T)", "astro-ph/9502003"),
+  es_tree: S("ES at tree level in the Standard Model, sin²θ<sub>W</sub> = 0.23857 (PDG 2024, MS-bar at Q² → 0)"),
+  es_radiative: S("ES with electroweak, QCD and QED radiative corrections: Bahcall, Kamionkowski & Sirlin, PRD 51, 6146 (1995); sin²θ<sub>W</sub>(m<sub>Z</sub>) = 0.2317, ρ = 1.0126, κ(T)", "astro-ph/9502003"),
   snowglobes: S("SNOwGLoBES cross-section tables", null, "https://github.com/SNOwGLoBES/snowglobes"),
   marley: S("MARLEY (νₑ CC on ⁴⁰Ar), as tabulated by SNOwGLoBES in 2018 (zero below 5 MeV)", "arXiv:2101.11867"),
   bgt_pn: S("B(GT) from ⁴⁰Ar(p,n): Bhattacharya et al., Phys. Rev. C 80, 055501 (2009)", "10.1103/PhysRevC.80.055501"),
@@ -53,7 +53,7 @@ export const SOURCES = {
   bgt_liu: S("B(GT) from ⁴⁰Ti β decay: Liu et al., Phys. Rev. C 58, 2677 (1998)", "10.1103/PhysRevC.58.2677"),
   bgt_b1998: S("B(GT) from ⁴⁰Ti β decay: Bhattacharya et al., Phys. Rev. C 58, 3677 (1998)", "10.1103/PhysRevC.58.3677"),
   marley_code: S("MARLEY code", null, "https://github.com/MARLEY-MC/marley"),
-  ksz: S("Shell model of νₑ CC on ⁴⁰Ar: Kostensalo, Suhonen & Zuber, Phys. Rev. C 97, 034309 (2018), table I (g_A = 1.00)", "10.1103/PhysRevC.97.034309"),
+  ksz: S("Shell model of νₑ CC on ⁴⁰Ar: Kostensalo, Suhonen & Zuber, Phys. Rev. C 97, 034309 (2018), table I (g<sub>A</sub> = 1.00)", "10.1103/PhysRevC.97.034309"),
   suzuki: S("Shell model cross-check (electrons above 5 MeV): Suzuki & Honma, Phys. Rev. C 87, 014607 (2013)", "arXiv:1211.4078"),
   crust1: S("CRUST1.0 (local crust under each site): Laske, Masters, Ma & Pasyanos 2013", null, "https://igppweb.ucsd.edu/~gabi/crust1.html"),
   nufit61: S("NuFIT 6.1 global fit with the first JUNO data", "arXiv:2601.09791"),
@@ -143,7 +143,7 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   const curve = setup.efficiency_table?.curve && d.efficiency_curves?.[setup.efficiency_table.curve];
   if (curve) out.push(S(`Efficiency: ${curve.label}, ${curve.note}. Read from a figure: ${curve.method}`, curve.source.split(",")[0]));
   else if (setup.efficiency_table) out.push(S(`Imported efficiency curve: ${setup.efficiency_table.name || "file"} (your own source)`));
-  return [...out, S("Generic detector response: Gaussian resolution σ = √((a√E)² + (bE)²), a logistic efficiency turn-on and a hard threshold, all in observed energy (ES: electron kinetic energy; CC: E_ν − Q). Statistics: Poisson, no backgrounds.")];
+  return [...out, S("Generic detector response: Gaussian resolution σ = √((a√E)² + (bE)²), a logistic efficiency turn-on and a hard threshold, all in observed energy (ES: electron kinetic energy; CC: E<sub>ν</sub> − Q). Statistics: Poisson, no backgrounds.")];
 }
 
 // The home page's credits, grouped as the calculator's steps, which are the benchmarks B1–B5
