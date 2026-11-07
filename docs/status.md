@@ -11,9 +11,9 @@ an issue.
 
 | Item | Where | Notes |
 |---|---|---|
-| **D: detector response library** | `benchmarks/README.md` | Smearing, efficiency and thresholds per detector as a benchmark of their own. The engine has a generic response (Gaussian or Super-K resolution, logistic or imported efficiency, imported smearing matrices) and one published curve (Super-K IV), but no contributed or validated detector responses. |
+| **Part 2 contributions to B5** | B5 spec | The spec takes observed rates with the published responses or a tool's own (`response.parquet`), and SNUfish folds every published response (`B5_Observed`), but no tool has contributed yet. SNOwGLoBES's smeared output would be the first, with its own detector configurations (matrices in neutrino energy, also for ES, which the engine's imported matrices take for CC only). |
+| **Night and A_DN in B5 part 2** | B5 spec | Observed spectra are daytime; the engine has night and A_DN through any response, the benchmark does not. |
 | **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
-| **Observed spectra in B5** | B5 spec | B5 rates are in true neutrino energy before detector response; observed spectra wait for D. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
 | **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T<sub>min</sub>) for detector thresholds is not a benchmark quantity (the engine computes it). |
 | **Spectral-shape variants** | B2 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
@@ -79,7 +79,12 @@ an issue.
 | BKS QED end-point divergence clipped | last ~10⁻³ of the recoil range | `reference/radiative.py` |
 | Super-K IV efficiency read from a figure | 0.08 % in efficiency | `reference/detectors/efficiency_curves.yaml` |
 | Hyper-K resolution | Super-K IV's as a stand-in | calculator preset |
-| SNO resolution and efficiencies | not included (the paper gives only extra smearing terms) | calculator preset |
+| SNO resolution and efficiencies | the salt-phase resolution (nucl-ex/0502021, eq. A3) is in the B5 response and the `sno_salt` preset; no CC efficiency curve is published (taken as 1); the phases I + II preset (`sno`) has no resolution | B5 spec, calculator presets |
+| CC visible energy E<sub>ν</sub> − Q | for d(νₑ, e⁻)pp the electron shares E<sub>ν</sub> − Q with the two protons: SNUfish's T for SNO CC is too high, and its rate above 5.5 MeV with it | engine, B5 part 2 |
+| SNO salt resolution at low energy | eq. A3 is negative below T = 0.11 MeV and taken as no smearing there: an artefact in the heavy-water ES spectrum below ~0.3 MeV, far under the 5.5 MeV threshold it was fitted for | B5 spec |
+| Borexino resolution | "~50 keV at 1 MeV" scaled with √E (photostatistics); its analysis uses a full response model (scaled Poisson in N_p, quenching, Cherenkov light) not reduced to σ(E) | B5 spec |
+| DUNE response | 20 % at every energy and no efficiency below or above the 5 MeV step: no solar-neutrino response is published | B5 spec, calculator preset |
+| Super-K IV efficiency on CC ¹⁶O | the fig. 28 curve (⁸B ES) applied to every channel of water, CC ¹⁶O included (4 × 10⁻⁵ per kt·yr: hep only) | B5 spec |
 | JUNO preset | no energy-dependent fiducial volume, muon-veto dead time or non-linearity | calculator preset |
 
 ## Data to check
@@ -126,8 +131,8 @@ From [crosschecks.md](crosschecks.md):
   effects are tiny there)? Add `prem_crust1` per site as a variant?
 - **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
 - **B5**: take the full Winter et al. ⁸B tail before using rates above
-  15 MeV; night and annual quantities in contributions; observed spectra
-  once D exists.
+  15 MeV; night and annual quantities in contributions; a second response
+  per detector (Hyper-K, JUNO, SNO+) as variants of part 2.
 - **B2 (solar models)**: shape variants; use the B23 correlations in B5 rate
   uncertainties.
 - **B2**: a non-adiabatic solver; radial path against the true line of

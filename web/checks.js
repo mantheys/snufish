@@ -10,9 +10,18 @@ import * as engine from "./engine.js";
 export const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
 export const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
                        ktday: [1 / DAYS, "per kt·day"], cpd100t: [0.1 / DAYS, "per 100 t·day"] };
-// Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
-// (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
-export const SK4_RESOLUTION = [-0.05525, 0.3162, 0.04572];
+// The published resolutions of the B5 spec (part 2, inputs.responses), by the value of the page's resolution menu:
+// Super-K IV (arXiv:2312.12907, eq. 9, in total electron energy) and SNO's salt phase (nucl-ex/0502021, eq. A3, in
+// kinetic energy). Super-K IV's other numbers: 22.5 kt fiducial (fig. 28); 2970 days live (sec. V A 1); energy scale
+// +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
+export const RESOLUTIONS = { sk4: "water", sno_salt: "heavy_water" };
+
+export function publishedResolution(inputs, model) {
+  // {resolution_poly, resolution_energy} of a resolution-menu value: a published one, or none (quadrature, import)
+  if (!RESOLUTIONS[model]) return { resolution_poly: [], resolution_energy: "total" };
+  const r = engine.publishedResponse(inputs, RESOLUTIONS[model]);
+  return { resolution_poly: r.resolution_poly, resolution_energy: r.resolution_energy };
+}
 // the experiments' presets (the page adds its opening example, the thumb)
 export const PRESETS = {
   // Borexino Phase-II (arXiv:1707.09279): interaction rates over all recoil energies, in counts per day per 100 t
@@ -27,10 +36,11 @@ export const PRESETS = {
   sno: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 3.5, "res-model": "quadrature",
          "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +((277.3 + 391.4) / DAYS).toFixed(4),
          "unc-scale": 0.41, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], quantity: "rate", period: "annual" },
-  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC
-  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "quadrature",
+  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC;
+  // resolution eq. A3, energy scale +-1.15 % and resolution +-3.4 % (table V): the B5 spec's response of heavy water
+  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "sno_salt",
               "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +(391.4 / DAYS).toFixed(4),
-              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
+              "unc-scale": 1.15, "unc-res": 3.4, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
   // DUNE far detector, public numbers only: 4 x 10 kt fiducial LAr, 5 MeV detected-energy threshold and ~20 % resolution
   // (supernova-burst paper, arXiv:2008.06647); 100 kt yr as in Capozzi, Li, Zhu & Beacom (arXiv:1808.08232)
   dune: { unit: "kt", detector: "argon", channel: "cc_nue_ar40", site: "SURF", threshold: 5.0, "res-model": "quadrature",
@@ -188,7 +198,7 @@ export function checkSetup(inputs, check) {
   const setup = engine.makeSetup({
     solar_model: v.solar, components: v.components, b8_flux: v.b8, site: v.site, earth_model: v.earth, detector: v.detector,
     channel: v.channel, xsec_model: xsec, es_model: v.es, period: v.period, threshold: number(v.threshold),
-    resolution_a: number(v["res-a"]), resolution_b: number(v["res-b"]) / 100, resolution_poly: v["res-model"] === "sk4" ? SK4_RESOLUTION : [],
+    resolution_a: number(v["res-a"]), resolution_b: number(v["res-b"]) / 100, ...publishedResolution(inputs, v["res-model"]),
     efficiency: number(v.eff, 100) / 100, efficiency_e50: number(v["eff-e50"]), efficiency_width: number(v["eff-width"], 0.5),
     smearing_table: check.electron ? engine.electronSmearing(inputs, v.channel, xsec, check.electron) : null, efficiency_table: efficiency,
     energy_scale_error: number(v["unc-scale"]) / 100, resolution_error: number(v["unc-res"]) / 100,

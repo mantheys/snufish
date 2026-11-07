@@ -4,7 +4,7 @@
 
 export function link(ref) {
   // an arXiv id, DOI or Zenodo DOI (as written in the data files) -> URL, or null
-  const arxiv = ref.match(/(?:arXiv:)?(\d{4}\.\d{4,5}|(?:hep-ph|astro-ph|nucl-th|hep-ex)\/\d{7})/);
+  const arxiv = ref.match(/(?:arXiv:)?(\d{4}\.\d{4,5}|(?:hep-ph|astro-ph|nucl-th|nucl-ex|hep-ex)\/\d{7})/);
   if (arxiv) return `https://arxiv.org/abs/${arxiv[1]}`;
   const doi = ref.match(/(10\.\d{4,9}\/[^\s,;)]+)/);
   if (doi) return `https://doi.org/${doi[1]}`;
@@ -38,6 +38,10 @@ export const SOURCES = {
   dune_snb: S("DUNE supernova-burst paper: 40 kt LAr, 5 MeV detected-energy threshold, resolution ~20 % (MARLEY + LArSoft)", "arXiv:2008.06647"),
   dune_solar: S("Capozzi, Li, Zhu & Beacom, DUNE as the next-generation solar neutrino experiment: 7 % resolution, 5 MeV, 100 kt·yr", "arXiv:1808.08232"),
   sno_salt: S("SNO salt phase: φ<sub>CC</sub>/φ<sub>NC</sub> = 0.340 ± 0.023 (stat) −0.031 +0.029 (syst) above T<sub>eff</sub> = 5.5 MeV, 391 live days", "nucl-ex/0502021"),
+  // B5 part 2: the published response of each detector (benchmarks/B5_rates/spec.yaml, response)
+  sno_salt_response: S("SNO salt phase response: σ<sub>T</sub> = −0.131 + 0.383√T + 0.03731 T in true kinetic energy (eq. A3), T<sub>eff</sub> > 5.5 MeV (sec. IX), energy scale ±1.15 % and resolution ±3.4 % (table V); no CC efficiency curve is published", "nucl-ex/0502021"),
+  borexino_response: S("Borexino Phase-II response: ~50 keV resolution at 1 MeV (scaled with √E), trigger threshold ~50 keV, cuts remove ~0.1 % of good events (sec. II)", "arXiv:1707.09279"),
+  dune_response: S("DUNE far-detector response: resolution \"closest to the 20 % level\" (sec. 6), step efficiency at a 5 MeV detected-energy threshold (fig. 15)", "arXiv:2008.06647"),
   nakamura: S("ν-deuteron CC and NC cross sections: Nakamura et al., Nucl. Phys. A 707, 561 (2002), table 1 (±1 %; SNOwGLoBES's xs_nue_d.dat is the same table from 5 MeV)", "nucl-th/0201062"),
   nc_capture: S("NC on deuterium: the neutron's capture γ (6.25 MeV on ²H, pure D₂O) is the visible energy, whatever the neutrino's; set the efficiency to the neutron capture × detection probability (SNO D₂O: 49 % of neutrons capture on ²H at the centre)", "nucl-ex/0502021"),
   hyperk: S("Hyper-K design report: fiducial volume, solar threshold, energy-scale and resolution uncertainties, site", "arXiv:1805.04163"),
@@ -127,13 +131,14 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   }
   const sk = "arXiv:2312.12907";
   const out = [];
-  if (preset === "borexino" || setup.detector === "scintillator_pc") out.push(SOURCES.borexino);
+  if (preset === "borexino" || setup.detector === "scintillator_pc") out.push(SOURCES.borexino, SOURCES.borexino_response);
   if (preset === "juno" || setup.detector === "scintillator_lab") out.push(SOURCES.juno_b8);
   if (preset === "sno" || setup.detector === "heavy_water") out.push(SOURCES.sno);
-  if (preset === "sno_salt") out.push(SOURCES.sno_salt);
+  if (preset === "sno_salt") out.push(SOURCES.sno_salt, SOURCES.sno_salt_response);
   if (preset === "hyperk") out.push(SOURCES.hyperk);
-  if (preset === "dune") out.push(SOURCES.dune_snb, SOURCES.dune_solar);
-  if (preset === "sk4" || setup.resolution_poly.length)
+  if (preset === "dune") out.push(SOURCES.dune_snb, SOURCES.dune_response, SOURCES.dune_solar);
+  if (setup.resolution_poly.length && setup.resolution_energy === "kinetic") { if (preset !== "sno_salt") out.push(SOURCES.sno_salt_response); }
+  else if (preset === "sk4" || setup.resolution_poly.length)
     out.push(S("Super-K IV energy resolution: eq. 9", sk));
   if (preset === "sk4")
     out.push(S("Super-K IV threshold 3.49 MeV and other rate systematics ±1.1 %: table IV", sk),
@@ -153,7 +158,7 @@ export const CREDITS = [
   ["B3 Earth", [SOURCES.nufast, SOURCES.prem, SOURCES.crust1, SOURCES.exposure, SOURCES.surf]],
   ["B4 Interaction: cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.nakamura, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
                       SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.ksz, SOURCES.suzuki, SOURCES.klmv]],
-  ["B5 Detector: experiments", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.borexino, SOURCES.juno_b8]],
+  ["B5 Detector: experiments and their responses", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_response, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.sno_salt_response, SOURCES.borexino, SOURCES.borexino_response, SOURCES.juno_b8]],
   ["Tools and software", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus,
                           SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
 ];

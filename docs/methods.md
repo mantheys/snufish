@@ -175,12 +175,13 @@ For component c with flux Φ<sub>c</sub> and shape s<sub>c</sub>, per target:
 
 Continua are integrated with trapezoid weights on the shape's grid (the
 engine's `_quadrature`), lines as points. Rates are per kiloton-year with
-the detector's targets per kt (B5 spec and `export.APP_DETECTORS`).
+the detector's targets per kt (B5 spec; JUNO's LAB in `export.APP_DETECTORS`).
 
 The B5 build (`combine_rates`) folds in true neutrino energy with the B2
 reference daytime oscillations, and with the B3 reference night excess of
-each site for `B5_DayNight` ([benchmarks.md](benchmarks.md#b5_rates-interaction-rates));
-the engine adds the detector response below.
+each site for `B5_DayNight` ([benchmarks.md](benchmarks.md#b5-detector-b5_rates-interaction-rates-and-the-detector-response));
+the engine adds the detector response below, and B5 part 2 (`combine_observed`)
+passes the same daytime rates through each detector's published response.
 
 ## Observed energy
 
@@ -206,9 +207,12 @@ as a fine edge, so the cut is exact (`observed_edges`).
 and an acceptance per observed bin:
 
 - **Energy scale** k: observed = k × true (for the scale uncertainty).
-- **Resolution**: Gaussian with σ(E) = √((a√E)² + (bE)²), or Super-K's
-  σ = c₀ + c₁√E<sub>tot</sub> + c₂E<sub>tot</sub> with E<sub>tot</sub> = T + m<sub>e</sub> for ES (the SK-IV
-  preset: −0.05525, 0.3162, 0.04572), times a resolution scale. What smears
+- **Resolution**: Gaussian with σ(E) = √((a√E)² + (bE)²), or a published
+  σ = c₀ + c₁√E + c₂E: Super-K's in E = E<sub>tot</sub> = T + m<sub>e</sub> for ES
+  (`resolution_energy` "total"; SK IV: −0.05525, 0.3162, 0.04572), SNO's in
+  E = T ("kinetic"; salt phase: −0.131, 0.383, 0.03731), the observed energy
+  itself for CC; times a resolution scale. σ is taken at the true energy of
+  each bin, as both experiments define it. What smears
   below zero goes to the first bin, above the last edge to the last bin.
 - **Imported smearing matrix** (CSV) in place of the resolution: each fine
   true bin takes the row of the imported true bin holding its centre, and
@@ -223,6 +227,23 @@ and an acceptance per observed bin:
 
 A perfect detector (no resolution, flat efficiency 1, no threshold)
 reproduces the true-energy rates (tested).
+
+### Published responses (B5 part 2)
+
+The B5 spec's `response` gives each detector one published response
+(Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II
+for scintillator, DUNE's far detector for argon; numbers and sources in
+[sources.md](sources.md#detector-responses)); `engine.published_response`
+turns it into setup fields, and the calculator's presets take the same
+values (`tests/test_b5_response.py`). `build.combine_observed` folds the
+part 1 daytime rates (B2 reference F_i averaged over production, NuFIT 6.0,
+the cross sections the spec names) through it with `engine.observed_rates`
+on the spec's observed grid: 0–20 MeV in 0.01 MeV bins, true and observed
+bins alike, so every preset threshold is a bin edge. The threshold is not
+part of the spectrum; the rate above a threshold is the spectrum summed
+over the bins above it. A contribution with its own response gives it as a
+binned matrix and efficiency (`response.parquet`), which `response_tables`
+turns into an imported matrix and efficiency curve for the same folding.
 
 ## Uncertainties
 

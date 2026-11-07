@@ -21,6 +21,14 @@ the channel file, and converts to interactions per kton-year. The variant
 `native` runs SNOwGLoBES's own solar flux (solar_bs05op_mixed: BS05-OP, P_ee
 read off a figure, nu_mu = nu_tau).
 
+Why the full chain is low below 2 MeV (docs/crosschecks.md#snowglobes-below-2-mev):
+GLoBES computes the rate of sampling bin j as flux(E_j) sigma(E_j) dE with E_j
+the bin's midpoint (glb_set_rates, glb_sbin_center: 200 bins of dE = 0.4975 MeV
+from 0.5 MeV), the flux interpolated linearly in E between the flux-table points
+(glb_get_flux) and sigma linearly in log10 E (glb_get_xsec). `globes_rate`
+below does the same; on the flux files this script writes it reproduces the
+contribution to 1e-5 (tests/test_snowglobes_sampling.py).
+
 Lines (7Be, pep): SNOwGLoBES evaluates flux x sigma at one sampling point per
 0.4975 MeV bin from 0.5 MeV. A line written as one point of the flux table
 is counted 0 to 2.5 times depending on where it falls (probe with 1e6 nu_e
@@ -77,6 +85,20 @@ def write_flux(path, flavours):
     table[:, 0] = GRID_GEV
     table[:, 1:4] = flavours
     np.savetxt(path, table, fmt="%.6e", header="SNUfish solar flux, nu/cm^2/s per 0.2 MeV")
+
+
+def sampling_centres():
+    """GLoBES's sampling points (MeV): the midpoints of 200 bins of SAMPLING_WIDTH from SAMPLING_MIN."""
+    return SAMPLING_MIN + (np.arange(200) + 0.5) * SAMPLING_WIDTH
+
+
+def globes_rate(flux_column, sigma):
+    """GLoBES's rate integral on one flux-file column (per 0.2 MeV, on GRID_GEV): sum over the sampling bins of the
+    flux interpolated linearly at the bin midpoint, per MeV, times ``sigma(E)`` (cm^2 per target), times the bin
+    width. Per target and second; zero outside the flux table, as glb_get_flux."""
+    energy, centres = GRID_GEV * 1e3, sampling_centres()
+    flux = np.where((centres > energy[0]) & (centres <= energy[-1]), np.interp(centres, energy, flux_column), 0.0)
+    return float(np.sum(flux / 0.2 * sigma(centres)) * SAMPLING_WIDTH)
 
 
 def component_flux(spec, model, component, oscillation, U2, naive_lines=False):

@@ -2,7 +2,7 @@
 import * as engine from "./engine.js";
 import { ADN, budgetPlot, distributionPlot, math, officialPlot, plain, spectrumPlot, themeIcon } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
-import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
+import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, UNITS, publishedResolution,
          reproduced } from "./checks.js";
 import { officialFigure } from "./official.js";
 
@@ -60,8 +60,9 @@ const PRESET_NOTES = {
      + "Switch the channel to NC on deuterium for the neutral-current rate (set its neutron efficiency).",
   sno_salt: "SNO salt phase (nucl-ex/0502021): the CC rate on deuterium above T<sub>eff</sub> = 5.5 MeV over the rate without oscillations, "
           + "which is SNO's φ<sub>CC</sub>/φ<sub>NC</sub> (both fluxes inferred for an undistorted ⁸B spectrum). The total flux and the detector "
-          + "normalisation cancel; statistics are for 770 t and 391.4 live days without backgrounds or efficiencies. No "
-          + "resolution is applied (T<sub>eff</sub> is smeared by ~ 0.4 √E in SNO), which moves the ratio by under 0.1 %.",
+          + "normalisation cancel; statistics are for 770 t and 391.4 live days without backgrounds or efficiencies. SNO's "
+          + "resolution σ<sub>T</sub> = −0.131 + 0.383√T + 0.03731 T (eq. A3), energy scale ±1.15 % and resolution ±3.4 % (table V): "
+          + "the B5 benchmark's response of heavy water. The visible energy is E<sub>ν</sub> − 1.442 MeV (the two protons' share is not modelled).",
   dune: "DUNE far detector from published numbers only: four 10 kt fiducial liquid-argon modules at SURF, νₑ CC on ⁴⁰Ar "
       + "(MARLEY 2), a 5 MeV detected-energy threshold and a 20 % energy-independent resolution (DUNE's supernova-burst paper, "
       + "arXiv:2008.06647: \"realistic energy resolution is closest to the 20 % level\"), and 100 kt·yr as in Capozzi et al. "
@@ -213,7 +214,7 @@ function readSetup() {
     b8_flux: radio("b8"), site: $("site").value, earth_model: $("earth").value, detector: $("detector").value,
     channel: $("channel").value, xsec_model: $("xsec").value || "default", es_model: radio("es"),
     period: radio("period"), threshold: number("threshold"), resolution_a: number("res-a"),
-    resolution_b: number("res-b") / 100, resolution_poly: $("res-model").value === "sk4" ? SK4_RESOLUTION : [],
+    resolution_b: number("res-b") / 100, ...publishedResolution(app.inputs, $("res-model").value),
     efficiency: number("eff", 100) / 100, efficiency_e50: number("eff-e50"), efficiency_width: number("eff-width", 0.5),
     smearing_table: $("res-model").value === "import" ? app.imports.smearing : null,
     efficiency_table: efficiencyTable(),
@@ -236,7 +237,7 @@ function presetSummary(es) {
   // the preset's detector settings in one line, for the Preset view (Manual shows them all)
   const s = readSetup(), parts = [];
   parts.push(s.threshold > 0 ? `threshold ${s.threshold} MeV (${es ? "T" : "visible energy"})` : "no threshold");
-  if (s.resolution_poly.length) parts.push("Super-K IV resolution");
+  if (s.resolution_poly.length) parts.push(`${s.resolution_energy === "kinetic" ? "SNO salt" : "Super-K IV"} resolution`);
   else if (s.smearing_table) parts.push("imported smearing");
   else if (s.resolution_a > 0 || s.resolution_b > 0)
     parts.push(`resolution ${[s.resolution_a > 0 ? `${s.resolution_a} √E` : "", s.resolution_b > 0 ? `${+(100 * s.resolution_b).toFixed(1)} % E` : ""].filter(Boolean).join(" ⊕ ")}`);

@@ -50,7 +50,7 @@ plotipus.)
 | You are… | SNUfish gives you |
 |---|---|
 | **A tool developer** (oscillation, cross-section or rate code) | A fixed problem to run, a validator with physics checks (unitarity, vacuum limit at the horizon, normalisation), and plots of your tool against the others and the reference solvers. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). |
-| **A detector physicist** planning or checking a solar analysis | Rates and spectra in observed energy for water, argon, scintillator and heavy water, with threshold, resolution, efficiency (or an imported smearing matrix and efficiency curve), exposure and detector uncertainties; presets for Super-K IV, Hyper-K, DUNE, SNO, Borexino and JUNO. |
+| **A detector physicist** planning or checking a solar analysis | Rates and spectra in observed energy for water, argon, scintillator and heavy water, with threshold, resolution, efficiency (or an imported smearing matrix and efficiency curve), exposure and detector uncertainties; presets for Super-K IV, Hyper-K, DUNE, SNO, Borexino and JUNO. B5 benchmarks the published responses of Super-K IV, SNO (salt), Borexino and DUNE, and takes a tool's own. |
 | **A phenomenologist** asking what separates solar and reactor Δm²<sub>21</sub> | `snufish scan`: the <sup>8</sup>B day-night asymmetry, the slope and curvature of the daytime P<sub>ee</sub> and the upturn, against Δm²<sub>21</sub> and at each published parameter set, next to the measurements. |
 | **Anyone quoting a rate** | An error budget split into sampled sources and model ranges (`snufish budget`, or the calculator), so the dominant uncertainty and the model dependence are visible separately. |
 | **A reviewer or student** | A one-click reproduction of published numbers (Borexino, Super-K, SNO, JUNO, BKS) in the calculator, each linked to its paper, and the official figures recomputed. |
@@ -73,7 +73,10 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    Kostensalo's shell model is 27–35 % lower with g<sub>A</sub> = 1.00.
 5. **SNOwGLoBES matches SNUfish to 0.4 % for <sup>8</sup>B and hep, not below
    2 MeV.** On the same fluxes and cross sections its full chain is 16–21 %
-   lower for <sup>7</sup>Be, pep and <sup>13</sup>N.
+   lower for <sup>7</sup>Be, pep and <sup>13</sup>N, because GLoBES evaluates
+   flux × σ once per 0.5 MeV bin, at its midpoint (reproduced to 10⁻⁵). The
+   detector response matters more: Super-K IV's efficiency halves the
+   <sup>8</sup>B rate above its threshold, DUNE's 20 % resolution takes 4 % off.
 6. **The tools agree; the inputs do not.** Earth solvers agree to 10⁻⁸ and
    the ES radiative corrections to 0.1 %, orders of magnitude below the
    spread of competing inputs.

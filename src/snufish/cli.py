@@ -31,7 +31,7 @@ def cmd_validate(args):
 
 
 def cmd_build(args):
-    from .build import BUILDERS, build, combine_day_night, combine_rates, combine_ssm
+    from .build import BUILDERS, build, combine_day_night, combine_observed, combine_rates, combine_ssm
 
     combine_ssm(args.out)
     for benchmark in args.benchmark or available_benchmarks():
@@ -39,6 +39,7 @@ def cmd_build(args):
             build(benchmark, extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
     combine_day_night(args.out)
     combine_rates(args.out)
+    combine_observed(args.out)
     if "B5_rates" in (args.benchmark or available_benchmarks()):  # needs the folded rates above
         build("B5_rates", extra_roots=args.extra, out_dir=args.out, strict=not args.skip_invalid)
     return 0

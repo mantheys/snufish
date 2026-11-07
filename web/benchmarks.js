@@ -18,7 +18,7 @@ const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFA
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
                ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model (Kostensalo 2018)", ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed",
                default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES KLMV" };
-const CHANNELS = { es: "ES", cc_nue_ar40: "CC ⁴⁰Ar", cc_nue_o16: "CC ¹⁶O" };
+const CHANNELS = { es: "ES", cc_nue_ar40: "CC ⁴⁰Ar", cc_nue_o16: "CC ¹⁶O", cc_nue_d: "CC d" };
 
 const $ = (id) => document.getElementById(id);
 // the palette without its two greys (series 4 and 9), which read as the oscillation bars and muted lines
@@ -332,7 +332,47 @@ function b4() {
 
 // ------------------------------------------------------------------ B5
 
+const DETECTOR_LABEL = { water: "Water", heavy_water: "Heavy water", scintillator_pc: "Scintillator", argon: "Argon" };
+const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visible energy E<sub>ν</sub> − 1.504 MeV",
+                     cc_nue_o16: "CC: visible energy E<sub>ν</sub> − 15.42 MeV", cc_nue_d: "CC: visible energy E<sub>ν</sub> − 1.442 MeV" };
+
+function b5Observed() {
+  // part 2: observed spectra through each detector's published response (B5_Observed), one line per detector and channel
+  const c = colours(), data = page.sections.observed, node = $("plot-b5-observed");
+  if (!data || !data.cases) { $("b5-observed").innerHTML = `<p class="hint">Run snufish build and export-sections for part 2.</p>`; return; }
+  const select = $("b5-component");
+  if (!select.options.length) {
+    for (const k of ["all", ...ORDER]) select.add(new Option(k === "all" ? "All components" : DISPLAY[k], k));
+    select.addEventListener("change", b5Observed);
+  }
+  const comp = select.value || "all";
+  const cases = data.cases.filter((k) => (k.totals.all.interactions > 1e-3)); // not CC on 16O (hep only, 4e-5 per kt yr)
+  const traces = cases.map((k, i) => {
+    // the last bin also holds what the resolution moves above 20 MeV: not drawn
+    const x = k.edges.slice(0, -2).map((e, b) => 0.5 * (e + k.edges[b + 1])), y = k.spectra[comp].slice(0, -1).map((v) => (v > 0 ? v : null));
+    const name = `${DETECTOR_LABEL[k.detector]} ${CHANNELS[k.channel] || k.channel} (${k.preset})`;
+    return { x, y, mode: "lines", line: { shape: "hvh", color: palette()[i % 8], width: 2, dash: k.channel === "es" ? "solid" : "dash" }, name,
+             hovertemplate: `%{x:.2f} MeV: %{y:.4g} /(kt·yr·MeV)<extra>${name}</extra>` };
+  });
+  const shapes = cases.map((k, i) => ({ type: "line", x0: k.threshold, x1: k.threshold, yref: "paper", y0: 0, y1: 1,
+                                         line: { color: palette()[i % 8], dash: "dot", width: 1 } }));
+  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
+  Plotly.react(node, traces, layout(c, node, `Observed spectra, ${comp === "all" ? "all components" : DISPLAY[comp]} (B16-GS98, by day)`,
+    "Observed energy (MeV): ES, electron kinetic energy; CC, E<sub>ν</sub> − Q", "Interactions / (kt·yr·MeV)",
+    { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: [-3, 7] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
+  const fmt = (v) => (v >= 100 ? v.toFixed(0) : v.toPrecision(3));
+  $("b5-observed").innerHTML = `<table><thead><tr><th>Detector</th><th>Response</th><th>Channel</th><th class="num">Threshold (MeV)</th>
+    <th class="num">Interactions</th><th class="num">Above threshold, perfect detector</th><th class="num">Observed above threshold</th><th class="num">Ratio</th></tr></thead><tbody>${
+    data.cases.map((k) => { const t = k.totals[comp]; return `<tr><td>${DETECTOR_LABEL[k.detector]}</td><td>${k.preset}</td><td>${OBSERVABLE[k.channel] || k.channel}</td>
+      <td class="num">${k.threshold}</td><td class="num">${fmt(t.interactions)}</td><td class="num">${fmt(t.true_above)}</td><td class="num">${fmt(t.above)}</td>
+      <td class="num">${t.true_above > 0 ? (t.above / t.true_above).toFixed(3) : "—"}</td></tr>`; }).join("")
+  }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for part 2 (BKS for ES,
+    MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Dotted lines: the thresholds. The ratio is the response's effect above the threshold:
+    resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>`;
+}
+
 function b5() {
+  b5Observed();
   const c = colours(), rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98");
   const node = $("plot-b5-chain");
   const cases = [...new Set(rows.map((r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`))];
@@ -344,12 +384,12 @@ function b5() {
              hovertemplate: `%{text}: %{y:.4f}<extra>${name}</extra>` };
   });
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })));
-  Plotly.react(node, traces, layout(c, node, "SNOwGLoBES full chain over SNUfish's folding (B16-GS98)", "Component", "Rate ratio",
+  Plotly.react(node, traces, layout(c, node, "Part 1: SNOwGLoBES full chain over SNUfish's folding (B16-GS98)", "Component", "Rate ratio",
     { showlegend: false, hovermode: "closest", xaxis: { tickvals: ORDER.map((_, i) => i), ticktext: ORDER.map((x) => DISPLAY[x]), range: [-0.5, ORDER.length - 0.5], minor: { ticks: "" } },
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
   $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
     rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
-  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; B5 rates are daytime, in true neutrino energy, before any detector response.</p>`
+  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; part 1 rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
     : `<p class="hint">No full-chain tool has contributed yet.</p>`;
 }
 
@@ -573,8 +613,8 @@ async function main() {
   for (const m of Object.keys(XSEC)) XSEC[m] += tag(status.xsec_model?.cc_nue_ar40?.[m]);
   const s = page.sections, set = page.inputs.parameter_sets.sets[s.set];
   $("reference-note").textContent = `Reference: ${set?.label || s.set} oscillation parameters, ${page.inputs.solar_models[s.solar_model].label} `
-    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages without `
-    + `detector response, ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
+    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages through `
+    + `each detector's published response (B5), ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
   fill($("overview-observable"), Object.entries(s.observables).map(([id, o]) => [id, sup(o.label)]), "argon_cc_hep");
   fill($("b2-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);
   fill($("b2-component"), ORDER.map((comp) => [comp, DISPLAY[comp]]), "hep");

@@ -17,7 +17,7 @@ their `version`.
 | B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth |
 | B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth |
 | B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
-| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates) | 0.3.0 | interaction rates; the detector response is planned ([status.md](status.md)) | snowglobes (full chain); SNUfish folds every B4 model |
+| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.4.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (full chain, part 1); SNUfish folds every B4 model and every published response |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
@@ -214,10 +214,18 @@ in the `b45` list.
 
 ---
 
-## B5 Detector (`B5_rates`): interaction rates
+## B5 Detector (`B5_rates`): interaction rates and the detector response
+
+Two parts with one spec, as B2: part 1 gives the interaction rates in true
+neutrino energy, part 2 passes them through each detector's published
+response into observed energy. A contribution may give either part or both
+(`optional_grids`); version 0.4.0 added part 2 without changing part 1, and
+the SNOwGLoBES contribution was rerun against it (bit-identical numbers).
+
+### Part 1: interaction rates
 
 Interaction rates per detector, channel and flux component before
-detector response (the response itself, the rest of this step, is planned). SNUfish computes them itself for every B4 model and
+detector response. SNUfish computes them itself for every B4 model and
 every B2 solar model,
 
   dR/dE = N<sub>targets</sub> Φ<sub>c</sub> s<sub>c</sub>(E) Σ<sub>α</sub> P<sub>eα</sub>(E) σ<sub>α</sub>(E),
@@ -232,8 +240,8 @@ inputs.
 |---|---|
 | Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes)); normalisations from the B2 solar model |
 | Exposure | 1 kton-year, Julian year (3.15576 × 10⁷ s) |
-| Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`) |
-| Channels | `es` sums the three ES channels weighted with P<sub>eα</sub>; CC uses P<sub>ee</sub>. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
+| Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`); `heavy_water` (3.007 × 10³² e⁻, 6.014 × 10³¹ d per kt; `es`, `cc_nue_d`); `scintillator_pc` (3.307 × 10³² e⁻ per kt; `es`) |
+| Channels | `es` sums the three ES channels weighted with P<sub>eα</sub>; CC uses P<sub>ee</sub>. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV, d 1.442 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
 | Spectra | `linear` (0–20 MeV, 0.1 MeV) and `log` (0.05–20 MeV, 40 per decade) binnings, per MeV of neutrino energy |
 | Totals | all energies and E<sub>ν</sub> > 5 MeV |
 
@@ -255,6 +263,13 @@ fraction of the spectrum the cross-section table covers), `B5_DayNight`
 and Earth model) and `B5_Chain` (tool totals, SNUfish's folding of the
 same inputs, their ratio). Plots: `plotipus run b45`.
 
+Part 1 contributions with SNOwGLoBES: 0.4 % for ⁸B and hep; below 2 MeV its
+full chain is 2–21 % low, and its lines move by −52 % to +55 % with how they
+are written into its flux table. Both come from GLoBES evaluating flux × σ
+once per 0.4975 MeV sampling bin, at its midpoint; an emulation of that
+integral reproduces SNOwGLoBES to 10⁻⁵
+([crosschecks.md](crosschecks.md#snowglobes-below-2-mev)).
+
 Night and annual totals are SNUfish's folding only (contributions stay
 daytime): P<sub>ee</sub>(night) = P<sub>ee</sub>(day) + Σᵢ F<sub>i</sub> R<sub>i</sub>, with the B3 night excess
 R<sub>i</sub> = ⟨P<sub>ie</sub>⟩<sub>night</sub> − |U<sub>ei</sub>|² of the site from the `snufish-reference` B3
@@ -267,6 +282,56 @@ fluxes at 1 AU. On constant shells the folding agrees with the engine's
 engine's NuFast-Earth night differs by its mean-density approximation
 ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density); `tests/test_b5_night.py`).
 
+### Part 2: the detector response
+
+Each detector has one published response (spec `response.detectors`;
+numbers and sources in [sources.md](sources.md#detector-responses)):
+
+| Detector | Experiment | Resolution | Efficiency | Threshold | Uncertainties |
+|---|---|---|---|---|---|
+| `water` | Super-K IV (arXiv:2312.12907) | −0.05525 + 0.3162√E + 0.04572E, E = T + m<sub>e</sub> | fig. 28 curve | 3.49 MeV | scale 0.48 %, σ 3 %, rate 1.1 % |
+| `heavy_water` | SNO salt (nucl-ex/0502021) | −0.131 + 0.383√T + 0.03731T | 1 (none published) | 5.5 MeV | scale 1.15 %, σ 3.4 % |
+| `scintillator_pc` | Borexino Phase-II (arXiv:1707.09279) | 0.05√E | 0.999 | 0.05 MeV | — |
+| `argon` | DUNE far detector (arXiv:2008.06647) | 20 % | 1 | 5 MeV | — |
+
+The response applies to every channel of the detector, in observed energy:
+the electron's kinetic energy T for ES, the visible energy E<sub>ν</sub> − Q for CC
+(Q from `response.visible_offset_MeV`). The spectrum is the part 1 daytime
+rate smeared by a Gaussian of width σ(true energy) and multiplied by the
+efficiency in observed energy; the threshold is not part of it.
+
+| Setting | Value |
+|---|---|
+| Cross sections (SNUfish's folding) | ES: BKS (`snufish-reference` `es_bks`); ⁴⁰Ar: `ar40_marley2_bhattacharya2009`; ¹⁶O: SNOwGLoBES; d: Nakamura et al. 2002 down to threshold |
+| Grid `observed` | `threshold` = 0–20 MeV of observed energy, step 0.01 (2001 points): the value is the rate above it, so the spectrum is its difference and every preset threshold is a grid point |
+| Quantities | `<detector>/<channel>/<component>` as in part 1, including `all` |
+| Response of a contribution | `settings.response` in meta.yaml: `spec` (the responses above), or `own`, with `response.parquet` next to the data (per detector and channel: efficiency per observed bin and a smearing matrix P(observed bin \| true bin), true axis the observed energy or, CC only, E<sub>ν</sub>). `snufish validate` checks both |
+
+SNUfish's folding (`B5_Observed`, B16-GS98, per kt·yr by day):
+
+| Detector, channel | Interactions | Above threshold, perfect detector | Observed above threshold | Ratio |
+|---|---|---|---|---|
+| water ES (T > 3.49 MeV) | 6.94 × 10⁵ | 731 | 379 | 0.519 |
+| heavy water CC (> 5.5 MeV) | 4403 | 3638 | 3508 | 0.964 |
+| heavy water ES (> 5.5 MeV) | 6.24 × 10⁵ | 337.9 | 337.9 | 1.000 |
+| scintillator ES (> 0.05 MeV) | 6.86 × 10⁵ | 4.88 × 10⁵ | 4.84 × 10⁵ | 0.992 |
+| argon CC (> 5 MeV) | 2333 | 2235 | 2136 | 0.956 |
+| argon ES (> 5 MeV) | 5.63 × 10⁵ | 366.6 | 356.4 | 0.972 |
+
+Super-K IV's efficiency (11 % in its first bin, 81–84 % above 9.5 MeV)
+halves the rate above its threshold. DUNE's 20 % resolution and SNO's take
+4.4 % and 3.6 % off the CC rate above threshold, where the visible spectrum
+still rises; on the falling ES recoil spectra resolution moves the rate by
+under 3 %.
+
+**Products**: `B5_Observed` (per solar model, detector, channel and
+component: the spectrum on the observed grid, the rate above every grid
+value and above the preset threshold, with and without the response) and
+`B5_ObservedChain` (a contribution's observed rates next to SNUfish's
+folding of the same inputs through the same response, the spec's or its
+own). Contributions so far: none in part 2 (SNOwGLoBES's smeared output uses
+its own detector configurations; see [status.md](status.md)).
+
 ---
 
 ## Combining benchmarks
@@ -277,4 +342,5 @@ engine's NuFast-Earth night differs by its mean-density approximation
 - **B2 × B4 → B5.** Every B4 model folded with every B2 solar model and its
   B2 oscillations.
 - **All of them → the engine.** `snufish.engine` adds the night, the
-  detector response and the uncertainties ([methods.md](methods.md)).
+  detector response (the B5 presets, or any other) and the uncertainties
+  ([methods.md](methods.md)).
