@@ -64,6 +64,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with: {name: plots, path: output/plots}
 
+  # The status check the repository's merge rule (require-ci) waits for: passes once lint and every test job have.
+  validate-and-plot:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "lint and tests passed"
+
   # Publishes https://mantheys.github.io/snufish/ from main once lint and tests pass (web/deploy.sh by hand
   # does the same).
   deploy:
