@@ -26,30 +26,36 @@ SNUfish reports as model ranges.
 
 ## What we have learned
 
-1. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
-   reference agree to 10⁻⁸, the two radiative-correction calculations of
-   ν–e scattering to 0.1 %. Every spread that matters comes from physics
-   inputs.
-2. **Most of the large spreads were outdated inputs, not uncertainties.**
-   The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
-   5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
-   models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear
-   rates).
-3. **Oscillations: JUNO now fixes Δm²₂₁ and θ₁₂.** Solar data alone give
+1. **Oscillations: JUNO now fixes Δm²₂₁ and θ₁₂.** Solar data alone give
    Δm²₂₁ about 1.5σ lower: a physics question, not a choice of input.
-4. **Solar composition: the open model uncertainty of the fluxes.** B23
+2. **Solar composition: the open model uncertainty of the fluxes.** B23
    with MB22 against AAG21: ⁸B −16 %, ⁷Be −8 %, CNO −30 %. The neutrino data
    prefer MB22 (AAG21 disfavoured by up to 2.5σ on CNO), not decisively.
-5. **Earth: the crust under the detector matters at a few per cent; 3D is
+3. **Earth: the crust under the detector matters at a few per cent; 3D is
    not yet computed.** The CRUST1.0 column moves A<sub>DN</sub> by −2.4 % (SURF)
    to +3.8 % (SNOLAB). The crust where neutrinos enter and the 3D mantle
    (up to ~8 % in the literature) are missing, so there is no Earth range yet.
-6. **⁴⁰Ar: how much the Gamow–Teller strength is quenched, about 37 %.**
+4. **⁴⁰Ar: how much the Gamow–Teller strength is quenched, about 37 %.**
    MARLEY 2 with the measured strengths and the shell model of Suzuki &
    Honma agree to 3 %; the shell model of Kostensalo et al. with g<sub>A</sub> =
    1.00 is 27–35 % lower, and with the free g<sub>A</sub> it agrees. The three
    measured strength sets differ by 11 % among themselves. A cross-section
    measurement at a stopped-pion source would settle it.
+5. **Folding: the detector step adds no input yet.** On the same fluxes and
+   cross sections, SNOwGLoBES's full chain agrees with SNUfish's folding to
+   0.4 % for ⁸B and hep (ES, CC on ⁴⁰Ar); below 2 MeV (⁷Be, pep, ¹³N) it is
+   16–21 % lower, and its ⁷Be and pep rates depend on how a line is written
+   into its flux table (−52 % to +55 %). The detector response is not yet
+   benchmarked.
+6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
+   reference agree to 10⁻⁸, the two radiative-correction calculations of
+   ν–e scattering to 0.1 %. Every spread that matters comes from physics
+   inputs.
+7. **Most of the large spreads were outdated inputs, not uncertainties.**
+   The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
+   5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
+   models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear
+   rates).
 
 The model ranges, state of the art against everything SNUfish offers
 (B23-MB22m, JUNO 2025, PREM with the local crust, annual rates):
@@ -240,7 +246,9 @@ agrees to about 1 %. Current.
 - **Home page.** The table of every input and its status (from
   `data/inputs.json`).
 - **Benchmark pages.** Legacy models and approximations are labelled in
-  every legend; the overview counts state-of-the-art ranges only.
+  every legend; the overview counts state-of-the-art ranges only, except B3,
+  where the shift to PREM's average crust stands in (drawn pale) for the missing
+  Earth range.
 - **Command line.** `snufish status` prints the table; `snufish budget`
   and `snufish scan` print a note for any legacy input they are given; the
   Python engine's `status`, `not_current` and `budget(..., legacy=True)`

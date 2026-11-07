@@ -4,13 +4,13 @@
 import * as engine from "./engine.js";
 import { DISPLAY } from "./engine.js";
 import { CHECKS, PAPER_SETS, UNITS, checkSetup, currentSetup, reproduced } from "./checks.js";
-import { CONFIG, alpha, colours, htmlLegend, layout } from "./plots.js";
+import { CONFIG, alpha, colours, htmlLegend, layout, themeIcon } from "./plots.js";
 
 const DATA = "data/";
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
-// the benchmarks are the calculator's steps, under the same names (B5 adds no input of its own)
-const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction" };
-const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5 }; // --series-N of each step
+// the benchmarks are the calculator's steps, under the same names
+const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
+const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
                 scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A_DN, water" };
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
@@ -46,8 +46,11 @@ const pct = (v) => {
 const FLOOR = 1e-4; // per cent: the left end of the log axes
 
 // the overview counts state-of-the-art contributions only: sampled uncertainties and ranges over current models
-// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page
+// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page, but for
+// B3, which has a single current Earth model and so no range: the shift to PREM's average crust stands in for it
+// (flagged "overview", drawn pale)
 const stateOfTheArt = (r) => r.kind === "sampled" || r.kind === "model range";
+const inOverview = (r) => stateOfTheArt(r) || r.overview;
 
 function largest(rows, central, keep) {
   let best = null;
@@ -62,15 +65,14 @@ function largest(rows, central, keep) {
 
 function matrix() {
   const obs = page.sections.observables, accent = colours().sampled;
-  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && stateOfTheArt(r)]);
-  const heads = { B1: "B1", B2: "B2", B3: "B3", B4: "B4", B5: "B5" };
-  columns.push(["B5", "B5 Detector: the folding adds no input of its own", () => false]);
+  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && inOverview(r)]);
   const cell = (best) => {
     if (!best) return `<td class="num empty">–</td>`;
-    const strength = Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5));
-    return `<td class="num" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}</td>`;
+    const strength = best.value ? Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5)) : 0;
+    const proxy = !["sampled", "model range"].includes(best.kind);
+    return `<td class="num${proxy ? " proxy" : ""}" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}${proxy ? "*" : ""}</td>`;
   };
-  $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; A_DN in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${heads[k]}</th>`).join("")}</tr></thead><tbody>${
+  $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; A_DN in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
     Object.entries(obs).map(([id, o]) => `<tr><th title="${sup(o.label)}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
       columns.map(([, , keep]) => cell(largest(o.rows, o.central, keep))).join("")}</tr>`).join("")}</tbody></table>`;
 }
@@ -81,7 +83,7 @@ function overviewPlot() {
   const c = colours(), id = $("overview-observable").value, o = page.sections.observables[id], node = $("plot-overview");
   // grouped by step, B1 at the top (Plotly draws the first category at the bottom), the largest first within a step
   const step = (r) => Object.keys(SECTIONS).indexOf(r.section);
-  const rows = o.rows.filter(stateOfTheArt)
+  const rows = o.rows.filter(inOverview)
     .sort((a, b) => step(b) - step(a) || Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
   const traces = Object.keys(SECTIONS).map((s) => {
     const mine = rows.filter((r) => r.section === s);
@@ -89,14 +91,17 @@ function overviewPlot() {
              x: mine.map((r) => Math.max(Math.abs(size(r, o.central)), FLOOR)),
              text: mine.map((r) => `${pct(size(r, o.central))} · ${r.kind}`), textposition: "outside", cliponaxis: false,
              textfont: { size: 11, color: c.secondary }, hovertemplate: "%{y}: %{text}<extra></extra>",
-             marker: { color: seriesColour(s) } };
+             marker: { color: mine.map((r) => (stateOfTheArt(r) ? seriesColour(s) : alpha(seriesColour(s), 0.35))),
+                       line: { color: seriesColour(s), width: mine.map((r) => (stateOfTheArt(r) ? 0 : 1.5)) } } };
   });
   htmlLegend(node, Object.keys(SECTIONS).map((s) => ({ label: SECTIONS[s], colour: seriesColour(s), fill: true })),
-             "State-of-the-art inputs only: approximations and legacy models are on each benchmark's page.");
+             "State-of-the-art inputs; pale: B3 has a single current Earth model, so the shift to PREM's average crust stands in for its spread.");
   node.style.height = `${Math.max(360, 34 * rows.length + 90)}px`;
+  // the labels sit to the right of the bars, on a log axis: about two decades of room beyond the largest bar
+  const top = Math.max(FLOOR, ...rows.map((r) => Math.abs(size(r, o.central))));
   return Plotly.react(node, traces, layout(c, node, sup(o.label), "Relative to the central value (%), log scale", "",
-    { showlegend: false, barmode: "overlay", margin: { l: 20, r: 90, t: 24, b: 48 },
-      xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(200)], exponentformat: "power" },
+    { showlegend: false, barmode: "overlay", margin: { l: 20, r: 20, t: 24, b: 48 },
+      xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(top) + 2], exponentformat: "power" },
       yaxis: { categoryorder: "array", categoryarray: rows.map((r) => sup(r.source)), automargin: true } }), CONFIG);
 }
 
@@ -107,7 +112,7 @@ const seriesColour = (section) => getComputedStyle(document.documentElement).get
 function impactPlot(node, section) {
   // per observable: one bar per source of this step, the oscillation parameters in grey for scale
   const c = colours(), obs = page.sections.observables, ids = Object.keys(obs).reverse();
-  const rank = { sampled: 0, "model range": 1, approximation: 2 }; // inputs first, then the approximations
+  const rank = { sampled: 0, "model range": 1, approximation: 2, legacy: 3 }; // inputs first, then the approximations
   const rows = Object.values(obs).flatMap((o) => o.rows.filter((r) => r.section === section));
   const sources = [...new Set(rows.map((r) => r.source))]
     .sort((a, b) => rank[rows.find((r) => r.source === a).kind] - rank[rows.find((r) => r.source === b).kind]); // stable
@@ -457,58 +462,54 @@ async function discrepancies() {
     : `<td class="num" style="background:${shade(kind, Math.min(Math.abs(v) / 3, 1))}">${minus(v.toFixed(1))}σ</td>`);
   const empty = `<td class="num empty">–</td>`;
 
-  $("discrepancy-scale").innerHTML = `<span class="key"><b>Reproduction</b> |Δ| ${HEAT[0]} % ${strip("reproduction")} ≥ ${HEAT[1]} %; pull 0 ${strip("reproduction")} ≥ 3σ</span>`
-    + `<span class="key"><b>Update</b> |shift| ${HEAT[0]} % ${strip("update")} ≥ ${HEAT[1]} %; pull 0 ${strip("update")} ≥ 3σ</span>`;
+  const templateCell = (c) => `<td class="template"><a href="rates.html#check=${encodeURIComponent(c.id)}" title="Open in the calculator">${c.label}</a>`
+    + `<a class="source" href="https://arxiv.org/abs/${c.arxiv}" target="_blank" rel="noopener">${c.source}</a>`;
+
+  // the measurements alone: how far each prediction lies from the measured value, in its error
+  const measured = shown.filter((r) => r.check.published.measured);
+  $("pull-scale").innerHTML = `<span class="key"><b>Paper's inputs</b> 0 ${strip("reproduction")} ≥ 3σ</span>`
+    + `<span class="key"><b>State of the art</b> 0 ${strip("update")} ≥ 3σ</span>`;
+  $("pull-table").innerHTML = measured.length ? `<table><thead>`
+    + `<tr><th>Experiment</th><th>Measurement and source</th><th class="num">Measured</th>`
+    + `<th class="num" title="SNUfish with the paper's inputs">SNUfish, paper's inputs</th>`
+    + `<th class="num" title="(SNUfish − measured) / its error, the error on the side the prediction falls">Pull</th>`
+    + `<th class="num" title="Every legacy input and approximation replaced by the state of the art">SNUfish, state of the art</th>`
+    + `<th class="num" title="The state-of-the-art prediction's pull">Pull</th></tr></thead><tbody>${
+    measured.map((r) => {
+      const c = r.check, p = c.published, changed = r.flagged.some((f) => f.by);
+      return `<tr><td>${c.group}</td>${templateCell(c)}</td>`
+        + `<td class="num start">${paperNumber(p, p.value)} <span class="error-bar">−${paperNumber(p, p.minus)} +${paperNumber(p, p.plus)}</span><span class="unit">${UNIT_OF[p.kind](p)}</span></td>`
+        + `<td class="num">${paperNumber(p, r.ours)}</td>${pullCell("reproduction", r.pull)}`
+        + (changed ? `<td class="num">${paperNumber(p, r.current)}</td>${pullCell("update", r.currentPull)}` : `<td class="num muted">same</td>${pullCell("update", r.currentPull)}`)
+        + `</tr>`;
+    }).join("")}</tbody></table>` : `<p class="hint">No template is a measurement.</p>`;
+
+  $("discrepancy-scale").innerHTML = `<span class="key"><b>Reproduction</b> |Δ| ${HEAT[0]} % ${strip("reproduction")} ≥ ${HEAT[1]} %</span>`
+    + `<span class="key"><b>Update</b> |shift| ${HEAT[0]} % ${strip("update")} ≥ ${HEAT[1]} %</span>`;
   $("discrepancy-table").innerHTML = `<table><thead>`
-    + `<tr><th colspan="2"></th><th colspan="5" class="group reproduction">Reproduction: the paper's own assumptions</th>`
-    + `<th colspan="4" class="group update">Update: state-of-the-art models and measurements</th></tr>`
+    + `<tr><th colspan="2"></th><th colspan="4" class="group reproduction">Reproduction: the paper's own assumptions</th>`
+    + `<th colspan="3" class="group update">Update: state-of-the-art models and measurements</th></tr>`
     + `<tr><th>Experiment</th><th>Template and source</th>`
     + `<th class="num">Published</th><th class="num" title="With the paper's inputs, as the calculator's template">SNUfish</th>`
     + `<th class="num" title="SNUfish ÷ published − 1: what SNUfish does not reproduce with the paper's assumptions">Δ</th>`
-    + `<th class="num" title="Measurements: (SNUfish − measured) / its error">Pull</th><th>Paper's inputs</th>`
+    + `<th>Paper's inputs</th>`
     + `<th>Replaced</th><th class="num" title="Every legacy input and approximation replaced by the state of the art">SNUfish</th>`
-    + `<th class="num" title="State of the art ÷ paper's inputs − 1: what the newer models and measurements change">Shift</th>`
-    + `<th class="num" title="Measurements: the state-of-the-art prediction's pull">Pull</th></tr></thead><tbody>${
+    + `<th class="num" title="State of the art ÷ paper's inputs − 1: what the newer models and measurements change">Shift</th></tr></thead><tbody>${
     shown.map((r) => {
       const c = r.check, p = c.published, changed = r.flagged.some((f) => f.by);
       const published = `${paperNumber(p, p.value)}${p.measured ? ` <span class="error-bar">−${paperNumber(p, p.minus)} +${paperNumber(p, p.plus)}</span>` : ""}`;
       const points = p.kind === "adn" ? ` (${minus((100 * (r.ours - p.value)).toFixed(2))} points)` : "";
       const replaced = r.flagged.filter((f) => f.by);
-      return `<tr><td>${c.group}</td><td class="template"><a href="rates.html#check=${encodeURIComponent(c.id)}" title="Open in the calculator">${c.label}</a>`
-        + `<a class="source" href="https://arxiv.org/abs/${c.arxiv}" target="_blank" rel="noopener">${c.source}</a>`
+      return `<tr><td>${c.group}</td>${templateCell(c)}`
         + `${c.note ? `<span class="note">${c.note}</span>` : ""}</td>`
         + `<td class="num start">${published}<span class="unit">${UNIT_OF[p.kind](p)}${p.measured ? ", measured" : ""}</span></td><td class="num">${paperNumber(p, r.ours)}</td>`
         + `<td class="num" style="background:${shade("reproduction", heat(r.relative))}" title="SNUfish ÷ published − 1${points}">${signedPct(r.relative)}</td>`
-        + pullCell("reproduction", r.pull)
         + `<td class="inputs">${inputsCell(r)}</td>`
         + `<td class="inputs start">${replaced.length ? replaced.map((f) => `<span class="input" title="${f.summary.replace(/"/g, "&quot;")}">${inputName(f.category, f.name)} → ${inputName(f.category, f.by)}</span>`).join("") : `<span class="muted">nothing</span>`}</td>`
         + (changed ? `<td class="num">${paperNumber(p, r.current)}</td>`
             + `<td class="num" style="background:${shade("update", heat(r.shift))}" title="State of the art ÷ published − 1: ${signedPct(r.currentRelative)}">${signedPct(r.shift)}</td>`
-            + pullCell("update", r.currentPull)
-          : `<td class="num muted">same</td>${empty}${empty}`) + `</tr>`;
+          : `<td class="num muted">same</td>${empty}`) + `</tr>`;
     }).join("")}</tbody></table>`;
-
-  const c = colours(), node = $("plot-discrepancies"), ordered = [...shown].reverse(); // the first row at the top
-  const short = (r) => { const t = `${r.check.group}: ${r.check.label}`; return t.length > 58 ? `${t.slice(0, 57)}…` : t; };
-  const names = ordered.map((r) => `${r.check.group}: ${r.check.label}`), y = ordered.map((_, i) => i);
-  const bars = (kind, values, label) => ({
-    type: "bar", orientation: "h", y, x: values, name: label,
-    marker: { color: values.map((v) => alpha(hues[kind], 0.25 + 0.75 * heat(v))),
-              line: { color: ordered.map((r) => (r.check.published.measured ? c.text : "rgba(0,0,0,0)")), width: 1 } },
-    text: values.map((v) => (kind === "update" && Math.abs(v) < 0.05 ? "" : signedPct(v))), textposition: "outside", cliponaxis: false,
-    textfont: { size: 9, color: c.secondary }, customdata: names, hovertemplate: `%{customdata}<br>${label}: %{x:.2f} %<extra></extra>` });
-  const traces = [bars("update", ordered.map((r) => r.shift), "update, state of the art ÷ paper's inputs − 1"),
-                  bars("reproduction", ordered.map((r) => r.relative), "reproduction, SNUfish ÷ published − 1")];
-  const reach = Math.max(1, ...shown.flatMap((r) => [Math.abs(r.relative), Math.abs(r.shift)])) * 1.25;
-  htmlLegend(node, [{ label: "Reproduction: SNUfish with the paper's own assumptions ÷ published − 1", colour: hues.reproduction, fill: true },
-                    { label: "Update: SNUfish with state-of-the-art models and measurements ÷ SNUfish with the paper's − 1", colour: hues.update, fill: true }],
-             "Outlined: a measurement (pulls in the table). The update bar is empty where every input the template uses is already the state of the art.");
-  node.style.height = `${Math.max(400, 30 * shown.length + 90)}px`;
-  return Plotly.react(node, traces, layout(c, node, "Two kinds of divergence, per template", "Relative difference (%)", "",
-    { showlegend: false, barmode: "group", bargap: 0.25, bargroupgap: 0.05, margin: { l: 20, r: 60, t: 24, b: 48 },
-      xaxis: { range: [-reach, reach] },
-      yaxis: { tickvals: y, ticktext: ordered.map(short), automargin: true, minor: { ticks: "" }, tickfont: { size: 11 } },
-      shapes: [{ type: "line", yref: "paper", y0: 0, y1: 1, x0: 0, x1: 0, line: { color: c.muted, width: 1 } }] }), CONFIG);
 }
 
 // ------------------------------------------------------------------ pages
@@ -535,7 +536,7 @@ function setupTheme() {
   const apply = () => {
     if (mode === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", mode);
-    $("theme").textContent = `Theme: ${mode}`;
+    themeIcon($("theme"), mode);
     render();
   };
   $("theme").addEventListener("click", () => {

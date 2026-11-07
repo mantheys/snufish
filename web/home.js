@@ -2,7 +2,7 @@
 // export-sections) and data/inputs.json, and the About tab (how the numbers are made, the status of every input,
 // credits).
 import * as engine from "./engine.js";
-import { CONFIG, colours, htmlLegend, layout } from "./plots.js";
+import { CONFIG, colours, htmlLegend, layout, themeIcon } from "./plots.js";
 import { CREDITS, render as renderSources } from "./sources.js";
 
 const DATA = "data/";
@@ -44,8 +44,8 @@ const flat = (c, y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, y0: y, y1: 
 // ------------------------------------------------------------------ the findings
 
 function toolsVsInputs() {
-  // 1. tools on the same inputs against the spread of competing inputs, on one log scale
-  const c = colours(), node = $("plot-f1"), tools = page.sections.tools;
+  // 6. tools on the same inputs against the spread of competing inputs, on one log scale
+  const c = colours(), node = $("plot-f6"), tools = page.sections.tools;
   const worst = (rows) => (rows?.length ? 100 * Math.max(...rows.map((r) => r.max_abs)) : null);
   const es = Math.max(...["water_es_b8", "scint_es_be7"].map((o) => row(o, "ES radiative corrections") || 0));
   const bars = [
@@ -68,8 +68,8 @@ function toolsVsInputs() {
 }
 
 function outdated() {
-  // 2. legacy inputs and approximations against the state of the art: shifts, not uncertainties
-  const c = colours(), node = $("plot-f2"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status || {};
+  // 7. legacy inputs and approximations against the state of the art: shifts, not uncertainties
+  const c = colours(), node = $("plot-f7"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status || {};
   const at5 = (n) => 100 * (interp(xs[n].energy, xs[n].sigma, 5) / interp(xs[MARLEY].energy, xs[MARLEY].sigma, 5) - 1);
   const bars = Object.keys(xs).filter((n) => !n.includes("#") && status.xsec_model?.cc_nue_ar40?.[n]?.status === "legacy")
     .map((n) => [`B4 ⁴⁰Ar σ(5 MeV), ${SHORT_XS[n] || n}`, at5(n), "legacy"]).sort((a, b) => b[1] - a[1]);
@@ -94,8 +94,8 @@ const colour = { legacy: css("--series-7"), approximation: c.muted };
 }
 
 function composition() {
-  // 4. (B2) the three state-of-the-art solar models, flux by flux, over B23 MB22m with its published 1 sigma
-  const c = colours(), node = $("plot-f4"), models = page.inputs.solar_models, status = page.inputs.status?.solar_model || {};
+  // 2. (B2) the three state-of-the-art solar models, flux by flux, over B23 MB22m with its published 1 sigma
+  const c = colours(), node = $("plot-f2"), models = page.inputs.solar_models, status = page.inputs.status?.solar_model || {};
   const ref = "b23_mb22m", current = Object.keys(models).filter((k) => status[k]?.status === "current");
   const colourOf = [series(1), series(2), series(3)];
   const traces = current.map((k, i) => ({
@@ -116,9 +116,9 @@ const PUBLISHED_AR40 = [
 ];
 
 function argon() {
-  // 6. (B4) the state-of-the-art 40Ar cross sections folded over the 8B spectrum, over MARLEY 2 (p,n); the shell model of
+  // 4. (B4) the state-of-the-art 40Ar cross sections folded over the 8B spectrum, over MARLEY 2 (p,n); the shell model of
   // Suzuki & Honma, which publishes one folded value only, and Kostensalo's with the free g_A, from the papers
-  const c = colours(), node = $("plot-f6"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status?.xsec_model?.cc_nue_ar40 || {};
+  const c = colours(), node = $("plot-f4"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status?.xsec_model?.cc_nue_ar40 || {};
   const b8 = d.components.B8, folded = (n) => {
     let t = 0;
     for (let i = 1; i < b8.energy.length; i++) {
@@ -146,8 +146,8 @@ function argon() {
 }
 
 function earth() {
-  // 5. (B3) the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
-  const c = colours(), node = $("plot-f5"), sites = Object.keys(page.inputs.sites);
+  // 3. (B3) the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
+  const c = colours(), node = $("plot-f3"), sites = Object.keys(page.inputs.sites);
   const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E_vis > 5 MeV", c.range]];
   const traces = page.adn ? kinds.map(([kind, name, colour]) => {
     const y = sites.map((site) => 100 * (page.adn[site][kind].prem_crust1 / page.adn[site][kind].prem_full - 1));
@@ -197,8 +197,8 @@ async function adn() {
 }
 
 function oscillations() {
-  // 3. (B1) Delta m^2_21 and sin^2 theta_12 of the state-of-the-art parameter sets, with their 1 sigma
-  const c = colours(), node = $("plot-f3"), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
+  // 1. (B1) Delta m^2_21 and sin^2 theta_12 of the state-of-the-art parameter sets, with their 1 sigma
+  const c = colours(), node = $("plot-f1"), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
   const shown = Object.keys(sets).filter((k) => status[k]?.status === "current");
   const colourOf = { reactor: series(1), global: series(2), solar: series(3) }, symbol = { reactor: "square", global: "diamond", solar: "circle" };
   const seen = new Set();
@@ -218,7 +218,26 @@ function oscillations() {
     { showlegend: false, hovermode: "closest" }), CONFIG);
 }
 
-const FIGURES = [toolsVsInputs, outdated, oscillations, composition, earth, argon]; // the findings, B1 to B4 after the first two
+function folding() {
+  // 5. (B5) SNOwGLoBES's full chain over SNUfish's folding of the same fluxes and cross sections, per component
+  const c = colours(), node = $("plot-f5");
+  const rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98" && r.threshold === 0);
+  const groups = [["water", "es", "ES in water", series(1)], ["argon", "es", "ES in argon", series(2)],
+                  ["argon", "cc_nue_ar40", "CC on ⁴⁰Ar", series(5)]];
+  const traces = groups.map(([detector, channel, name, colour]) => {
+    const mine = ORDER.map((k) => rows.find((r) => r.detector === detector && r.channel === channel && r.component === k))
+      .filter(Boolean);
+    return { type: "bar", name, x: mine.map((r) => DISPLAY[r.component]), y: mine.map((r) => 100 * (r.ratio - 1)),
+             marker: { color: colour }, hovertemplate: `%{x}, ${name}: %{y:+.2f} %<extra></extra>` };
+  }).filter((t) => t.x.length);
+  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })),
+             "B16-GS98, all energies, before any detector response");
+  return Plotly.react(node, traces, layout(c, node, "SNOwGLoBES full chain against SNUfish's folding", "", "Tool ÷ SNUfish − 1 (%)",
+    { showlegend: false, barmode: "group", margin: { l: 20, r: 20, t: 16, b: 40 },
+      xaxis: { categoryorder: "array", categoryarray: ORDER.map((k) => DISPLAY[k]) }, yaxis: { automargin: true } }), CONFIG);
+}
+
+const FIGURES = [oscillations, composition, earth, argon, folding, toolsVsInputs, outdated]; // the findings: B1 to B5, then across steps
 
 // ------------------------------------------------------------------ About: the status of every input
 
@@ -276,7 +295,7 @@ function setupTheme() {
   const apply = () => {
     if (mode === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", mode);
-    $("theme").textContent = `Theme: ${mode}`;
+    themeIcon($("theme"), mode);
     draw();
   };
   $("theme").addEventListener("click", () => {
