@@ -40,7 +40,7 @@ from .solar import COMPONENTS, electron_density, production_weights, table
 from .spec import load_spec, pmns
 
 SET, SOLAR_MODEL = "juno_2025", "b23_mb22m"  # state of the art (reference/status.yaml)
-N_DRAWS, SEED = 300, 1
+N_DRAWS, SEED = 1000, 1  # a sampled sigma to about 2 % (1/sqrt(2n))
 EXPOSURE = 100.0  # kt yr: B5's statistics, e.g. 10 kt for 10 years
 # Each observable is seen through its detector's published response (B5 spec, part 2): threshold, resolution,
 # efficiency and detector uncertainties of Super-K IV (water), DUNE (argon) and Borexino Phase-II (scintillator).

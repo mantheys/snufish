@@ -250,7 +250,10 @@ turns into an imported matrix and efficiency curve for the same folding.
 `snufish.engine.budget` (and `snufish.uncertainty` for the `snufish
 budget` command). Two kinds are kept apart.
 
-**Sampled** (Monte Carlo, n = 400 draws by default, fixed seed), each
+**Sampled** (Monte Carlo, fixed seed; a sampled σ from n draws is uncertain by
+about 1/√(2n): 1000 draws on the benchmark pages and in the calculator, which
+shows 400 at once and replaces them with 1000 computed in a background worker;
+400 in `snufish budget` for now), each
 reported as a standard deviation and combined in "total sampled", in the
 order of the calculator's steps (B1 to B5):
 

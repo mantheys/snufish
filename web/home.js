@@ -2,10 +2,10 @@
 // export-sections) and data/inputs.json, and the About tab (how the numbers are made, the status of every input,
 // credits).
 import * as engine from "./engine.js";
+import { DATA, loadTable } from "./load.js";
 import { ADN, CONFIG, colours, htmlLegend, layout, math, themeIcon } from "./plots.js";
 import { CREDITS, render as renderSources } from "./sources.js";
 
-const DATA = "data/";
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const DISPLAY = { pp: "pp", pep: "pep", hep: "hep", Be7: "⁷Be", B8: "⁸B", N13: "¹³N", O15: "¹⁵O", F17: "¹⁷F" };
 const MARLEY = "ar40_marley2_bhattacharya2009";
@@ -163,19 +163,6 @@ function earth() {
              page.adn ? `Annual ${ADN}, ${page.inputs.parameter_sets.sets[page.sections.set]?.label || page.sections.set}, B23 MB22m` : `Computing ${ADN} at the five sites…`);
   return Plotly.react(node, traces, layout(c, node, "The crust under the detector", "", `${ADN}, local crust over PREM (%)`,
     { showlegend: false, barmode: "group", bargap: 0.3, xaxis: { minor: { ticks: "" } }, yaxis: { range: [-4, 6] }, shapes: [flat(c, 0)] }), CONFIG);
-}
-
-async function loadTable(name) {
-  // as app.js: a table's JSON index and its float32 binary (base64 text in a hosted copy)
-  const meta = await (await fetch(`${DATA}${name}.json`)).json();
-  const response = await fetch(`${DATA}${meta.bin}`);
-  if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
-  if (meta.encoding === "base64") {
-    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-    return { meta, buffer: bytes.buffer };
-  }
-  return { meta, buffer: await response.arrayBuffer() };
 }
 
 async function adn() {

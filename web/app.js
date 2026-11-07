@@ -1,14 +1,16 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
+import { DATA, loadTable } from "./load.js";
 import { ADN, budgetPlot, distributionPlot, math, officialPlot, plain, spectrumPlot, themeIcon } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
 import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, UNITS, publishedResolution,
          reproduced } from "./checks.js";
 import { officialFigure } from "./official.js";
 
-const DATA = "data/";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted build carries its own copy (build.py)
-const N_DRAWS = 400, SEED = 1;
+// the budget at once with FIRST_DRAWS, then refined to N_DRAWS in a worker (budget-worker.js): a sampled sigma
+// from n draws is uncertain by about 1/sqrt(2n), 3.5 % at 400, 2.2 % at 1000
+const FIRST_DRAWS = 400, N_DRAWS = 1000, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νₑ CC on ⁴⁰Ar", cc_nue_o16: "νₑ CC on ¹⁶O",
                    cc_nue_d: "νₑ CC on deuterium", nc_d: "NC on deuterium (all flavours)",
                    nc_ar40: "NC on ⁴⁰Ar (all flavours; SNOwGLoBES table, in neutrino energy)" };
@@ -83,21 +85,9 @@ const $ = (id) => document.getElementById(id);
 // setup in the address: those controls are hidden there and the files below say how to run the site locally.
 const HOSTED = document.querySelector('meta[name="snufish-host"]')?.content === "artifact";
 const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
-              worker: null, rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
+              worker: null, refiner: null, refineId: 0, rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
 
 // ------------------------------------------------------------------ loading
-
-async function loadTable(name) {
-  const meta = await (await fetch(`${DATA}${name}.json`)).json();
-  const response = await fetch(`${DATA}${meta.bin}`);
-  if (!response.ok) throw new Error(`could not load ${meta.bin} (${response.status})`);
-  if (meta.encoding === "base64") { // hosted copies keep the float32 tables as base64 text
-    const text = atob((await response.text()).trim()), bytes = new Uint8Array(text.length);
-    for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-    return { meta, buffer: bytes.buffer };
-  }
-  return { meta, buffer: await response.arrayBuffer() };
-}
 
 function option(value, label, selected = false) {
   const o = document.createElement("option");
@@ -482,6 +472,33 @@ function lineMarks(setup) {
   }).sort((a, b) => a.x - b.x);
 }
 
+function refine(result, { solarRange, night, tableNames }) {
+  // the same budget and spectra with N_DRAWS, in a worker; the result on screen is replaced when they come, unless
+  // the setup changed meanwhile (a later compute() bumps refineId). Without workers the first draws stay.
+  const id = ++app.refineId;
+  try {
+    if (!app.refiner) {
+      app.refiner = new Worker("budget-worker.js", { type: "module" });
+      app.refiner.onmessage = ({ data }) => {
+        const r = app.result;
+        if (data.id !== app.refineId || !r || !r.refining) return;
+        r.refining = false;
+        if (data.error) { console.warn("refinement:", data.error); render(); return; }
+        Object.assign(r, { rows: data.rows, samples: data.samples, spectra: data.spectra, ms: data.ms, draws: N_DRAWS });
+        render();
+        if (app.rendered.length || !$("plotipus").hidden) renderPlotipus();
+      };
+      app.refiner.onerror = () => { app.refiner = null; if (app.result) { app.result.refining = false; render(); } };
+    }
+    result.refining = true;
+    app.refiner.postMessage({ id, setup: result.setup, quantity: result.quantity, set: result.set, solarRange, night,
+                              n: N_DRAWS, seed: SEED, tableNames });
+  } catch (error) {
+    console.warn("no refinement worker:", error);
+    result.refining = false;
+  }
+}
+
 function schedule() {
   clearTimeout(app.timer);
   app.timer = setTimeout(run, 120);
@@ -505,8 +522,9 @@ async function compute() {
   // A rate's solar-model range needs only the fluxes (one table); A_DN, where a single flux cancels,
   // needs every model's density profile (all day tables).
   const solarRange = quantity === "adn" ? "full" : "fluxes";
-  const needed = [...(solarRange === "full" ? Object.keys(d.solar_models) : [setup.solar_model]).map((m) => `day_${m}`),
-                  ...(night ? d.earth_models.map((e) => `night_${e}`) : [])].filter((n) => !app.tables.has(n));
+  const tableNames = [...(solarRange === "full" ? Object.keys(d.solar_models) : [setup.solar_model]).map((m) => `day_${m}`),
+                      ...(night ? d.earth_models.map((e) => `night_${e}`) : [])];
+  const needed = tableNames.filter((n) => !app.tables.has(n));
   if (needed.length) {
     status(`Downloading ${needed.length} table${needed.length > 1 ? "s" : ""}…`);
     try { await app.tables.ensure(needed); } catch (error) { status(`Could not load the tables: ${error.message}`, true); return; }
@@ -515,8 +533,8 @@ async function compute() {
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
   app.tables.clamped = 0;
-  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: N_DRAWS, seed: SEED, solarRange, legacy: true });
-  const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: N_DRAWS, seed: SEED, night });
+  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: FIRST_DRAWS, seed: SEED, solarRange, legacy: true });
+  const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: FIRST_DRAWS, seed: SEED, night });
   const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
   const ms = performance.now() - t0;
   const [scale, unit] = { adn: [100, "%"], ratio: [1, "of the unoscillated rate"] }[quantity] || UNITS[$("unit").value];
@@ -524,7 +542,8 @@ async function compute() {
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
   const check = CHECKS.find((c) => c.id === $("check").value) || null;
   app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check,
-                 lines: lineMarks(setup) };
+                 lines: lineMarks(setup), draws: FIRST_DRAWS, refining: false };
+  refine(app.result, { solarRange, night, tableNames });
   app.result.official = await officialFigure(check, { inputs: app.inputs, tables: app.tables, setup, set: $("set").value });
   render();
   if (thumbShown()) setTimeout(thumb, 0); // the all-components example, after the result is on screen
@@ -628,7 +647,8 @@ function render() {
     ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
     <div class="what"><span>${describe(setup, quantity)}${thumbShown() ? "" : ` · ${app.inputs.data.parameter_sets.sets[r.set].label}`}</span>
-      <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
+      <span class="timing">${r.refining ? `${r.draws} draws in ${Math.round(r.ms)} ms; refining to ${N_DRAWS}…`
+        : `Computed with ${r.draws} draws in ${Math.round(r.ms)} ms.`}</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
     <div class="ranges"><b>Model ranges: the competing state-of-the-art models</b>${ranges.join("<br>") || "none: one state-of-the-art model per choice here"}${
