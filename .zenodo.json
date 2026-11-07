@@ -3,7 +3,7 @@
   "upload_type": "software",
   "description": "Community benchmarks of solar neutrino tools (solar models, MSW in the Sun, Earth matter effects, cross sections, interaction rates), reference solvers, and a rate and uncertainty calculator that runs in the browser.",
   "creators": [
-    {"name": "Manthey, Sergio"}
+    {"name": "Manthey, Sergio", "orcid": "0000-0002-9368-9120"}
   ],
   "license": "MIT",
   "version": "0.2.0",
