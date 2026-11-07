@@ -47,12 +47,14 @@ const flat = (c, y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, y0: y, y1: 
 function toolsVsInputs() {
   // 6. tools on the same inputs against the spread of competing inputs, on one log scale
   const c = colours(), node = $("plot-f6"), tools = page.sections.tools;
-  const worst = (rows) => (rows?.length ? 100 * Math.max(...rows.map((r) => r.max_abs)) : null);
+  // each tool against the reference on the spec's tool comparison (B2 b16_gs98, B3 four shells): identical inputs
+  const perTool = (rows, label) => (rows || []).filter((r) => r.comparison).sort((a, b) => a.name.localeCompare(b.name))
+    .map((r) => [`${label}: ${r.name} (|ΔP|)`, 100 * r.max_abs, "tools"]);
   const es = Math.max(...["water_es_b8", "scint_es_be7"].map((o) => row(o, "ES radiative corrections") || 0));
   const bars = [
-    ["B2 Sun: solvers (|ΔP|)", worst(tools.B2_sun), "tools"],
-    ["B3 Earth: solvers, shells (|ΔP|)", worst(tools.B3_earth?.filter((r) => r.variant === "prem_prob3")), "tools"], // exact for both
-    ["B4 ES: radiative corr.", es, "tools"],
+    ...perTool(tools.B2_sun, "B2 Sun"),
+    ...perTool(tools.B3_earth, "B3 Earth"),
+    ["B4 ES: BKS vs SNOwGLoBES", es, "tools"],
     ["B1 osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
     ["B2 composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
     ["B4 ⁴⁰Ar model, ⁸B CC", row("argon_cc_b8", "40Ar nuclear model"), "inputs"],

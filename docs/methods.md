@@ -69,7 +69,9 @@ the right factor first. For constant density it is exactly the shell
 propagator. Steps of 6.25 km (`CONVERGED_STEP_KM`) give P<sub>ie</sub> within
 4 × 10⁻⁷ of a 1.5625 km solution over 43 chords and the 39 exposure
 energies; the convergence is slowest at low energy, where the Δm²₃₁ mode
-oscillates over ~2 km. Independently, the exact solver on 1 km constant
+oscillates over ~2 km. On the `map` grid's energies in between it reaches
+1.5 × 10⁻⁶ (5.4 × 10⁻⁷ at the exposure energies on all chords) (found by the nuSQuIDS contribution,
+[crosschecks.md](crosschecks.md#peanuts-and-nusquids)). Independently, the exact solver on 1 km constant
 shells agrees to 3 × 10⁻⁶. The tests check the matter potential against its
 textbook value, chord lengths, the core-crossing threshold, unitarity, the
 vacuum limit at the horizon, independence of θ₂₃ and δ, the

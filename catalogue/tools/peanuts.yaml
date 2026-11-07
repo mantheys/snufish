@@ -1,11 +1,23 @@
 id: peanuts
 name: PEANUTS
-description: Solar neutrino propagation in the Sun and through the Earth.
-language: Python
-license: null
-repository: null
-documentation: null
-reference: null
-maintainers: null
+description: Propagation and Evolution of Active NeUTrinoS. Solar neutrino fluxes (adiabatic mass-eigenstate weights over a solar model's production profiles) and their propagation through the Earth, analytically (exact on constant-density shells, first order in the density variation otherwise) or numerically.
+language: Python (numba)
+license: GPL-3.0
+repository: https://github.com/michelelucente/PEANUTS
+documentation: README.md in the repository, and the paper
+reference: arXiv:2303.15527   # Gonzalo & Lucente, Eur. Phys. J. C 84, 119 (2024)
+maintainers: [Tomás E. Gonzalo, Michele Lucente]
 benchmarks: [B2_sun, B3_earth]
-status: draft
+status: verified          # contributions/peanuts/scripts (pinned submodule, v1.6 = 39ef11f)
+notes: >
+  B2: peanuts.solar.Tei at the spec's n_e(r0), every variant. Its matter term is hard-coded,
+  V/k = 3.868e-7/2.533 n_e E/dm^2, 3.6e-4 above the spec's constants; with its approximate matter angles
+  (zeroth order of arXiv:1604.08167) it differs from the reference by up to 1.2e-4 in F_i, 1.1e-4 of it from
+  the constant (docs/crosschecks.md, "PEANUTS and nuSQuIDS"). B3: peanuts.earth.Pearth, analytical mode,
+  prem_prob3 only. Its Earth models are even polynomials in r per shell (alpha + beta r^2 + gamma r^4 + ...),
+  so the PREM polynomials of prem_four and prem_full (odd powers of r) cannot be given to it without refitting:
+  not computed. Its own Earth model (Data/Earth_Density.csv, five shells of hep-ph/9702343) is not contributed
+  as `native`: on non-constant shells the analytical evolutor is first order in the density variation and
+  breaks unitarity by up to 9.7e-4 at 20 MeV, beyond B3's 1e-6 check (run_b3.py --native). Its Earth matter
+  potential, 3.868e-7 m^-1 per mol/cm^3, is 1.8e-5 above the spec's: up to 9e-6 in P_ie on prem_prob3, which
+  the spec's value brings to 2e-11. Its Data/ directory also supplies SNUfish's B16 and BS05 tables.

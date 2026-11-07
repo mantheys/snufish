@@ -20,6 +20,18 @@ git submodule update --init                    # if cloned without --recurse-sub
 make -C contributions/nufast-earth/scripts     # builds b2_driver and b3_driver
 ```
 
+The other tools' contributions are committed data; only regenerating them
+needs the tools. Each is pinned (versions in `catalogue/tools/`):
+
+```bash
+# PEANUTS 1.6: the submodule contributions/peanuts/scripts/PEANUTS, run from its checkout
+pip install -r contributions/peanuts/scripts/requirements.txt    # numba, mpmath
+(cd contributions/peanuts/scripts && python run_b2.py && python run_b3.py)
+# nuSQuIDS 1.13.3 on SQuIDS 1.3.1: build_nusquids.sh clones and builds both into scripts/local
+# (needs g++, GSL and HDF5 headers: apt install libgsl-dev libhdf5-dev)
+(cd contributions/nusquids/scripts && make && python run_b3.py --jobs 8)    # hours: GSL on continuous PREM
+```
+
 ## Command line
 
 | Command | Does | Needs |

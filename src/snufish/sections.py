@@ -30,10 +30,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from . import engine
 from .export import MARLEY_DEFAULT
-from .paths import build_dir, contributions_dir
+from .paths import build_dir, contributions_dir, repo_root
 from .reference.sun import adiabatic_fractions, fractions_at_density
 from .scan import _with_oscillation
 from .solar import COMPONENTS, electron_density, production_weights, table
@@ -275,14 +276,23 @@ def _contribution(tool, benchmark):
     return pd.read_parquet(paths[-1]) if paths else None
 
 
+def _tool_name(tool):
+    path = repo_root() / "catalogue" / "tools" / f"{tool}.yaml"
+    return yaml.safe_load(path.read_text()).get("name", tool) if path.exists() else tool
+
+
 def tool_agreement():
-    """Largest difference of each tool from the SNUfish reference on the cases both computed (B2, B3), and B5's
-    full-chain rates over SNUfish's folding of the same inputs."""
+    """Largest difference of each tool from the SNUfish reference on the cases both computed (B2, B3; B4's ES
+    with radiative corrections, relative), and B5's
+    full-chain rates over SNUfish's folding of the same inputs. ``comparison`` marks the spec's required variant
+    (B2 b16_gs98, B3 prem_prob3), the one every tool solves on identical inputs."""
     out = {}
     for benchmark, axis in (("B2_sun", "radius"), ("B3_earth", "cos_nadir")):
-        ref = _contribution("snufish-reference", benchmark)
+        ref, spec = _contribution("snufish-reference", benchmark), load_spec(benchmark)
+        required = {name for name, v in spec.variants.items() if v.get("required")}
+        tools = sorted({p.parents[2].name for p in contributions_dir().glob(f"*/{benchmark}/*/data.parquet")} - {"snufish-reference"})
         rows = []
-        for tool in ("nufast-earth",):
+        for tool in tools:
             other = _contribution(tool, benchmark)
             if ref is None or other is None:
                 continue
@@ -290,8 +300,25 @@ def tool_agreement():
             both = ref.merge(other, on=keys, suffixes=("_ref", "_tool"))
             diff = (both.value_tool - both.value_ref).abs()
             for variant, d in diff.groupby(both.variant):
-                rows.append(dict(tool=tool, variant=variant, points=int(d.size), max_abs=float(d.max())))
+                rows.append(dict(tool=tool, name=_tool_name(tool), variant=variant, comparison=variant in required,
+                                 points=int(d.size), max_abs=float(d.max())))
         out[benchmark] = rows
+    # B4: the radiatively corrected nu-e cross sections, SNOwGLoBES's tables (Marciano & Parsa) against the
+    # reference's BKS, relative, where both have a value (SNOwGLoBES's ES tables start at 0.5 MeV)
+    ref, rows = _contribution("snufish-reference", "B4_xsec"), []
+    for tool in ("snowglobes",):
+        other = _contribution(tool, "B4_xsec")
+        if ref is None or other is None:
+            continue
+        both = ref[ref.variant == "es_bks"].merge(other[other.variant == "default"], on=["grid", "quantity", "energy"],
+                                                  suffixes=("_ref", "_tool")).dropna(subset=["value_ref", "value_tool"])
+        both = both[(both.value_ref > 0) & (both.value_tool > 0)]
+        for quantity, b in both.groupby("quantity"):
+            rel = b.value_tool / b.value_ref - 1
+            rows.append(dict(tool=tool, name=_tool_name(tool), variant="es_bks", quantity=quantity, points=int(len(b)),
+                             energy_min=float(b.energy.min()), max_rel=float(rel.abs().max()), min_rel=float(rel.min()),
+                             max_rel_signed=float(rel.max())))
+    out["B4_xsec"] = rows
     chain = build_dir() / "B5_Chain.parquet"
     if chain.exists():
         frame = pd.read_parquet(chain)

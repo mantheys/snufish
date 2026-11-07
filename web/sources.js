@@ -22,7 +22,8 @@ export const SOURCES = {
   bs05: S("BS05 standard solar models: Bahcall, Serenelli & Basu 2005", "astro-ph/0412440"),
   b23: S("B23 / SF-III standard solar models: Herrera & Serenelli, data release", "10.5281/zenodo.10174172"),
   b23_papers: S("with Magg et al., A&A 661, A140 (2022), and Solar Fusion III, Rev. Mod. Phys. 97, 035002 (2025)"),
-  peanuts: S("PEANUTS (B16 and BS05 tables taken from its data directory)", "arXiv:2303.15527"),
+  peanuts: S("PEANUTS (B2 and B3 contributions; B16 and BS05 tables taken from its data directory)", "arXiv:2303.15527"),
+  nusquids: S("nuSQuIDS (B3 contribution)", "arXiv:2112.13804"),
   shape_pp_hep: S("pp and hep spectra: Bahcall, Phys. Rev. C 56, 3391 (1997)", "10.1103/PhysRevC.56.3391"),
   shape_b8: S("⁸B spectrum: Winter et al., Phys. Rev. C 73, 025503 (2006)", "10.1103/PhysRevC.73.025503"),
   shape_cno: S("¹³N, ¹⁵O, ¹⁷F spectra: Bahcall & Ulrich, Rev. Mod. Phys. 60, 297 (1988)", "10.1103/RevModPhys.60.297"),
@@ -159,6 +160,6 @@ export const CREDITS = [
   ["B4 Interaction: cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.nakamura, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
                       SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.ksz, SOURCES.suzuki, SOURCES.klmv]],
   ["B5 Detector: experiments and their responses", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_response, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.sno_salt_response, SOURCES.borexino, SOURCES.borexino_response, SOURCES.juno_b8]],
-  ["Tools and software", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus,
+  ["Tools and software", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.nusquids, SOURCES.plotipus,
                           SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
 ];

@@ -77,9 +77,11 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    flux × σ once per 0.5 MeV bin, at its midpoint (reproduced to 10⁻⁵). The
    detector response matters more: Super-K IV's efficiency halves the
    <sup>8</sup>B rate above its threshold, DUNE's 20 % resolution takes 4 % off.
-6. **The tools agree; the inputs do not.** Earth solvers agree to 10⁻⁸ and
-   the ES radiative corrections to 0.1 %, orders of magnitude below the
-   spread of competing inputs.
+6. **The tools agree; the inputs do not.** Three Earth solvers (NuFast-Earth,
+   PEANUTS, nuSQuIDS) agree with the reference to 10⁻⁸–10⁻⁵ on the same
+   shells, two Sun solvers to 10⁻⁴ and the ES radiative corrections to 0.1 %,
+   orders of magnitude below the spread of competing inputs; what is left is
+   each tool's hard-coded constants.
 7. **Most large spreads were outdated inputs, not uncertainties.** The
    <sup>40</sup>Ar tables of SNOwGLoBES differ by a factor 5–7, Earth models without
    a crust overstate A<sub>DN</sub> by up to 40 %, and B16 gives 6.5 % more <sup>8</sup>B.

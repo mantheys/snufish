@@ -56,12 +56,16 @@ SNUfish reports as model ranges.
    Super-K IV's efficiency keeps 52 % of the ⁸B ES interactions above
    3.49 MeV; SNO's and DUNE's resolutions take 3.6 % and 4.4 % off the CC rate
    above 5.5 and 5 MeV.
-6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
-   reference agree to 10⁻⁸ on constant shells, the two radiative-correction
-   calculations of ν–e scattering to 0.1 %. On PREM's continuous density
-   NuFast-Earth takes each crossing's mean density: up to 2 % in the ⁸B
-   A<sub>DN</sub> at one energy, 0.3 % over the Super-K spectrum (Kamioka). Every spread that matters comes from physics
-   inputs.
+6. **The tools agree; the inputs do not.** On the same constant-density
+   Earth, NuFast-Earth, nuSQuIDS and PEANUTS agree with the SNUfish reference
+   to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶; in the Sun, NuFast-Earth and PEANUTS to
+   3 × 10⁻⁸ and 1.2 × 10⁻⁴; the two radiative-correction calculations of
+   ν–e scattering to 0.1 %. The residuals are each tool's hard-coded
+   constants (PEANUTS's matter potential, 3.6 × 10⁻⁴ high in the Sun), not
+   its method ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)). On
+   PREM's continuous density NuFast-Earth takes each crossing's mean density:
+   up to 2 % in the ⁸B A<sub>DN</sub> at one energy, 0.3 % over the Super-K
+   spectrum (Kamioka). Every spread that matters comes from physics inputs.
 7. **Most large spreads were outdated inputs, not uncertainties.**
    The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
    5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
