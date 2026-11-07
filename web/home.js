@@ -11,10 +11,11 @@ const DISPLAY = { pp: "pp", pep: "pep", hep: "hep", Be7: "⁷Be", B8: "⁸B", N1
 const MARLEY = "ar40_marley2_bhattacharya2009";
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
                ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model, Kostensalo 2018 (g_A = 1)",
-               ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley: "SNOwGLoBES MARLEY (p,n)",
+               ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed", ar40_marley: "SNOwGLoBES MARLEY (p,n)",
                ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "SNOwGLoBES KLMV", default: "SNOwGLoBES default" };
 const SHORT_XS = { ar40_marley1_bhattacharya2009: "MARLEY v1", ar40_marley: "SNOwGLoBES MARLEY", ar40_marley1: "SNOwGLoBES ⁴⁰Ti",
-                   ar40_klmv: "KLMV", default: "SNOwGLoBES default" };
+                   ar40_klmv: "KLMV", default: "SNOwGLoBES default",
+                   ar40_marley1_allowed: "MARLEY v1 allowed" };
 const $ = (id) => document.getElementById(id);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const series = (n) => css(`--series-${n}`);
@@ -50,7 +51,7 @@ function toolsVsInputs() {
   const es = Math.max(...["water_es_b8", "scint_es_be7"].map((o) => row(o, "ES radiative corrections") || 0));
   const bars = [
     ["B2 Sun: solvers (|ΔP|)", worst(tools.B2_sun), "tools"],
-    ["B3 Earth: solvers (|ΔP|)", worst(tools.B3_earth), "tools"],
+    ["B3 Earth: solvers, shells (|ΔP|)", worst(tools.B3_earth?.filter((r) => r.variant === "prem_prob3")), "tools"], // exact for both
     ["B4 ES: radiative corr.", es, "tools"],
     ["B1 osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
     ["B2 composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
@@ -71,22 +72,24 @@ function outdated() {
   // 7. legacy inputs and approximations against the state of the art: shifts, not uncertainties
   const c = colours(), node = $("plot-f7"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status || {};
   const at5 = (n) => 100 * (interp(xs[n].energy, xs[n].sigma, 5) / interp(xs[MARLEY].energy, xs[MARLEY].sigma, 5) - 1);
+  // short names on the axis (step, then what differs), the full description on hover
   const bars = Object.keys(xs).filter((n) => !n.includes("#") && status.xsec_model?.cc_nue_ar40?.[n]?.status === "legacy")
-    .map((n) => [`B4 ⁴⁰Ar σ(5 MeV), ${SHORT_XS[n] || n}`, at5(n), "legacy"]).sort((a, b) => b[1] - a[1]);
+    .map((n) => [`B4 ${SHORT_XS[n] || n}`, at5(n), "legacy", `⁴⁰Ar CC cross section at 5 MeV: ${XSEC[n] || n}`]).sort((a, b) => b[1] - a[1]);
   // A_DN of 8B without a crust (PREM's four regions) against PREM + the local crust (computed by adn())
-  if (page.adn) for (const [site, kind, label] of [["Kamioka", "water", "⁸B ES"], ["SURF", "argon", "⁸B CC ⁴⁰Ar"]]) {
+  if (page.adn) for (const [site, kind, label] of [["Kamioka", "water", "⁸B ES in water"], ["SURF", "argon", "⁸B CC on ⁴⁰Ar"]]) {
     const a = page.adn[site][kind];
-    bars.push([`B3 A_DN ${label}, no crust (${site})`, 100 * (a.prem_four / a.prem_crust1 - 1), "approximation"]);
+    bars.push([`B3 no crust, ${site}`, 100 * (a.prem_four / a.prem_crust1 - 1), "approximation",
+               `A_DN of ${label} at ${site}, PREM without a crust (four regions)`]);
   }
   const m = d.solar_models;
-  if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 ⁸B flux, B16 GS98", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy"]);
-    bars.sort((a, b) => a[0].slice(0, 2).localeCompare(b[0].slice(0, 2))); // B2, B3, B4: the calculator's order
-const colour = { legacy: css("--series-7"), approximation: c.muted };
+  if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 B16 ⁸B flux", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy", "⁸B flux of B16-GS98"]);
+  bars.sort((a, b) => a[0].slice(0, 2).localeCompare(b[0].slice(0, 2))); // B2, B3, B4: the calculator's order
+  const colour = { legacy: css("--series-7"), approximation: c.muted };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[2]]) },
                   text: bars.map((b) => pct(b[1])), textposition: "outside", cliponaxis: false, textfont: { size: 11, color: c.secondary },
-                  hovertemplate: "%{y}: %{text}<extra></extra>" };
+                  customdata: bars.map((b) => b[3]), hovertemplate: "%{customdata}: %{text}<extra></extra>" };
   htmlLegend(node, [{ label: "legacy input", colour: colour.legacy, fill: true }, { label: "approximation", colour: colour.approximation, fill: true }],
-             `Against MARLEY 2 (⁴⁰Ar), PREM + local crust (A_DN${page.adn ? "" : ": computing…"}), B23 MB22m (flux)`);
+             `B2: ⁸B flux against B23 MB22m; B3: ⁸B A_DN against PREM + local crust${page.adn ? "" : " (computing…)"}; B4: ⁴⁰Ar σ at 5 MeV against MARLEY 2`);
   const lo = Math.min(0, ...bars.map((b) => b[1])), hi = Math.max(0, ...bars.map((b) => b[1])), span = hi - lo;
   return Plotly.react(node, [trace], layout(c, node, "Legacy inputs and approximations: shifts, not uncertainties", "Shift from the state of the art (%)", "",
     { showlegend: false, margin: { l: 20, r: 56, t: 16, b: 48 }, xaxis: { range: [lo - 0.3 * span, hi + 0.25 * span], zeroline: true, zerolinecolor: c.muted },

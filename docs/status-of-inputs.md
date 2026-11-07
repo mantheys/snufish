@@ -48,8 +48,10 @@ SNUfish reports as model ranges.
    into its flux table (−52 % to +55 %). The detector response is not yet
    benchmarked.
 6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
-   reference agree to 10⁻⁸, the two radiative-correction calculations of
-   ν–e scattering to 0.1 %. Every spread that matters comes from physics
+   reference agree to 10⁻⁸ on constant shells, the two radiative-correction
+   calculations of ν–e scattering to 0.1 %. On PREM's continuous density
+   NuFast-Earth takes each crossing's mean density: up to 2 % in the ⁸B
+   A<sub>DN</sub> at one energy, 0.3 % over the Super-K spectrum (Kamioka). Every spread that matters comes from physics
    inputs.
 7. **Most of the large spreads were outdated inputs, not uncertainties.**
    The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
@@ -229,7 +231,10 @@ agrees to about 1 %. Current.
   current.
 - **Solvers.** The SNUfish reference solvers and NuFast-Earth
   ([arXiv:2511.04735](https://arxiv.org/abs/2511.04735)) agree to 10⁻⁸ on
-  B3; the tools are not a source of spread, the inputs are.
+  B3's constant shells; on continuous PREM, NuFast-Earth's mean density per
+  crossing is a small approximation (0.3 % of the ⁸B A<sub>DN</sub> over the
+  spectrum, [crosschecks.md](crosschecks.md)). The tools are not a source of
+  spread, the inputs are.
 
 ## Where it shows
 
