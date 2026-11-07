@@ -17,7 +17,7 @@ are filled from the tool's own repository or paper, never from memory.
 
 ## Solar models
 
-`reference/ssm/<model>.dat`, `benchmarks/B1_ssm/models.yaml`, written by
+`reference/ssm/<model>.dat`, `benchmarks/B2_sun/models.yaml`, written by
 `scripts/import_ssm.py` (retrieved 2026-10-28; per-model SHA-256 of the
 source file in `models.yaml`).
 
@@ -150,7 +150,7 @@ Efficiency curves (`reference/detectors/efficiency_curves.yaml`):
 | [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) | B4, B5 | git 6fa928e | verified |
 | [MARLEY](https://github.com/MARLEY-MC/marley) ([arXiv:2101.11867](https://arxiv.org/abs/2101.11867)) | B4 | 2.0.0 | verified |
 | nuSQuIDS | B2, B3 (planned) | — | draft entry, no contribution |
-| PEANUTS ([arXiv:2303.15527](https://arxiv.org/abs/2303.15527)) | B1, B2, B3 (planned) | — | draft entry, no contribution (its data directory supplies the B16 and BS05 tables) |
+| PEANUTS ([arXiv:2303.15527](https://arxiv.org/abs/2303.15527)) | B2, B3 (planned) | — | draft entry, no contribution (its data directory supplies the B16 and BS05 tables) |
 
 Notes on each tool's wrapper (what it computes, what it assumes) are in
 its catalogue entry and in `contributions/<tool>/scripts/`.

@@ -19,7 +19,7 @@ custom values.
 
   H = U diag(0, Δm²₂₁, Δm²₃₁) U† / 2E + diag(V, 0, 0),  V = √2 G_F N_e,
 
-with N_e = n_e N_A from the B1 table (or the analytic profile of the spec).
+with N_e = n_e N_A from the B2 solar-model table (or the analytic profile of the spec).
 The reference gives the **adiabatic** fractions
 
   F_i(E, r₀) = |V_eᵢ(r₀)|²,
@@ -37,7 +37,7 @@ effect.
 **Production average.** For a flux component c,
 F_i^c(E) = Σ_r w_c(r) F_i(E, r), with w_c the fraction of the component's
 flux produced in each radius cell (`snufish.solar.production_weights`,
-from the B1 production densities; each profile integrates to 1). The
+from the B2 solar-model production densities; each profile integrates to 1). The
 daytime survival probability is P_ee^day = Σᵢ F_i |U_eᵢ|².
 
 NuFast-Earth's B2 contribution uses its `Calculate_Solar_Probability`
@@ -147,7 +147,7 @@ the model range.
 `snufish.fluxes`. Each continuum shape is normalised to unit area on its
 own energy grid; lines carry their branching fractions (⁷Be 861.3 keV:
 89.56 %, 384.3 keV: 10.44 %; pep 1.442 MeV). The flux of each component is
-the B1 model's, or, for ⁸B on request, the measured SNO neutral-current
+the B2 solar model's, or, for ⁸B on request, the measured SNO neutral-current
 total flux, 5.25 × 10⁶ cm⁻² s⁻¹ ± 3.81 % (as Super-K applies it).
 
 ## Rate folding

@@ -49,12 +49,12 @@ function toolsVsInputs() {
   const worst = (rows) => (rows?.length ? 100 * Math.max(...rows.map((r) => r.max_abs)) : null);
   const es = Math.max(...["water_es_b8", "scint_es_be7"].map((o) => row(o, "ES radiative corrections") || 0));
   const bars = [
-    ["Sun solvers (|ΔP|)", worst(tools.B2_sun), "tools"],
-    ["Earth solvers (|ΔP|)", worst(tools.B3_earth), "tools"],
-    ["ES radiative corr.", es, "tools"],
-    ["Osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
-    ["Composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
-    ["⁴⁰Ar model, ⁸B CC", row("argon_cc_b8", "40Ar nuclear model"), "inputs"],
+    ["B2 Sun: solvers (|ΔP|)", worst(tools.B2_sun), "tools"],
+    ["B3 Earth: solvers (|ΔP|)", worst(tools.B3_earth), "tools"],
+    ["B4 ES: radiative corr.", es, "tools"],
+    ["B1 osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
+    ["B2 composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
+    ["B4 ⁴⁰Ar model, ⁸B CC", row("argon_cc_b8", "40Ar nuclear model"), "inputs"],
   ].filter(([, v]) => v !== null && v > 0);
   const colour = { tools: c.sampled, inputs: c.range };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]),
@@ -72,14 +72,14 @@ function outdated() {
   const c = colours(), node = $("plot-f2"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status || {};
   const at5 = (n) => 100 * (interp(xs[n].energy, xs[n].sigma, 5) / interp(xs[MARLEY].energy, xs[MARLEY].sigma, 5) - 1);
   const bars = Object.keys(xs).filter((n) => !n.includes("#") && status.xsec_model?.cc_nue_ar40?.[n]?.status === "legacy")
-    .map((n) => [`⁴⁰Ar σ(5 MeV), ${SHORT_XS[n] || n}`, at5(n), "legacy"]).sort((a, b) => b[1] - a[1]);
+    .map((n) => [`B4 ⁴⁰Ar σ(5 MeV), ${SHORT_XS[n] || n}`, at5(n), "legacy"]).sort((a, b) => b[1] - a[1]);
   // A_DN of 8B without a crust (PREM's four regions) against PREM + the local crust (computed by adn())
   if (page.adn) for (const [site, kind, label] of [["Kamioka", "water", "⁸B ES"], ["SURF", "argon", "⁸B CC ⁴⁰Ar"]]) {
     const a = page.adn[site][kind];
-    bars.push([`A_DN ${label}, no crust (${site})`, 100 * (a.prem_four / a.prem_crust1 - 1), "approximation"]);
+    bars.push([`B3 A_DN ${label}, no crust (${site})`, 100 * (a.prem_four / a.prem_crust1 - 1), "approximation"]);
   }
   const m = d.solar_models;
-  if (m.b16_gs98 && m.b23_mb22m) bars.push(["⁸B flux, B16 GS98", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy"]);
+  if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 ⁸B flux, B16 GS98", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy"]);
   const colour = { legacy: css("--series-7"), approximation: c.muted };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[2]]) },
                   text: bars.map((b) => pct(b[1])), textposition: "outside", cliponaxis: false, textfont: { size: 11, color: c.secondary },

@@ -5,7 +5,7 @@
 
 Writes reference/ssm/<model>.dat (columns: r/R_sun, log10 n_e [N_A/cm^3],
 then the production densities per unit r/R_sun of pp, pep, hep, Be7, B8,
-N13, O15, F17, each integrating to 1) and benchmarks/B1_ssm/models.yaml
+N13, O15, F17, each integrating to 1) and benchmarks/B2_sun/models.yaml
 (fluxes, uncertainties, sources, density tail beyond the table).
 
 The inputs are only read as numbers (np.loadtxt); nothing from them runs.
@@ -147,7 +147,7 @@ def main():
     parser.add_argument("--peanuts", type=Path, required=True)
     args = parser.parse_args()
     models = {**b16(args.peanuts), **bs05(args.peanuts), **b23(args.b23)}
-    target = ROOT / "benchmarks" / "B1_ssm" / "models.yaml"
+    target = ROOT / "benchmarks" / "B2_sun" / "models.yaml"
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w") as handle:
         handle.write("# Written by scripts/import_ssm.py: do not edit by hand.\n")

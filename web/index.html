@@ -46,34 +46,40 @@
     <h2 class="credits-title">What we have learned</h2>
     <div class="findings">
       <article class="card finding">
-        <p><span class="n">1</span><b>The tools agree; the inputs do not.</b> Earth solvers agree to 10⁻⁸, the ν–e
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
+        <p><b>The tools agree; the inputs do not.</b> Earth solvers agree to 10⁻⁸, the ν–e
           radiative corrections to 0.1 %.</p>
         <h3 class="plot-title"></h3><div id="plot-f1" class="plot"></div>
       </article>
       <article class="card finding">
-        <p><span class="n">2</span><b>Most large spreads were outdated inputs.</b> The factor 5–7 between ⁴⁰Ar tables,
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
+        <p><b>Most large spreads were outdated inputs.</b> The factor 5–7 between ⁴⁰Ar tables,
           A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on ⁸B from B16: legacy models and approximations, not
           uncertainties.</p>
         <h3 class="plot-title"></h3><div id="plot-f2" class="plot"></div>
       </article>
       <article class="card finding">
-        <p><span class="n">3</span><b>Solar composition</b> (B23 with MB22 or AAG21) is the open flux uncertainty:
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B2">B2</a></span>
+        <p><b>Solar composition</b> (B23 with MB22 or AAG21) is the open flux uncertainty:
           ⁸B 16 %, ⁷Be 8 %, CNO 30 %.</p>
         <h3 class="plot-title"></h3><div id="plot-f3" class="plot"></div>
       </article>
       <article class="card finding">
-        <p><span class="n">4</span><b>⁴⁰Ar: how much the Gamow–Teller strength is quenched</b>, about 37 %: MARLEY 2
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
+        <p><b>⁴⁰Ar: how much the Gamow–Teller strength is quenched</b>, about 37 %: MARLEY 2
           and the Suzuki–Honma shell model agree to 3 %, the Kostensalo shell model (g<sub>A</sub> = 1.00) is 27–35 %
           lower.</p>
         <h3 class="plot-title"></h3><div id="plot-f4" class="plot"></div>
       </article>
       <article class="card finding">
-        <p><span class="n">5</span><b>Earth: the crust under the detector moves A<sub>DN</sub> by −2 to +4 %</b>; the
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B3">B3</a></span>
+        <p><b>Earth: the crust under the detector moves A<sub>DN</sub> by −2 to +4 %</b>; the
           3D Earth (up to ~8 %) is not yet computed, so no Earth uncertainty is counted.</p>
         <h3 class="plot-title"></h3><div id="plot-f5" class="plot"></div>
       </article>
       <article class="card finding">
-        <p><span class="n">6</span><b>JUNO fixes Δm²₂₁</b>; solar data alone sit 1.5σ lower: a physics question, not a
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a></span>
+        <p><b>JUNO fixes Δm²₂₁</b>; solar data alone sit 1.5σ lower: a physics question, not a
           choice of input.</p>
         <h3 class="plot-title"></h3><div id="plot-f6" class="plot"></div>
       </article>
@@ -102,8 +108,17 @@
       <section class="step">
         <h2>The benchmarks behind it</h2>
         <ul class="plain">
-          <li><b>B1</b> standard solar models in one format; <b>B2</b> oscillations in the Sun; <b>B3</b> through the
-            Earth; <b>B4</b> cross sections; <b>B5</b> interaction rates.</li>
+          <li>The benchmarks are the calculator's steps after the result, in the same order and under the same names:
+            <ul class="plain">
+              <li><span class="bench-id">B1</span> <b>Oscillation parameters</b>: measurements and global fits in one
+                format.</li>
+              <li><span class="bench-id">B2</span> <b>Sun</b>: the standard solar models (fluxes, spectra, density
+                and production profiles) and the oscillations inside the Sun.</li>
+              <li><span class="bench-id">B3</span> <b>Earth</b>: the crossing of the Earth at night.</li>
+              <li><span class="bench-id">B4</span> <b>Interaction</b>: the cross sections, ν–e scattering, CC and NC.</li>
+              <li><span class="bench-id">B5</span> <b>Detector</b>: everything folded into interaction rates (the
+                calculator adds a generic detector response).</li>
+            </ul></li>
           <li>Each benchmark fixes its inputs, so tools that compute the same thing can be compared on the same plot.</li>
           <li><a href="benchmarks.html">The benchmark pages</a> show what each step varies, how tools agree on it, and how
             much it moves the rates and the day-night asymmetry.</li>

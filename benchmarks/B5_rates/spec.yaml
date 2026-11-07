@@ -17,7 +17,7 @@ status: draft
 title: Solar neutrino interaction rates
 
 # Spectral shapes and lines (shared by every solar model); the flux of each
-# component comes from the B1 solar model (benchmarks/B1_ssm/models.yaml).
+# component comes from the B2 solar model (benchmarks/B2_sun/models.yaml).
 fluxes:
   pp:  {shape: reference/ssm/shapes/pp_shape.csv}
   pep: {lines: [[1.442, 1.0]]}
@@ -28,7 +28,7 @@ fluxes:
   O15: {shape: reference/ssm/shapes/o15_shape.csv}
   F17: {shape: reference/ssm/shapes/f17_shape.csv}
 
-# Rates for every B1 model, each with the B2 reference oscillations of the
+# Rates for every B2 solar model, each with the B2 reference oscillations of the
 # same model (production-averaged, daytime).
 solar_models: all
 reference_solar_model: b16_gs98
@@ -75,7 +75,7 @@ thresholds_MeV: [0.0, 5.0]
 # - Observed spectra need detector response (the D library): smearing and efficiency.
 
 # --- Contributions: full-chain rates from tools that fold fluxes themselves ---
-# Each tool runs the same inputs (B1 fluxes and shapes, B2 reference daytime
+# Each tool runs the same inputs (B2 solar-model fluxes and shapes, B2 reference daytime
 # oscillations per component, its own cross sections) through its own chain;
 # SNUfish compares the totals with its folding of that tool's B4 cross
 # sections. Values are interactions per kton-year, before detector response.

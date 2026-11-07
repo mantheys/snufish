@@ -1,7 +1,7 @@
 # Figures shown in README.md, one per stage (rendered by scripts/readme_images.py in light and dark).
-# B1: the solar model sets the flux normalisations (bands: the model's own uncertainty where published)
-cat --datafile B1_Fluxes -x Model -y RelativeFlux --hue Component --select Component -s B8 Be7 O15 pp --kind point --horizontal 1 --legend_ncol 4 --legend_loc above --labelx '' --labely 'Flux / B16-GS98' --title 'B1: fluxes by solar model' --output_suffix b1_fluxes
-# B2: MSW in the Sun, daytime P_ee per flux component (production-averaged)
+# B2 (solar models): the solar model sets the flux normalisations (bands: the model's own uncertainty where published)
+cat --datafile B2_Fluxes -x Model -y RelativeFlux --hue Component --select Component -s B8 Be7 O15 pp --kind point --horizontal 1 --legend_ncol 4 --legend_loc above --labelx '' --labely 'Flux / B16-GS98' --title 'B2: fluxes by solar model' --output_suffix b2_fluxes
+# B2 (propagation): MSW in the Sun, daytime P_ee per flux component (production-averaged)
 line --no_error --datafile B2_Average -x Energy -y PeeDay --hue Component --select Tool -s snufish-reference --select Variant -s b16_gs98 --plot_type line --logx --rangex 0.1 20 --labelz None --legend_ncol 4 --legend_loc 'lower left' --labelx 'Neutrino energy (MeV)' --labely '$P_{ee}$ (day)' --title 'B2: survival leaving the Sun (B16-GS98)' --output_suffix b2_pee
 # B3: tool comparison through the core
 line --no_error --datafile B3_Energy -x Energy -y Probability --hue Label --select Variant -s prem_prob3 --select Quantity -s P2e --select Nadir -s 0.90 --plot_type line --lower subtract --reference Label --reference_value 'snufish-reference 0.1.0' --lower_labely 'Difference' --labelz None --legend_loc 'upper left' --labelx 'Neutrino energy (MeV)' --labely '$P(\nu_2 \to \nu_e)$' --title 'B3: Earth core crossing ($\cos\eta = 0.9$)' --output_suffix b3_tools

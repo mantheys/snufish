@@ -6,9 +6,9 @@ export-sections``): ``sections.json`` for the web page's benchmark pages.
 
 For a few reference observables (``OBSERVABLES``), the engine's error budget
 on the app tables, each source assigned to the benchmark it comes from
-(``SECTION_OF``): B1 the solar fluxes, B2 the solar density and production
-profiles, B3 the Earth model, B4 the cross sections; the oscillation
-parameters are an input of B2 and B3 and are kept apart. B2 adds the
+(``SECTION_OF``), the benchmarks being the calculator's steps: B1 the
+oscillation parameters, B2 the Sun (the solar fluxes, and the density and
+production profiles), B3 the Earth model, B4 the cross sections. B2 adds the
 approximations some solvers make about where neutrinos are produced
 (``TREATMENTS``): signed shifts of the observable, computed with the exact
 B2 solver (the tables hold each component's own profile only). With them,
@@ -49,7 +49,7 @@ OBSERVABLES = {
                          setup=dict(detector="water", channel="es", components=("B8", "hep"), threshold=3.49,
                                     site="Kamioka")),
 }
-SECTION_OF = {"oscillation parameters": "oscillation", "solar model": "B1", "Earth model": "B3",
+SECTION_OF = {"oscillation parameters": "B1", "solar model": "B2", "Earth model": "B3",
               "40Ar nuclear model": "B4", "cross-section model": "B4", "ES radiative corrections": "B4"}
 # NuFast-Earth's examples set one solar density for every component: rhoYe = 100 x 2/3 g/cm^3
 SINGLE_DENSITY = 100 * 2 / 3
@@ -84,7 +84,7 @@ class ProductionTreatment:
 
 def _section(source):
     if "flux" in source:
-        return "B1"
+        return "B2"
     if source.startswith("measured B(GT)"):
         return "B4"
     return SECTION_OF.get(source)
@@ -133,7 +133,7 @@ def impacts(inputs, tables, params):
 
 
 def sun_profiles(inputs):
-    """B1: log10 n_e and normalised production per unit r/R_sun of every model on RADII."""
+    """B2, part 1: log10 n_e and normalised production per unit r/R_sun of every model on RADII."""
     out = {}
     for model in inputs["solar_models"]:
         data = table(model)
@@ -147,7 +147,7 @@ def sun_profiles(inputs):
 
 
 def survival_curves(inputs, osc):
-    """B2: daytime P_ee(E) of every component for every solar model (own profiles), and for SOLAR_MODEL under
+    """B2, part 2: daytime P_ee(E) of every component for every solar model (own profiles), and for SOLAR_MODEL under
     each production treatment."""
     ue2 = np.abs(pmns(osc)[0]) ** 2
     pee = lambda provider, model, c: (provider.day(osc, model, c, ENERGIES) @ ue2).tolist()
@@ -224,8 +224,9 @@ def export_sections(tables_dir):
     params = engine.parameters(inputs, SET)
     osc = engine.oscillation(params)
     data = dict(set=SET, solar_model=SOLAR_MODEL, draws=N_DRAWS, single_density=SINGLE_DENSITY,
-                observables=impacts(inputs, tables, params), b1=sun_profiles(inputs),
-                b2=survival_curves(inputs, osc), b3=regeneration(inputs, tables, osc), tools=tool_agreement())
+                observables=impacts(inputs, tables, params), solar_profiles=sun_profiles(inputs),
+                survival=survival_curves(inputs, osc), regeneration=regeneration(inputs, tables, osc),
+                tools=tool_agreement())
     path = tables_dir / "sections.json"
     with path.open("w") as handle:
         json.dump(_clean(data), handle, allow_nan=False)

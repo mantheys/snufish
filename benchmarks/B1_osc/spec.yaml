@@ -1,0 +1,24 @@
+# SNUfish benchmark B1: oscillation parameters.
+#
+# A registry of oscillation parameter sets in one format
+# (reference/oscillation/parameter_sets.yaml): Delta m^2_21 and sin^2 theta_12
+# of each measurement or fit with their 1 sigma, the parameters a set does not
+# determine (theta13, theta23, delta, Delta m^2_31) from `defaults`, and the
+# status of each set (reference/status.yaml: state of the art, legacy, as used
+# in a paper). B2 and B3 run on them; the calculator's first step chooses one,
+# and its 1 sigma is sampled. Like the solar models of B2, these are inputs: no
+# tool computes them, so B1 has no contributions.
+#
+# Status: DRAFT.
+
+id: B1_osc
+version: 0.1.0
+status: draft
+title: Oscillation parameters
+sets_file: reference/oscillation/parameter_sets.yaml
+status_file: reference/status.yaml      # its `parameter_set` block
+ordering: normal
+reference_set: juno_2025                # the benchmark pages' reference (state of the art)
+
+checks:
+  required: [dm2_21_eV2, sin2_theta12]  # every set gives these, each with value and [minus, plus] error

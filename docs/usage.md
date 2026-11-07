@@ -50,7 +50,7 @@ is invalid. The checks are listed in
 
 ```bash
 snufish build                                # everything
-snufish build --benchmark B3_earth B2_sun    # some benchmarks (B1 and the combinations always run)
+snufish build --benchmark B3_earth B2_sun    # some benchmarks (the solar models and the combinations always run)
 snufish build --extra ../private/contributions --skip_invalid --out /tmp/data
 ```
 
@@ -103,10 +103,10 @@ The data of `benchmarks.html`, one page per benchmark. For five reference
 observables (⁸B ES in water, ⁸B and hep CC on ⁴⁰Ar, ⁷Be ES in scintillator,
 the ES day-night asymmetry; `sections.OBSERVABLES`) it runs the error budget
 on the app tables and assigns every source to the benchmark it comes from:
-B1 the fluxes (sampled, and the range between models with the production
-profiles fixed), B2 the density and production profiles (the range between
-models with the fluxes fixed), B3 the Earth model, B4 the cross sections; the
-oscillation parameters are shown apart. B2 also gets the shift of three
+B1 the oscillation parameters, B2 the fluxes (sampled, and the range between
+models with the production profiles fixed) and the density and production
+profiles (the range between models with the fluxes fixed), B3 the Earth
+model, B4 the cross sections. B2 also gets the shift of three
 production-region approximations, computed with the exact B2 solver: every
 component on ⁸B's profile, every component at the centre, and one density
 for every component (n_e = 66.7 N_A/cm³, as in NuFast-Earth's examples).
@@ -118,7 +118,7 @@ SNUfish's folding).
 
 | Script | Does |
 |---|---|
-| `scripts/import_ssm.py --b23 <dir> --peanuts <dir>` | convert the published solar model tables into `reference/ssm/` and `benchmarks/B1_ssm/models.yaml` (inputs read as numbers only) |
+| `scripts/import_ssm.py --b23 <dir> --peanuts <dir>` | convert the published solar model tables into `reference/ssm/` and `benchmarks/B2_sun/models.yaml` (inputs read as numbers only) |
 | `scripts/crosscheck.py [--exact]` | recompute the published numbers of [crosschecks.md](crosschecks.md) (app tables, or with `--exact` the B2 solver and NuFast-Earth); needs `build/app` |
 | `scripts/dune_solar_tables.py [--earth <model>]` | the CC, ES and NC rate tables of DUNE solar analyses in SOLAR's conventions ([dune-solar-tables.md](dune-solar-tables.md)) |
 | `scripts/dune_phase1_rates.py [--out <dir>]` | the raw rates of the DUNE solar Phase I paper as LaTeX macros, a table and JSON ([dune-solar-tables.md](dune-solar-tables.md#phase-i-paper)); NuFast-Earth driver needed |
@@ -133,8 +133,7 @@ SNUfish's folding).
 
 | `plotipus run …` | Figures | Frames |
 |---|---|---|
-| `b1` | solar model fluxes, densities, production profiles | `B1_*` |
-| `b2` | F_i, daytime P_ee per component, day-night | `B2_*`, `B23_DayNight` |
+| `b2` | solar model fluxes, densities, production profiles; F_i, daytime P_ee per component, day-night | `B2_*`, `B23_DayNight` |
 | `b3` | P_iₑ against energy and nadir, maps, night averages, tool differences | `B3_*` |
 | `b45` | cross sections, rate spectra and totals, full-chain comparison | `B4_Sigma`, `B5_*` |
 | `scan` | observables against Δm²₂₁ | `Scan_*` |
@@ -150,7 +149,7 @@ All in `build/data/`, one row per series with arrays in the cells.
 
 | Frame | Columns |
 |---|---|
-| `B1_Fluxes` | Model, Family, Composition, Component, Flux, RelativeFlux, RelativeFluxError |
+| `B2_Fluxes` | Model, Family, Composition, Component, Flux, RelativeFlux, RelativeFluxError |
 | `B1_Profiles` | Model, Family, Composition, Radius, LogNe |
 | `B1_Production` | Model, Family, Composition, Component, Radius, Density |
 | `B2_Energy` | Tool, Version, Label, Variant, Quantity, RadiusBin, Energy, Fraction |
@@ -202,7 +201,7 @@ documented in `src/snufish/engine.py`; the main ones:
 
 | Field | Values |
 |---|---|
-| `solar_model` | a B1 model id |
+| `solar_model` | a B2 solar model id |
 | `components` | tuple of pp, pep, hep, Be7, B8, N13, O15, F17 |
 | `b8_flux` | `model` or `sno_nc` (measured) |
 | `site`, `earth_model` | a B3 site; `prem_crust1` (default), `prem_full`, `prem_four`, `prem_prob3` |
@@ -245,21 +244,25 @@ selected. Every choice is labelled state of the art, legacy or
 approximation, with the reason under the control; the result says
 whether every input is current ([status-of-inputs.md](status-of-inputs.md)).
 
-0. **Result**: interaction rate, day-night asymmetry, or the rate over the
-   rate without oscillations (SNO's φ_CC/φ_NC for CC on deuterium); day,
-   night or annual; units per kt·yr, t·yr, kg·yr, g·yr, kt·day or
-   cpd/100 t.
-1. **Oscillation parameters**: a parameter set.
-2. **Sun**: solar model, flux components, ⁸B flux from the model or
-   measured (SNO NC).
-3. **Earth**: site and Earth model.
-4. **Interaction**: target, channel, ES cross section (BKS, tree level,
-   SNOwGLoBES) or nuclear model.
-5. **Detector**: a preset or custom threshold, resolution (quadrature
-   formula, Super-K IV, or an imported smearing matrix), efficiency
-   (logistic turn-on, or an imported curve), exposure for the statistical
-   error, and detector uncertainties (energy scale, resolution, rate).
-   Imported files are read in the browser and never uploaded.
+The steps after the result are the benchmarks, in the same order and under
+the same names as on the benchmark pages ([benchmarks.md](benchmarks.md)):
+
+- **Result**: interaction rate, day-night asymmetry, or the rate over the
+  rate without oscillations (SNO's φ_CC/φ_NC for CC on deuterium); day,
+  night or annual; units per kt·yr, t·yr, kg·yr, g·yr, kt·day or
+  cpd/100 t.
+- **B1 Oscillation parameters**: a parameter set.
+- **B2 Sun**: solar model, flux components, ⁸B flux from the model or
+  measured (SNO NC); the oscillations inside the Sun follow from the model.
+- **B3 Earth**: site, Earth model and the Earth–Sun distance.
+- **B4 Interaction**: target, channel, ES cross section (BKS, tree level,
+  SNOwGLoBES) or nuclear model.
+- **B5 Detector**: the folding, then the detector response: a preset, or
+  manual settings for the threshold, resolution (quadrature
+  formula, Super-K IV, or an imported smearing matrix), efficiency
+  (logistic turn-on, or an imported curve), exposure for the statistical
+  error, and detector uncertainties (energy scale, resolution, rate).
+  Imported files are read in the browser and never uploaded.
 
 **Results.** The headline value with its sampled σ and model ranges, the
 flux summary, the spectrum in observed energy (per component, with the

@@ -18,9 +18,9 @@ an issue.
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
 | **Radiative corrections in the B4 reference** | B4 spec | BKS is implemented (`snufish.reference.radiative`) and used by the engine, but the `snufish-reference` B4 contribution is tree level only. |
 | **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T_min) for detector thresholds is not a benchmark quantity (the engine computes it). |
-| **Spectral-shape variants** | B1 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
-| **B1 checks in the validator** | B1 spec | B1 has no contributions; its checks (profile normalisation, falling density) run in `tests/test_ssm.py`, not in `snufish validate`. |
-| **B1 flux correlations in B5** | B1 spec | The B23 correlation matrices are used by `snufish budget` and the engine, not by the B5 build. |
+| **Spectral-shape variants** | B2 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
+| **Solar-model checks in the validator** | B2 spec | The solar models (B2, part 1) have no contributions; their checks (profile normalisation, falling density) run in `tests/test_ssm.py`, not in `snufish validate`. |
+| **Solar-model flux correlations in B5** | B2 spec | The B23 correlation matrices are used by `snufish budget` and the engine, not by the B5 build. |
 
 ### Tools
 
@@ -132,7 +132,7 @@ From [crosschecks.md](crosschecks.md):
 - **B5**: take the full Winter et al. ⁸B tail before using rates above
   15 MeV; add night and annual rates per site; add observed spectra once D
   exists.
-- **B1**: shape variants; use the B23 correlations in B5 rate
+- **B2 (solar models)**: shape variants; use the B23 correlations in B5 rate
   uncertainties.
 - **B2**: a non-adiabatic solver; radial path against the true line of
   sight for off-centre production.
@@ -140,7 +140,7 @@ From [crosschecks.md](crosschecks.md):
 ## Housekeeping
 
 - CI runs ruff, validation, build, the tests on Python 3.10 and 3.12 and
-  the `b1`, `b2`, `b3`, `b45` plots. It builds the NuFast-Earth driver and
+  the `b2`, `b3`, `b45` plots. It builds the NuFast-Earth driver and
   the app tables (`export-app`, cached on the inputs and the code), so no
   test is skipped, including `test_web_engine.py` (the page's engine against
   the Python one). The `scan` and `budget` commands themselves are not run.

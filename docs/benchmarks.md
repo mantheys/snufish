@@ -1,21 +1,23 @@
 # Benchmarks
 
 Each benchmark isolates one link of the chain from the solar core to an
-interaction in a detector, and fixes its inputs in
+interaction in a detector; the benchmarks are the calculator's steps, in
+the same order and under the same names (Result aside): B1 Oscillation
+parameters, B2 Sun, B3 Earth, B4 Interaction, B5 Detector. Each fixes its
+inputs in
 `benchmarks/<id>/spec.yaml`. Contributions differ only by the tool; named
 **variants** carry model alternatives (solar model, Earth model, nuclear
 model) so that the spread between models shows next to the spread between
 tools. All specs are drafts: they may still change, and any change bumps
 their `version`.
 
-| id | Version | Link of the chain | Contributed by |
-|---|---|---|---|
-| [B1_ssm](#b1_ssm-standard-solar-models) | 0.1.0 | the source: solar models | (registry, no contributions) |
-| [B2_sun](#b2_sun-msw-propagation-in-the-sun) | 0.2.0 | MSW propagation out of the Sun | snufish-reference, nufast-earth |
-| [B3_earth](#b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth |
-| [B4_xsec](#b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
-| [B5_rates](#b5_rates-interaction-rates) | 0.3.0 | interaction rates | snowglobes (full chain); SNUfish folds every B4 model |
-| D | — | detector response | planned ([status.md](status.md)) |
+| Step | id | Version | Link of the chain | Contributed by |
+|---|---|---|---|---|
+| B1 Oscillation parameters | [B1_osc](#b1-oscillation-parameters-b1_osc) | 0.1.0 | the parameters of every propagation | (registry, no contributions) |
+| B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth |
+| B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth |
+| B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
+| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates) | 0.3.0 | interaction rates; the detector response is planned ([status.md](status.md)) | snowglobes (full chain); SNUfish folds every B4 model |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
@@ -25,11 +27,30 @@ N_A = 6.02214076 × 10²³ mol⁻¹. The matter potential is V = √2 G_F N_e.
 
 ---
 
-## B1_ssm: standard solar models
+## B1 Oscillation parameters (`B1_osc`)
+
+A registry of oscillation parameter sets in one format,
+`reference/oscillation/parameter_sets.yaml`: Δm²₂₁ and sin²θ₁₂ of each
+measurement or global fit with its 1σ (as [minus, plus]), and `defaults`
+(NuFIT 6.0) for what a set does not determine (θ₁₃, θ₂₃, δ, Δm²₃₁). The
+status of each set (state of the art, legacy) is in `reference/status.yaml`.
+Like the solar models of B2 these are inputs that no tool computes: B1 has no
+contributions. B2 and B3 run on them; the calculator's B1 step chooses one
+and samples its 1σ. The benchmark pages take `juno_2025` as the reference.
+
+---
+
+## B2 Sun (`B2_sun`): solar models and MSW propagation
+
+B2 covers the Sun, from the solar model to the neutrinos leaving it, in
+two parts with one spec. The solvers of part 2 agree to 3 × 10⁻⁸, so the
+solar model of part 1, not the solver, is what moves a result.
+
+### Part 1: the solar models
 
 A registry of ten standard solar models in one format, written by
 `scripts/import_ssm.py` from the published tables into
-`benchmarks/B1_ssm/models.yaml` and `reference/ssm/<model>.dat`.
+`benchmarks/B2_sun/models.yaml` and `reference/ssm/<model>.dat`.
 
 | Model id | Family | Composition | Flux errors | Flux correlations |
 |---|---|---|---|---|
@@ -59,13 +80,11 @@ Conventions fixed by the spec:
   monotonically beyond r = 0.05 (tested in `tests/test_ssm.py`).
 - Spectral shapes are shared by all models (B5).
 
-**Products** (`snufish build`): `B1_Fluxes` (flux, ratio to `b16_gs98`,
-error), `B1_Profiles` (log n_e against radius), `B1_Production`
-(production densities). Plots: `plotipus run b1`.
+**Products** (`snufish build`): `B2_Fluxes` (flux, ratio to `b16_gs98`,
+error), `B2_Profiles` (log n_e against radius), `B2_Production`
+(production densities).
 
----
-
-## B2_sun: MSW propagation in the Sun
+### Part 2: MSW propagation
 
 Each contribution gives the mass-eigenstate fractions that leave the Sun,
 
@@ -83,17 +102,17 @@ O(10⁻⁶).
 | Quantities | `F1`, `F2`, `F3` |
 | Grid `map` | E = 0.1–20 MeV, step 0.1 (200 points); r₀/R_☉ = 0–0.3, step 0.005 (61 points; 99 % of every flux is below 0.27) |
 | Sun | R_☉ = 695,700 km (IAU 2015); radial path from r₀ to the surface |
-| Variants | `b16_gs98` (required: the tool comparison), every other B1 model, and `exponential` (Bahcall's n_e = 245 exp(−10.54 r/R_☉) N_A cm⁻³, with the B16-GS98 production profiles) |
+| Variants | `b16_gs98` (required: the tool comparison), every other solar model of part 1, and `exponential` (Bahcall's n_e = 245 exp(−10.54 r/R_☉) N_A cm⁻³, with the B16-GS98 production profiles) |
 | Columns | `grid, variant, quantity, energy, radius, value` |
 | Checks | values in [0, 1]; F₁ + F₂ + F₃ = 1 to 10⁻⁶ |
 
 **Products**: `B2_Energy` (F_i against energy in radius bins) and
 `B2_Average` (F_i averaged over each component's production profile, and
-the daytime P_ee = Σᵢ F_i |U_eᵢ|²). Plots: `plotipus run b2`.
+the daytime P_ee = Σᵢ F_i |U_eᵢ|²). Plots of both parts: `plotipus run b2`.
 
 ---
 
-## B3_earth: Earth crossing
+## B3 Earth (`B3_earth`): Earth crossing
 
 Each contribution gives P(νᵢ → νₑ) for a pure mass eigenstate νᵢ arriving
 at the Earth and crossing it along the chord set by the nadir angle η.
@@ -140,7 +159,7 @@ solar model, Earth model, site and component). Plots: `plotipus run b3`
 
 ---
 
-## B4_xsec: cross sections
+## B4 Interaction (`B4_xsec`): cross sections
 
 Each contribution gives σ(E) per target for the channels the tool has, on
 a fixed energy grid. B5 folds every contributed model into rates.
@@ -186,11 +205,11 @@ in the `b45` list.
 
 ---
 
-## B5_rates: interaction rates
+## B5 Detector (`B5_rates`): interaction rates
 
 Interaction rates per detector, channel and flux component before
-detector response. SNUfish computes them itself for every B4 model and
-every B1 solar model,
+detector response (the response itself, the rest of this step, is planned). SNUfish computes them itself for every B4 model and
+every B2 solar model,
 
   dR/dE = N_targets Φ_c s_c(E) Σ_α P_eα(E) σ_α(E),
   P_eα = Σᵢ F_i |U_αᵢ|²,
@@ -202,7 +221,7 @@ inputs.
 
 | Setting | Value |
 |---|---|
-| Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes)); normalisations from B1 |
+| Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes)); normalisations from the B2 solar model |
 | Exposure | 1 kton-year, Julian year (3.15576 × 10⁷ s) |
 | Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`) |
 | Channels | `es` sums the three ES channels weighted with P_eα; CC uses P_ee. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
@@ -233,7 +252,7 @@ fraction of the spectrum the cross-section table covers) and `B5_Chain`
 - **B2 × B3 → day-night.** P_ee(day) = Σᵢ F_i |U_eᵢ|²,
   P_ee(night) = Σᵢ F_i ⟨P_iₑ⟩_night, A_DN = 2(N − D)/(N + D); written by
   `snufish build` as `B23_DayNight`.
-- **B1 × B2 × B4 → B5.** Every B4 model folded with every B1 model and its
+- **B2 × B4 → B5.** Every B4 model folded with every B2 solar model and its
   B2 oscillations.
 - **All of them → the engine.** `snufish.engine` adds the night, the
   detector response and the uncertainties ([methods.md](methods.md)).

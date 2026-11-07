@@ -75,18 +75,19 @@ export function render(sources) {
 }
 
 export function forStep(step, setup, quantity, inputs, setName, preset = "custom") {
-  // the sources behind what is selected in one step of the calculator
+  // the sources behind what is selected in one step of the calculator: the result, then b1–b5, the steps that are
+  // the benchmarks B1–B5 (oscillation parameters, Sun, Earth, interaction, detector)
   const d = inputs.data;
-  if (step === 0) {
+  if (step === "result") {
     const out = [S("Rates: interactions per kiloton-year; A_DN = 2(N − D)/(N + D) of the night and day rates")];
     if (quantity === "adn" && setup.channel === "es" && setup.site === "Kamioka") out.push(SOURCES.sk_solar);
     return out;
   }
-  if (step === 1) {
+  if (step === "b1") {
     const set = d.parameter_sets.sets[setName];
     return [S(`${set.label}: ${set.source}`, null, link(set.source)), SOURCES.nufit];
   }
-  if (step === 2) {
+  if (step === "b2") {
     const model = d.solar_models[setup.solar_model], out = [];
     if (model.family === "B16") out.push(SOURCES.b16, SOURCES.peanuts);
     if (model.family === "BS05") out.push(SOURCES.bs05, SOURCES.peanuts);
@@ -96,15 +97,16 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
     if (c.includes("B8")) out.push(SOURCES.shape_b8);
     if (c.some((x) => ["N13", "O15", "F17"].includes(x))) out.push(SOURCES.shape_cno);
     if (c.includes("B8") && setup.b8_flux === "sno_nc") out.push(SOURCES.sk_solar);
+    out.push(S("Oscillations inside the Sun: SNUfish's adiabatic solver on this model's electron density and production profiles (benchmark B2; NuFast-Earth agrees to 3 × 10⁻⁸)"));
     return out;
   }
-  if (step === 3) {
+  if (step === "b3") {
     const site = d.sites[setup.site];
     return [S(`${setup.site}: latitude ${site.latitude_deg}° N (${site.source})`, null, link(site.source)),
             SOURCES.exposure, SOURCES.prem, ...(setup.earth_model === "prem_crust1" ? [SOURCES.crust1] : []), SOURCES.nufast, SOURCES.nufast_code,
             ...(setup.orbit ? [SOURCES.orbit, SOURCES.orbit_check] : [])];
   }
-  if (step === 4) {
+  if (step === "b4") {
     if (setup.channel === "es") return [...{ bks: [SOURCES.es_radiative], snowglobes: [SOURCES.snowglobes], tree: [SOURCES.es_tree] }[setup.es_model],
                                         S("Model range: BKS against SNOwGLoBES's tables (Marciano & Parsa); tree level, an approximation, is selectable but not in the range")];
     if (setup.channel === "cc_nue_d") return [SOURCES.nakamura];
@@ -144,14 +146,14 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   return [...out, S("Generic detector response: Gaussian resolution σ = √((a√E)² + (bE)²), a logistic efficiency turn-on and a hard threshold, all in observed energy (ES: electron kinetic energy; CC: E_ν − Q). Statistics: Poisson, no backgrounds.")];
 }
 
-// The home page's credits, grouped
+// The home page's credits, grouped as the calculator's steps, which are the benchmarks B1–B5
 export const CREDITS = [
-  ["Measurements and fits", [SOURCES.sk_solar, SOURCES.borexino, SOURCES.juno, SOURCES.kamland, SOURCES.nufit, SOURCES.nufit61]],
-  ["Solar models and spectra", [SOURCES.b16, SOURCES.bs05, SOURCES.b23, SOURCES.b23_papers, SOURCES.shape_pp_hep, SOURCES.shape_b8, SOURCES.shape_cno]],
-  ["Earth", [SOURCES.prem, SOURCES.crust1, SOURCES.nufast, SOURCES.exposure, SOURCES.surf]],
-  ["Detectors", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.borexino, SOURCES.juno_b8]],
-  ["Cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.nakamura, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
+  ["B1 Oscillation parameters: measurements and fits", [SOURCES.sk_solar, SOURCES.borexino, SOURCES.juno, SOURCES.kamland, SOURCES.nufit, SOURCES.nufit61]],
+  ["B2 Sun: solar models and spectra", [SOURCES.b16, SOURCES.bs05, SOURCES.b23, SOURCES.b23_papers, SOURCES.shape_pp_hep, SOURCES.shape_b8, SOURCES.shape_cno]],
+  ["B3 Earth", [SOURCES.nufast, SOURCES.prem, SOURCES.crust1, SOURCES.exposure, SOURCES.surf]],
+  ["B4 Interaction: cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.nakamura, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
                       SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.ksz, SOURCES.suzuki, SOURCES.klmv]],
+  ["B5 Detector: experiments", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.borexino, SOURCES.juno_b8]],
   ["Tools", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus]],
   ["Software in this page", [SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
 ];
