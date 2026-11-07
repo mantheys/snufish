@@ -14,16 +14,20 @@
    A_ND = 0.022, "about 5 % smaller than with the PREM model" (their PREM: no ocean, its crust to the surface).
 3. ``sites``: annual A_DN of 8B (+ hep) ES in water above 3.49 MeV and of 8B CC on 40Ar above 5 MeV (B23-MB22m,
    JUNO 2025), full PREM, PREM + the local crust and PREM + the crust along each chord, at the five B3 sites.
+4. ``average`` (not in the default run): the approximation of prem_crust1_3d, the crust of a cos-nadir cell's
+   chords averaged before solving, against P averaged over the cell's single chords (each turned to the cell's
+   nadir), at a few cells of one site (``--site``).
 """
 
 import argparse
+import subprocess
 
 import numpy as np
 
-from snufish import crust, engine
+from snufish import crust, earth3d, engine
 from snufish.export import ExactProbabilities, collect_inputs
 from snufish.fluxes import components
-from snufish.scan import SPLIT_KM, day_fractions, night_probabilities, oscillation, site_latitude
+from snufish.scan import SPLIT_KM, _nufast_driver, day_fractions, night_probabilities, oscillation, site_latitude
 from snufish.spec import load_spec, pmns
 
 SITES = ("Kamioka", "LNGS", "SURF", "SNOLAB", "Jiangmen")
@@ -119,9 +123,42 @@ def sites():
                   f"{100 * (adn['prem_crust1_3d'] / adn['prem_crust1'] - 1):+.2f} % against the local crust)")
 
 
+def _solve(osc, chords):
+    """[E, chord, 3] of P(nu_i -> nu_e) on the B3 exposure energies, chords as earth3d.write_trajectories takes."""
+    path = earth3d.write_trajectories(chords, "average_check")
+    argv = [f"trajectories:{path}", *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23",
+                                                            "delta_cp_deg", "dm2_21_eV2", "dm2_31_eV2")),
+            "0", "1", "20", "0.5", "0", "1", "1"]
+    table = np.loadtxt(subprocess.run([str(_nufast_driver()), *argv], capture_output=True, text=True,
+                                      check=True).stdout.splitlines())
+    energy = table[:, 0].reshape(39, -1)[:, 0]
+    return energy, table[:, [2, 5, 8]].reshape(len(energy), len(chords), 3)
+
+
+def average(site="Kamioka", cells=(0.05, 0.2, 0.4, 0.6, 0.8, 0.9)):
+    osc = oscillation("juno_2025")
+    ue2 = np.abs(pmns(osc)[0]) ** 2
+    near, far, counts = earth3d.averaged_crust(site)
+    grid = earth3d.cos_grid()
+    print(f"prem_crust1_3d at {site}: crust averaged per cell against P averaged over its chords (4-20 MeV)")
+    for c0 in cells:
+        k = int(np.argmin(abs(grid - c0)))
+        singles = earth3d.direction_chords(site, grid[k] - 0.0005, grid[k] + 0.0005, at=grid[k])
+        energy, P = _solve(osc, singles)
+        _, mean = _solve(osc, [(grid[k], *earth3d.pieces(*earth3d.chord_profile(grid[k], near[k], far[k])))])
+        sel = energy >= 4
+        diff = (mean[:, 0, 1] - P.mean(axis=1)[:, 1])[sel]
+        regeneration = (P.mean(axis=1)[:, 1] - ue2[1])[sel]
+        print(f"  cos {grid[k]:.3f}, {len(singles)} chords: max |dP2e| {np.abs(diff).max():.1e}, mean over the "
+              f"regeneration {diff.mean() / regeneration.mean():+.1e}, spread of single chords "
+              f"{P[:, :, 1].std(axis=1)[sel].max():.1e}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--part", choices=("han", "bakhti", "sites"), action="append")
-    for part in parser.parse_args().part or ("han", "bakhti", "sites"):
-        {"han": han, "bakhti": bakhti, "sites": sites}[part]()
+    parser.add_argument("--part", choices=("han", "bakhti", "sites", "average"), action="append")
+    parser.add_argument("--site", default="Kamioka", help="for --part average")
+    args = parser.parse_args()
+    for part in args.part or ("han", "bakhti", "sites"):
+        {"han": han, "bakhti": bakhti, "sites": sites, "average": lambda: average(args.site)}[part]()
         print()

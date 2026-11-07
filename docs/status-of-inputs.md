@@ -39,8 +39,9 @@ SNUfish reports as model ranges.
    (SURF) to +3.7 % (SNOLAB). Taking it along each night chord instead of
    under the detector moves it by at most 0.2 %: that is the Earth range.
    The literature's "up to ~8 %" for the 3D Earth is mostly this local
-   crust; a second crust model (LITHO1.0, ~3 % different at LNGS and SURF)
-   and a 3D mantle are still missing.
+   crust. The range has one crust model: Han et al.'s 3D Earth (LITHO1.0 on
+   a 3D mantle) differs from it by ~0.05 pp, 3–4 % of A<sub>DN</sub>, at LNGS and
+   SURF; a second crust model and a 3D mantle are still missing.
 4. **⁴⁰Ar CC is uncertain by 37 % because the Gamow–Teller quenching is
    unsettled.** MARLEY 2 with the measured strengths and the shell model of Suzuki &
    Honma agree to 3 %; the shell model of Kostensalo et al. with g<sub>A</sub> =

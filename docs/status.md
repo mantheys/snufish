@@ -26,11 +26,28 @@ an issue.
 | PEANUTS | B2 (every solar model) and B3 `prem_prob3`. Not `prem_four`, `prem_full`: its Earth models are even polynomials in r and PREM's have odd powers. Not `native`: on non-constant shells its analytical evolutor is first order and breaks unitarity by up to 10⁻³. Its hard-coded matter potential is 3.6 × 10⁻⁴ (Sun) and 1.8 × 10⁻⁵ (Earth) above the specs' constants ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)) |
 | nuSQuIDS | B3 `prem_prob3`, `prem_four`, `prem_full`; `native` (its own spline PREM) is in the wrapper but not yet run. No B2: no production-profile or phase averaging (a pointwise numerical solution from r₀, about 60 CPU-hours per solar model on the B2 grid) |
 | SNUfish reference | repository URL in its catalogue entry; no DOI yet: the release files (CITATION.cff, .zenodo.json, docs/release.md) are prepared, no version is tagged or archived |
-| Full-chain rate tools other than SNOwGLoBES | none yet |
+| Full-chain rate tools other than SNOwGLoBES | none yet: B5 is the only benchmark with a single tool besides SNUfish (see the follow-ups below) |
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E<sub>ν</sub> only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
 | Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %), but no tables are published: [arXiv:1907.03379](https://arxiv.org/abs/1907.03379) v2 ships a Mathematica notebook (the formulas of its app. K, example values at ω = 0.3 GeV only). A contribution needs Mathematica or a port of the notebook. BKS and Marciano & Parsa bound it at the solar precision |
-| 3D Earth | Two current Earth models make B3's range: `prem_crust1` (the CRUST1.0 column of each site above PREM, radial) and `prem_crust1_3d` (the CRUST1.0 crust along every night chord, solved chord by chord with NuFast-Earth's single-trajectory mode); they differ by ≤ 0.17 % of A<sub>DN</sub>. Missing: a 3D mantle (Han et al. use SAW642AN) and a second crust model (LITHO1.0): Han et al.'s 3D shifts differ from SNUfish's by ~0.05 pp (3–4 % of A<sub>DN</sub>) at LNGS and SURF ([crosschecks.md](crosschecks.md#crust-along-each-chord-3d)), more than the current range |
+| 3D Earth | Two current Earth models make B3's range: `prem_crust1` (the CRUST1.0 column of each site above PREM, radial) and `prem_crust1_3d` (the CRUST1.0 crust along every night chord, solved chord by chord with NuFast-Earth's single-trajectory mode); they differ by ≤ 0.17 % of A<sub>DN</sub> ([crosschecks.md](crosschecks.md#crust-along-each-chord-3d)) |
+| A second crust model | LITHO1.0 (Pasyanos et al. 2014; 1° grid, crust and lithosphere to ~300 km), the crust Han et al. use, as a third current Earth model through `earth3d` (a `crust_density` for it, the rest as for CRUST1.0). Han et al.'s 3D shifts differ from SNUfish's by ~0.05 pp (3–4 % of A<sub>DN</sub>) at LNGS and SURF: likely the larger missing Earth uncertainty, more than today's range. Which crust model (or the mantle) causes it is the first thing to find out |
+| A 3D mantle | A tomographic density model (SAW642AN, as Han et al.; or a velocity model converted to density) under the crust in `earth3d`, in place of PREM below the Moho. Expected small: the far side of a chord averages out and the core is invisible at first order (Bakhti & Smirnov), but not measured |
+| More sites | CallioLab (63.7° N), where Han et al. find their largest 3D shift (6.3 % of A<sub>DN</sub>): a B3 site, its CRUST1.0 column and chords would check the "~8 %" directly |
+
+### Follow-ups of the tool comparison
+
+The goal is at least two tools besides the SNUfish reference on every
+benchmark. B2 and B3 have it (NuFast-Earth and PEANUTS; NuFast-Earth,
+PEANUTS and nuSQuIDS); what is left from the PEANUTS and nuSQuIDS
+contributions ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)):
+
+| Item | Where | Notes |
+|---|---|---|
+| **Finer Magnus step for the B3 reference** | `reference/earth.py` `CONVERGED_STEP_KM` | 6.25 km leaves P<sub>iₑ</sub> within 1.5 × 10⁻⁶ on `prem_four` and `prem_full`, not the 4 × 10⁻⁷ once quoted; 1.5625 km agrees with nuSQuIDS to 10⁻⁸. About 4× the reference's time, and it rewrites the reference B3 contribution and the B5 night built on it (`snufish reference B3_earth`, then `snufish build`). No product moves by more than 10⁻⁴ of the regeneration. |
+| **nuSQuIDS `native`** | `contributions/nusquids/scripts` | Its own Earth (PREM every 0.005 R<sub>⊕</sub>, Akima spline) is in the wrapper: `python run_b3.py --variants prem_prob3 prem_four prem_full native`, about two more hours of GSL on 8 cores (the other variants come from the `out/` cache). |
+| **A second full-chain tool for B5** | B5 spec | SNOwGLoBES is the only one, so B5 does not yet meet the two-tool goal. Any rate code that folds the B2 fluxes and B4 cross sections into interactions per kt·yr can contribute (part 1), or with its own detector response (part 2). |
+| **Tomalak & Hill ES cross section (B4)** | B4 spec | No tables are published, only a Mathematica notebook ([arXiv:1907.03379](https://arxiv.org/abs/1907.03379) v2). Evaluating it on the B4 grid with Mathematica (or the free Wolfram Engine), or porting its app. K total cross section, would give B4's ES a third radiative-correction calculation and the most precise one (0.2–0.4 %). Asking the authors for tables is the cheaper route. |
 
 ### Physics scope
 
@@ -73,7 +90,8 @@ an issue.
 | Adiabatic F<sub>i</sub> in B2 | O(10⁻⁶) for the B2 parameters | `reference/sun.py` |
 | App tables instead of exact solvers | 2 × 10⁻⁴ (rates), 1 % (A<sub>DN</sub>) | `engine.TableProbabilities` |
 | PREM's continuous regions cut into 50 km shells for NuFast-Earth (the engine's night for `prem_four`, `prem_full`, `prem_crust1`; without the cut, NuFast-Earth's mean density per crossing is off by up to 2 % in ⁸B A<sub>DN</sub>) | ⁸B A<sub>DN</sub> within 0.05 % (0.1 % `prem_four`) of 10 km shells at 4–20 MeV ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density)) | `scan.SPLIT_KM` |
-| `prem_crust1_3d`: the crust of the ~130 chords in each of the 1001 nadir cells averaged before solving; chords in pieces of near-constant density | ≤ 1.3 × 10⁻⁴ in P₂ₑ (≤ 0.3 % of the regeneration); A<sub>DN</sub> within 0.07 % of 10 km pieces | `earth3d` |
+| `prem_crust1_3d`: the crust of the ~130 chords in each of the 1001 nadir cells averaged before solving; chords in pieces of near-constant density | ≤ 1.3 × 10⁻⁴ in P₂ₑ (≤ 0.25 % of the regeneration); A<sub>DN</sub> within 0.07 % of 10 km pieces | `earth3d` |
+| `prem_crust1_3d`: every CRUST1.0 cell's surface at the Earth's radius (no topography, as `prem_crust1` under the detector), Yₑ = 0.494 in every layer (water and ice too: 0.555 for water), one year of Sun positions (2026) | not measured; the far side, where oceans and topography sit, contributes ≤ 0.2 % of A<sub>DN</sub> in all | `earth3d` |
 | θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A<sub>DN</sub> over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
 | ⁸B shape truncated at 15.2 MeV (true endpoint ~16.5 MeV) | ~10⁻⁴ of the flux; matters above 15 MeV (⁸B background to hep) | `reference/ssm/shapes/` |
 | B16 and BS05 density beyond 0.5 R<sub>☉</sub> | exponential tail fit, residual ≤ 0.0033 in log₁₀ n<sub>e</sub> | `models.yaml` `tail` |
@@ -128,11 +146,20 @@ From [crosschecks.md](crosschecks.md):
   published, −6.96 % here; the ten- and four-region PREM bracket it.
 - JUNO's −1.6 % expected A<sub>DN</sub> at 7.5 × 10⁻⁵ eV² in its text, against
   −1.4 % from its own table 1 and −1.38 % here.
+- Han et al.'s 3D shift of A<sub>DN</sub> (LITHO1.0 on SAW642AN against PREM) at LNGS
+  (+0.001 pp published, +0.041 pp here with CRUST1.0) and SURF (+0.049 against
+  −0.003 pp); Kamioka, SNOLAB and Jiangmen agree to 0.005 pp. Different crust
+  models, or the 3D mantle: see "A second crust model" above.
+- Bakhti & Smirnov's Hyper-K A<sub>ND</sub>: CRUST1.0 "about 5 %" below a PREM
+  without ocean, 2.7 % here; their absolute 0.022 is 11 % above SNUfish's 0.0195
+  (first order in the potential, θ₁₂ and fluxes not stated).
 
 ## Open questions before freezing the specs
 
 - **B3**: extend the energy grid down to 0.1 MeV for pp and ⁷Be (Earth
-  effects are tiny there)? Add `prem_crust1` per site as a variant?
+  effects are tiny there)? Add `prem_crust1` per site as a variant? And
+  `prem_crust1_3d`, which needs the chords written out per site (a
+  trajectories grid) and a tool that solves single trajectories?
 - **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
 - **B5**: take the full Winter et al. ⁸B tail before using rates above
   15 MeV; night and annual quantities in contributions; a second response
@@ -147,7 +174,13 @@ From [crosschecks.md](crosschecks.md):
 - CI runs ruff, validation, build, the tests on Python 3.10 and 3.12 and
   the `b2`, `b3`, `b45` plots. It builds the NuFast-Earth driver and
   the app tables (`export-app`, cached on the inputs and the code), so no
-  test is skipped, including `test_web_engine.py` (the page's engine against
+  test is skipped. Since the 50 km shells and `prem_crust1_3d`, `export-app`
+  takes ~6× the CPU (an estimated ~30 min in CI, against ~6): a grid point's
+  night is 0.42 s per radial model and site, 1.5 s for `prem_crust1_3d`. To cut
+  it: solve the radial middle of each 3D chord once, as NuFast-Earth's Earth mode
+  does (about half its pieces), or tabulate the 3D crust's small difference from
+  `prem_crust1` on a coarser parameter grid. The chords of each site are cached
+  in `build/data/earth3d`. Nothing is skipped, including `test_web_engine.py` (the page's engine against
   the Python one). The `scan` and `budget` commands themselves are not run.
 - Pushes to `main` publish the page (`web/deploy.sh`) once lint and tests
   pass. plotipus is pinned to a commit in `pyproject.toml`; the page serves

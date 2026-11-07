@@ -124,11 +124,9 @@ def night_grid(osc, earth_model, site=None, split_km=SPLIT_KM, depth_km=None, co
     else:
         regions = spec["earth_models"][earth_model].get("regions")
         name = earth_model
-    if earth_model.startswith(("trajectories:", "regions:")):
-        pass
-    elif split_km and regions:
+    if split_km and regions:
         earth_model = f"regions:{crust.write_regions(crust.split(regions, split_km), f'{name}_split{split_km:g}')}"
-    elif earth_model in crust.SITE_MODELS:
+    elif earth_model in crust.SITE_MODELS:  # prem_crust1 unsplit (prem_crust1_3d is a trajectories: file by now)
         earth_model = f"regions:{crust.regions_file(earth_model, site)}"
     argv = [earth_model, *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
                                                  "dm2_21_eV2", "dm2_31_eV2")),

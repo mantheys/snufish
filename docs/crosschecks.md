@@ -213,8 +213,9 @@ density changes by 0.05 g/cm³ or every 50 km. Checks (`tests/test_earth3d.py`):
   2 × 10⁻⁴ in P_iₑ, and A<sub>DN</sub> within 0.05 % at 5, 10 and 15 MeV over the whole night;
 - the time sampling of the Sun reproduces W(η) of Lisi & Montanino within 1 % per 0.1 in cos η;
 - averaging the crust within a cell before solving, instead of averaging P over its chords: ≤ 1.3 × 10⁻⁴ in
-  P₂ₑ at Kamioka (0.3 % of the regeneration at cos η = 0.05, 10⁻⁴ of it elsewhere), while single chords
-  differ from each other by 3 × 10⁻⁴ to 6 × 10⁻³ (first order in the density change, so the average commutes);
+  P₂ₑ at Kamioka (0.25 % of the regeneration at cos η = 0.05, ≤ 0.04 % of it at cos η = 0.2–0.9), while
+  single chords differ from each other by 3 × 10⁻⁴ to 6 × 10⁻³ (first order in the density change, so the
+  average commutes; `scripts/earth3d_literature.py --part average`);
 - piece size: A<sub>DN</sub> of ⁸B within 0.07 % of 10 km pieces at 4–20 MeV.
 
 Against the local crust under the detector, the crust along each chord moves the annual A<sub>DN</sub> by **−0.17 to

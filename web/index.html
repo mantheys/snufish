@@ -62,7 +62,8 @@
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B3">B3</a></span>
         <p><b>The crust near the detector shifts A<sub>DN</sub> by −2.5 % to +3.7 %</b>, with a size and sign set by
           the site. Taking it along each night chord instead of under the detector moves it by at most 0.2 %: that
-          is the Earth range. A second crust model and a 3D mantle are not included yet.</p>
+          is the Earth range, with one crust model. Han et al.'s 3D Earth (another crust, LITHO1.0, on a 3D mantle)
+          differs from it by 3–4 % of A<sub>DN</sub> at LNGS and SURF; neither is included yet.</p>
         <h3 class="plot-title"></h3><div id="plot-f3" class="plot"></div>
       </article>
       <article class="card finding">
@@ -74,18 +75,19 @@
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B5">B5</a></span>
-        <p><b>SNOwGLoBES matches SNUfish to 0.4 % for ⁸B and hep, not below 2 MeV.</b> On the same fluxes and cross
-          sections its full chain is 16–21 % lower for ⁷Be, pep and ¹³N. The detector response is not benchmarked
-          yet.</p>
+        <p><b>SNOwGLoBES matches SNUfish to 0.4 % for ⁸B and hep, not below 2 MeV; the detector response matters
+          more.</b> On the same fluxes and cross sections its full chain is 16–21 % lower for ⁷Be, pep and ¹³N (GLoBES
+          takes flux × σ once per 0.5 MeV bin). Through the published responses, Super-K IV keeps 52 % of the ⁸B ES rate
+          above its threshold; DUNE's and SNO's resolutions take 4.4 % and 3.6 % off the CC rate.</p>
         <h3 class="plot-title"></h3><div id="plot-f5" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
-        <p><b>The tools agree; the inputs do not.</b> Three Earth solvers agree with the reference to 10⁻⁸–10⁻⁵ on the
-          same shells, two Sun solvers to 10⁻⁴ and the two ES radiative corrections to 0.1 %, orders of magnitude below
-          the spread of competing inputs; what is left is each tool's hard-coded constants. The largest tool effect,
-          NuFast-Earth's mean density per crossing on PREM, moves the ⁸B A<sub>DN</sub> by 0.3 %; the calculator's night cuts PREM into 50 km
-          shells, which removes it.</p>
+        <p><b>The tools agree; the inputs do not.</b> Through the same Earth, NuFast-Earth, nuSQuIDS and PEANUTS agree
+          with the reference to 10⁻⁸–10⁻⁵; out of the Sun, NuFast-Earth and PEANUTS to 3 × 10⁻⁸ and 10⁻⁴; the two ES
+          radiative corrections to 0.1 %. That is orders of magnitude below the spread of competing inputs, and what is
+          left is each tool's hard-coded constants. The largest tool effect, NuFast-Earth's mean density per crossing on
+          PREM, moves the ⁸B A<sub>DN</sub> by 0.3 %; the calculator's night cuts PREM into 50 km shells, which removes it.</p>
         <h3 class="plot-title"></h3><div id="plot-f6" class="plot"></div>
       </article>
       <article class="card finding">
@@ -109,12 +111,12 @@
           <li>Every input comes from a published model, measurement or tool, credited below and linked from the
             calculator's information buttons.</li>
           <li>Oscillations in the Sun come from the SNUfish adiabatic reference solver; through the Earth from
-            NuFast-Earth. The page interpolates tables of their results, which reproduce them to 2×10⁻⁴ for rates and
-            1 % for the day-night asymmetry.</li>
-          <li>The page's engine is a port of the SNUfish Python engine, checked against it to 10⁻¹¹ on the same inputs
+            NuFast-Earth, on 50 km shells (chord by chord for the crust along each chord). The page interpolates
+            tables of their results, which reproduce them to 2×10⁻⁴ for rates and 1 % for the day-night asymmetry.</li>
+          <li>The page's engine is a port of the SNUfish Python engine, checked against it to 10⁻⁹ on the same inputs
             and random draws.</li>
-          <li>Rates are in observed energy after a generic detector response (threshold, Gaussian resolution,
-            efficiency); there is no background model.</li>
+          <li>Rates are in observed energy after a detector response (threshold, Gaussian resolution or a smearing
+            matrix, efficiency): a published preset or your own. There is no background model.</li>
         </ul>
       </section>
       <section class="step">
@@ -128,8 +130,8 @@
                 and production profiles) and the oscillations inside the Sun.</li>
               <li><span class="bench-id">B3</span> <b>Earth</b>: the crossing of the Earth at night.</li>
               <li><span class="bench-id">B4</span> <b>Interaction</b>: the cross sections, ν–e scattering, CC and NC.</li>
-              <li><span class="bench-id">B5</span> <b>Detector</b>: everything folded into interaction rates (the
-                calculator adds a generic detector response).</li>
+              <li><span class="bench-id">B5</span> <b>Detector</b>: everything folded into interaction rates, then
+                through each detector's published response.</li>
             </ul></li>
           <li>Each benchmark fixes its inputs, so tools that compute the same thing can be compared on the same plot.</li>
           <li><a href="benchmarks.html">The benchmark pages</a> show what each step varies, how tools agree on it, and how
