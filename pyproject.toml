@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snufish"
-version = "0.1.0"
+version = "0.2.0"
 description = "SNUfish: community benchmarks of solar neutrino tools, plotted with plotipus"
 readme = "README.md"
 license = { text = "MIT" }
