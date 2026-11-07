@@ -120,14 +120,19 @@ def collect_inputs():
     levels = {}
     shifts = sorted((repo_root() / "contributions" / "marley" / "B4_xsec").glob("*/bgt_levels.parquet"))
     if shifts and MARLEY_DEFAULT in xsec.get("cc_nue_ar40", {}):
-        entries = []
-        for n, row in enumerate(pd.read_parquet(shifts[-1]).itertuples(), 1):
-            name = f"{MARLEY_DEFAULT}#bgt{n}"
-            xsec["cc_nue_ar40"][name] = {"energy": np.asarray(row.Energy).tolist(),
-                                         "sigma": np.nan_to_num(np.asarray(row.Sigma)).tolist()}
-            entries.append({"name": name, "level_MeV": row.Level, "kind": row.Kind, "strength": row.Strength,
-                            "error": row.Error})
-        levels = {"cc_nue_ar40": {MARLEY_DEFAULT: entries}}
+        table = pd.read_parquet(shifts[-1])
+        if "Variant" not in table:  # one variant only, before ar40_marley1_allowed had levels
+            table["Variant"] = MARLEY_DEFAULT
+        levels = {"cc_nue_ar40": {}}
+        for variant, rows in table.groupby("Variant", sort=False):
+            entries = []
+            for n, row in enumerate(rows.itertuples(), 1):
+                name = f"{variant}#bgt{n}"
+                xsec["cc_nue_ar40"][name] = {"energy": np.asarray(row.Energy).tolist(),
+                                             "sigma": np.nan_to_num(np.asarray(row.Sigma)).tolist()}
+                entries.append({"name": name, "level_MeV": row.Level, "kind": row.Kind, "strength": row.Strength,
+                                "error": row.Error})
+            levels["cc_nue_ar40"][variant] = entries
     # 40Ar: the shell model of Kostensalo, Suhonen & Zuber 2018, a published table, on the B4 grid
     if "cc_nue_ar40" in xsec:
         grid = np.asarray(next(iter(xsec["cc_nue_ar40"].values()))["energy"])

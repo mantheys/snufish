@@ -24,6 +24,7 @@ XSEC_LABELS = {
     "marley: ar40_marley2_liu1998": "MARLEY 2, B(GT) Liu 98",
     "marley: ar40_marley2_bhattacharya1998": "MARLEY 2, B(GT) Bh. 98",
     "marley: ar40_marley1_bhattacharya2009": "MARLEY v1 model",
+    "marley: ar40_marley1_allowed": "MARLEY v1 model, allowed",
     "snowglobes: default": "SNOwGLoBES default",
     "snowglobes: ar40_klmv": "KLMV",
     "snowglobes: ar40_marley": "SNOwGLoBES MARLEY",
@@ -38,7 +39,8 @@ COMPONENT_COLORS = {"pp": "C0", "Be7": "C1", "B8": "C2", "O15": "C3", "hep": "C4
 XSEC_COLORS = {"marley: default": "C0", "marley: ar40_marley2_bhattacharya2009": "C0",
                "marley: ar40_marley2_liu1998": "C1", "snowglobes: ar40_klmv": "C2", "snowglobes: ar40_marley": "C3",
                "marley: ar40_marley1_bhattacharya2009": "C4", "marley: ar40_marley2_bhattacharya1998": "C5",
-               "snowglobes: ar40_marley1": "C6", "snowglobes: default": "C7", "snufish-reference: default": "C8"}
+               "snowglobes: ar40_marley1": "C6", "snowglobes: default": "C7", "snufish-reference: default": "C8",
+               "marley: ar40_marley1_allowed": "C9"}
 
 
 def _quantity_label(value, n_unique):

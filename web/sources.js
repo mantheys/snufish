@@ -113,7 +113,7 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
     const out = [SOURCES.snowglobes];
     const m = setup.xsec_model;
     if (m === "ar40_marley" || m === "ar40_marley1") out.push(SOURCES.marley, m === "ar40_marley" ? SOURCES.bgt_pn : SOURCES.bgt_ti);
-    if (m.startsWith("ar40_marley2_") || m === "ar40_marley1_bhattacharya2009") {
+    if (m.startsWith("ar40_marley2_") || m.startsWith("ar40_marley1_")) {
       out.splice(0, out.length, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley, SOURCES.marley_code);
       out.push(m.endsWith("liu1998") ? SOURCES.bgt_liu : m.endsWith("bhattacharya1998") ? SOURCES.bgt_b1998 : SOURCES.bgt_pn);
       if ((d.xsec_levels?.[setup.channel] || {})[m]) out.push(S(`Measured B(GT) uncertainties of ${d.xsec_levels[setup.channel][m].length} levels, propagated (MARLEY's reaction file)`));

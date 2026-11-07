@@ -173,12 +173,13 @@ A tool contributes only the channels it has. Variants:
 | `ar40_marley2_bhattacharya2009` | ⁴⁰Ar | MARLEY 2.0.0 recommended: HF-CRPA continuum + B(GT) of Bhattacharya 2009 |
 | `ar40_marley2_liu1998` | ⁴⁰Ar | MARLEY 2.0.0, HF-CRPA + B(GT) of Liu 1998 (⁴⁰Ti β decay) |
 | `ar40_marley2_bhattacharya1998` | ⁴⁰Ar | MARLEY 2.0.0, HF-CRPA + B(GT) of Bhattacharya 1998 (⁴⁰Ti β decay) |
-| `ar40_marley1_bhattacharya2009` | ⁴⁰Ar | MARLEY's v1 reaction file run by MARLEY 2.0.0, down to threshold |
+| `ar40_marley1_bhattacharya2009` | ⁴⁰Ar | MARLEY's v1 reaction file run by MARLEY 2.0.0 (its default form factors), down to threshold |
+| `ar40_marley1_allowed` | ⁴⁰Ar | the same in the allowed approximation: MARLEY v1.2.1's cross section (DUNE's MARLEY samples, SOLAR) |
 
-The MARLEY contribution also writes `bgt_levels.parquet`: the default
-model's cross section with one measured level's B(GT) raised by 1σ, for
-every level with a measured uncertainty, used to propagate the B(GT)
-uncertainty exactly (see [methods.md](methods.md#measured-nuclear-strengths)).
+The MARLEY contribution also writes `bgt_levels.parquet`: the cross
+section of the default model and of `ar40_marley1_allowed` with one
+measured level's B(GT) raised by 1σ, for every level with a measured
+uncertainty, used to propagate the B(GT) uncertainty exactly (see [methods.md](methods.md#measured-nuclear-strengths)).
 
 **Products**: `B4_Sigma` (σ and σ/E per tool, variant and channel). Plots:
 in the `b45` list.

@@ -7,7 +7,7 @@ thresholds in neutrino energy E_nu and in electron kinetic energy T_e. See docs/
 Oscillation: dm2_21 = 6e-5 eV^2, sin2_12 = 0.304, sin2_13 = 0.022, dm2_31 = 2.515e-3 eV^2 (SOLAR
 config/analysis/physics.json). Night: SOLAR's (snufish.export.ExactProbabilities(night_mode="solar")).
 CC T_e: the electron alone (gammas undetected), from each 40K level's share of the cross section; only models
-with levels (MARLEY 2) have it.
+with measured levels (MARLEY 2, ar40_marley1_allowed) have it.
 """
 
 import argparse
@@ -17,7 +17,7 @@ from snufish.export import ExactProbabilities, collect_inputs
 
 SOLAR = {"dm2_21_eV2": 6e-5, "sin2_theta12": 0.304, "sin2_theta13": 0.022, "dm2_31_eV2": 2.515e-3}
 THRESHOLDS = (5.0, 8.0, 10.0, 15.0)
-CC_MODELS = ("ar40_marley", "ar40_marley1_bhattacharya2009", "ar40_marley2_bhattacharya2009")
+CC_MODELS = ("ar40_marley", "ar40_marley1_bhattacharya2009", "ar40_marley1_allowed", "ar40_marley2_bhattacharya2009")
 
 
 def main():
