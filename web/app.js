@@ -85,7 +85,7 @@ const $ = (id) => document.getElementById(id);
 // setup in the address: those controls are hidden there and the files below say how to run the site locally.
 const HOSTED = document.querySelector('meta[name="snufish-host"]')?.content === "artifact";
 const app = { inputs: null, tables: null, result: null, timer: null, running: false, again: false,
-              worker: null, refiner: null, refineId: 0, rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
+              worker: null, refiner: null, refineId: 0, cache: new Map(), rendered: [], renderId: 0, imports: { smearing: null, efficiency: null } };
 
 // ------------------------------------------------------------------ loading
 
@@ -472,6 +472,18 @@ function lineMarks(setup) {
   }).sort((a, b) => a.x - b.x);
 }
 
+// the last results by setup (budget, spectra, flux), most recent last; refined entries are updated in place
+const CACHE_SIZE = 12;
+function remembered(key) {
+  const hit = app.cache.get(key);
+  if (hit) { app.cache.delete(key); app.cache.set(key, hit); } // most recently used
+  return hit;
+}
+function remember(key, entry) {
+  app.cache.set(key, entry);
+  while (app.cache.size > CACHE_SIZE) app.cache.delete(app.cache.keys().next().value);
+}
+
 function refine(result, { solarRange, night, tableNames }) {
   // the same budget and spectra with N_DRAWS, in a worker; the result on screen is replaced when they come, unless
   // the setup changed meanwhile (a later compute() bumps refineId). Without workers the first draws stay.
@@ -485,6 +497,8 @@ function refine(result, { solarRange, night, tableNames }) {
         r.refining = false;
         if (data.error) { console.warn("refinement:", data.error); render(); return; }
         Object.assign(r, { rows: data.rows, samples: data.samples, spectra: data.spectra, ms: data.ms, draws: N_DRAWS });
+        const entry = app.cache.get(r.key);
+        if (entry) Object.assign(entry, { rows: data.rows, samples: data.samples, spectra: data.spectra, ms: data.ms, draws: N_DRAWS });
         render();
         if (app.rendered.length || !$("plotipus").hidden) renderPlotipus();
       };
@@ -529,21 +543,34 @@ async function compute() {
     status(`Downloading ${needed.length} table${needed.length > 1 ? "s" : ""}…`);
     try { await app.tables.ensure(needed); } catch (error) { status(`Could not load the tables: ${error.message}`, true); return; }
   }
-  status("Computing…");
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-  const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
-  app.tables.clamped = 0;
-  const { rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { n: FIRST_DRAWS, seed: SEED, solarRange, legacy: true });
-  const spectra = engine.spectra(app.inputs, app.tables, setup, params, { n: FIRST_DRAWS, seed: SEED, night });
-  const flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
-  const ms = performance.now() - t0;
+  // a setup computed before (e.g. a setting changed and changed back) is taken from the cache, refined or not
+  const key = JSON.stringify([setup, quantity, $("set").value]), hit = remembered(key);
+  let rows, samples, spectra, flux, ms, draws;
+  if (hit) {
+    ({ rows, samples, spectra, flux, ms, draws } = hit);
+    app.tables.clamped = hit.clamped;
+  } else {
+    status("Computing…");
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    const t0 = performance.now(), params = engine.parameters(app.inputs, $("set").value);
+    app.tables.clamped = 0;
+    // one set of draws for the budget and the spectra: the tables are interpolated once per draw (engine.survival)
+    const given = engine.draws(app.inputs, setup, params, FIRST_DRAWS, SEED);
+    ({ rows, samples } = engine.budget(app.inputs, app.tables, setup, params, quantity, { given, solarRange, legacy: true }));
+    spectra = engine.spectra(app.inputs, app.tables, setup, params, { given, night });
+    flux = engine.fluxSummary(app.inputs, app.tables, setup, engine.oscillation(params));
+    ms = performance.now() - t0;
+    draws = FIRST_DRAWS;
+    remember(key, { rows, samples, spectra, flux, ms, draws, clamped: app.tables.clamped });
+  }
   const [scale, unit] = { adn: [100, "%"], ratio: [1, "of the unoscillated rate"] }[quantity] || UNITS[$("unit").value];
   const [spectrumScale, spectrumUnit] = quantity === "ratio" ? UNITS.kt : [scale, unit]; // the ratio's spectrum: the rate's
   const live = setup.exposure ? (setup.period === "annual" || quantity === "adn" ? setup.exposure : setup.exposure / 2) : null;
   const check = CHECKS.find((c) => c.id === $("check").value) || null;
   app.result = { setup, quantity, rows, samples, spectra, scale, unit, spectrumScale, spectrumUnit, live, set: $("set").value, ms, flux, check,
-                 lines: lineMarks(setup), draws: FIRST_DRAWS, refining: false };
-  refine(app.result, { solarRange, night, tableNames });
+                 lines: lineMarks(setup), draws, refining: false, key, cached: Boolean(hit) };
+  if (draws < N_DRAWS) refine(app.result, { solarRange, night, tableNames });
+  else app.refineId++; // a refinement still running for another setup no longer applies
   app.result.official = await officialFigure(check, { inputs: app.inputs, tables: app.tables, setup, set: $("set").value });
   render();
   if (thumbShown()) setTimeout(thumb, 0); // the all-components example, after the result is on screen
@@ -648,7 +675,7 @@ function render() {
   $("headline").innerHTML = `
     <div class="what"><span>${describe(setup, quantity)}${thumbShown() ? "" : ` · ${app.inputs.data.parameter_sets.sets[r.set].label}`}</span>
       <span class="timing">${r.refining ? `${r.draws} draws in ${Math.round(r.ms)} ms; refining to ${N_DRAWS}…`
-        : `Computed with ${r.draws} draws in ${Math.round(r.ms)} ms.`}</span></div>
+        : `Computed with ${r.draws} draws in ${Math.round(r.ms)} ms${r.cached ? " (kept from before)" : ""}.`}</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
     <div class="ranges"><b>Model ranges: the competing state-of-the-art models</b>${ranges.join("<br>") || "none: one state-of-the-art model per choice here"}${

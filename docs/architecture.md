@@ -136,11 +136,17 @@ allowed. Everything is NumPy, so the same code ports to JavaScript.
 `web/` is a static site: `index.html` (home and credits) and `rates.html`
 (the calculator). `web/engine.js` ports `snufish.engine`;
 `tests/test_web_engine.py` runs both on the same inputs and random draws and
-requires agreement to 10⁻⁹ (it is ~10⁻¹⁴). Other modules:
+requires agreement to 10⁻⁹ (it is ~10⁻¹⁴). For speed it keeps, per input set, the
+oscillation-independent products (cross-section kernels, the response, their
+products), and per draw the interpolated survival probabilities, so a budget
+and the spectra of the same draws (`engine.draws`, passed to both as `given`)
+interpolate the tables once. Other modules:
 
 | File | Role |
 |---|---|
-| `app.js` | the form, presets, published checks, sharing links, result rendering |
+| `app.js` | the form, presets, published checks, sharing links, result rendering; the last 12 results kept by setup |
+| `budget-worker.js` | the calculator's refinement: the budget and spectra with 1000 draws off the main thread |
+| `load.js` | the table loader shared by the pages and the worker |
 | `plots.js` | Plotly figures in plotipus's look |
 | `sources.js` | the source of every input, per calculator step, and the home page credits |
 | `checks.js` | published numbers the page reproduces with one selection |

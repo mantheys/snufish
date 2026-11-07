@@ -14,8 +14,9 @@ self.onmessage = async ({ data }) => {
     }
     await tables.ensure(tableNames);
     const t0 = performance.now(), params = engine.parameters(inputs, set);
-    const { rows, samples } = engine.budget(inputs, tables, setup, params, quantity, { n, seed, solarRange, legacy: true });
-    const spectra = engine.spectra(inputs, tables, setup, params, { n, seed, night });
+    const given = engine.draws(inputs, setup, params, n, seed); // shared, as in app.js
+    const { rows, samples } = engine.budget(inputs, tables, setup, params, quantity, { given, solarRange, legacy: true });
+    const spectra = engine.spectra(inputs, tables, setup, params, { given, night });
     self.postMessage({ id, rows, samples, spectra, ms: performance.now() - t0 });
   } catch (error) {
     self.postMessage({ id, error: String(error.message || error) });
