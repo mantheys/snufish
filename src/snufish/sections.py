@@ -255,12 +255,16 @@ def observed(solar_model="b16_gs98"):
         low = np.asarray(first.EnergyLow)
         edges = np.round(np.arange(0.0, 20.0001, 0.25), 6)
         index = np.clip(np.searchsorted(edges, low + 1e-9, side="right") - 1, 0, len(edges) - 2)
-        spectra = {}
+        spectra, totals = {}, {}
         for r in group.itertuples():
+            if r.Interactions <= 0:
+                continue  # a component that does not reach this detector (e.g. pp in CC): no spectrum, no row
             content = np.asarray(r.Rate) * (np.asarray(r.EnergyHigh) - low)
-            spectra[r.Component] = (np.bincount(index, weights=content, minlength=len(edges) - 1) / 0.25).tolist()
-        totals = {r.Component: dict(interactions=r.Interactions, true_above=r.TrueAboveThreshold,
-                                    above=r.AboveThreshold) for r in group.itertuples()}
+            # 4 significant digits: the plot needs no more, and sections.json stays small
+            spectra[r.Component] = [float(f"{v:.4g}") for v in np.bincount(index, weights=content,
+                                                                             minlength=len(edges) - 1) / 0.25]
+            totals[r.Component] = dict(interactions=r.Interactions, true_above=r.TrueAboveThreshold,
+                                       above=r.AboveThreshold)
         out.append(dict(detector=detector, channel=channel, preset=first.Preset, threshold=first.Threshold,
                         source=responses[detector]["source"], edges=edges.tolist(), spectra=spectra, totals=totals))
     return dict(solar_model=solar_model, cases=out)
@@ -323,5 +327,5 @@ def export_sections(tables_dir):
                 tools=tool_agreement(), observed=observed())
     path = tables_dir / "sections.json"
     with path.open("w") as handle:
-        json.dump(_clean(data), handle, allow_nan=False)
+        json.dump(_clean(data), handle, allow_nan=False, separators=(",", ":"))  # compact: the page downloads it
     return path

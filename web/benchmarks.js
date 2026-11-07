@@ -346,7 +346,8 @@ function b5Observed() {
     select.addEventListener("change", b5Observed);
   }
   const comp = select.value || "all";
-  const cases = data.cases.filter((k) => (k.totals.all.interactions > 1e-3)); // not CC on 16O (hep only, 4e-5 per kt yr)
+  // not CC on 16O (hep only, 4e-5 per kt yr); a component that does not reach a detector has no spectrum (sections.json)
+  const cases = data.cases.filter((k) => k.totals.all.interactions > 1e-3 && k.spectra[comp]);
   const traces = cases.map((k, i) => {
     // the last bin also holds what the resolution moves above 20 MeV: not drawn
     const x = k.edges.slice(0, -2).map((e, b) => 0.5 * (e + k.edges[b + 1])), y = k.spectra[comp].slice(0, -1).map((v) => (v > 0 ? v : null));
@@ -358,25 +359,48 @@ function b5Observed() {
                                          line: { color: palette()[i % 8], dash: "dot", width: 1 } }));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
   Plotly.react(node, traces, layout(c, node, `Observed spectra, ${comp === "all" ? "all components" : DISPLAY[comp]} (B16-GS98, by day)`,
-    "Observed energy (MeV): ES, electron kinetic energy; CC, E<sub>ν</sub> − Q", "Interactions / (kt·yr·MeV)",
+    "Observed energy (MeV)", "Interactions / (kt·yr·MeV)",
     { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: [-3, 7] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
   const fmt = (v) => (v >= 100 ? v.toFixed(0) : v.toPrecision(3));
   $("b5-observed").innerHTML = `<table><thead><tr><th>Detector</th><th>Response</th><th>Channel</th><th class="num">Threshold (MeV)</th>
     <th class="num">Interactions</th><th class="num">Above threshold, perfect detector</th><th class="num">Observed above threshold</th><th class="num">Ratio</th></tr></thead><tbody>${
-    data.cases.map((k) => { const t = k.totals[comp]; return `<tr><td>${DETECTOR_LABEL[k.detector]}</td><td>${k.preset}</td><td>${OBSERVABLE[k.channel] || k.channel}</td>
+    data.cases.filter((k) => k.totals[comp]).map((k) => { const t = k.totals[comp]; return `<tr><td>${DETECTOR_LABEL[k.detector]}</td><td>${k.preset}</td><td>${OBSERVABLE[k.channel] || k.channel}</td>
       <td class="num">${k.threshold}</td><td class="num">${fmt(t.interactions)}</td><td class="num">${fmt(t.true_above)}</td><td class="num">${fmt(t.above)}</td>
       <td class="num">${t.true_above > 0 ? (t.above / t.true_above).toFixed(3) : "—"}</td></tr>`; }).join("")
   }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for part 2 (BKS for ES,
-    MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Dotted lines: the thresholds. The ratio is the response's effect above the threshold:
+    MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Observed energy: for ES the electron's kinetic energy T, for CC
+    E<sub>ν</sub> − Q. Solid lines ES, dashed CC; dotted lines: the thresholds. The ratio is the response's effect above the threshold:
     resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>`;
+}
+
+function whenVisible(node, draw) {
+  // draw a figure the first time it scrolls into view (once per call): the B5 tab opens on its part-2 figure, so the
+  // part-1 figure further down costs nothing until it is seen
+  node.visibilityObserver?.disconnect();
+  const observer = new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) { observer.disconnect(); draw(); }
+  }, { rootMargin: "200px" });
+  node.visibilityObserver = observer;
+  observer.observe(node);
 }
 
 function b5() {
   b5Observed();
-  const c = colours(), rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98");
+  const rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98");
   const node = $("plot-b5-chain");
   const cases = [...new Set(rows.map((r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`))];
   const key = (r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`;
+  const title = "Part 1: SNOwGLoBES full chain over SNUfish's folding (B16-GS98)";
+  node.previousElementSibling.innerHTML = title;
+  whenVisible(node, () => b5Chain(node, rows, cases, key, title));
+  $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
+  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; part 1 rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
+    : `<p class="hint">No full-chain tool has contributed yet.</p>`;
+}
+
+function b5Chain(node, rows, cases, key, title) {
+  const c = colours();
   const traces = cases.map((name, i) => {
     const mine = rows.filter((r) => key(r) === name).sort((a, b) => ORDER.indexOf(a.component) - ORDER.indexOf(b.component));
     return { x: mine.map((r) => ORDER.indexOf(r.component) + 0.08 * (i - (cases.length - 1) / 2)), y: mine.map((r) => r.ratio), mode: "markers", name,
@@ -384,13 +408,9 @@ function b5() {
              hovertemplate: `%{text}: %{y:.4f}<extra>${name}</extra>` };
   });
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })));
-  Plotly.react(node, traces, layout(c, node, "Part 1: SNOwGLoBES full chain over SNUfish's folding (B16-GS98)", "Component", "Rate ratio",
+  Plotly.react(node, traces, layout(c, node, title, "Component", "Rate ratio",
     { showlegend: false, hovermode: "closest", xaxis: { tickvals: ORDER.map((_, i) => i), ticktext: ORDER.map((x) => DISPLAY[x]), range: [-0.5, ORDER.length - 0.5], minor: { ticks: "" } },
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
-  $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
-    rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
-  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; part 1 rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
-    : `<p class="hint">No full-chain tool has contributed yet.</p>`;
 }
 
 // ------------------------------------------------------------------ discrepancies
