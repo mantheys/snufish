@@ -23,13 +23,13 @@ an issue.
 
 | Tool | Status |
 |---|---|
-| nuSQuIDS | catalogue entry only (draft, fields `null`); no B2 or B3 contribution |
-| PEANUTS | catalogue entry only (draft, fields `null`); no contribution, although its data directory supplies the B16 and BS05 tables |
+| PEANUTS | B2 (every solar model) and B3 `prem_prob3`. Not `prem_four`, `prem_full`: its Earth models are even polynomials in r and PREM's have odd powers. Not `native`: on non-constant shells its analytical evolutor is first order and breaks unitarity by up to 10⁻³. Its hard-coded matter potential is 3.6 × 10⁻⁴ (Sun) and 1.8 × 10⁻⁵ (Earth) above the specs' constants ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)) |
+| nuSQuIDS | B3 `prem_prob3`, `prem_four`, `prem_full`; `native` (its own spline PREM) is in the wrapper but not yet run. No B2: no production-profile or phase averaging (a pointwise numerical solution from r₀, about 60 CPU-hours per solar model on the B2 grid) |
 | SNUfish reference | repository URL in its catalogue entry; no DOI yet: the release files (CITATION.cff, .zenodo.json, docs/release.md) are prepared, no version is tagged or archived |
 | Full-chain rate tools other than SNOwGLoBES | none yet |
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E_ν only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
-| Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %); BKS and Marciano & Parsa bound it at the solar precision |
+| Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %), but no tables are published: [arXiv:1907.03379](https://arxiv.org/abs/1907.03379) v2 ships a Mathematica notebook (the formulas of its app. K, example values at ω = 0.3 GeV only). A contribution needs Mathematica or a port of the notebook. BKS and Marciano & Parsa bound it at the solar precision |
 | 3D Earth | `prem_crust1` puts the CRUST1.0 column of each site above PREM's Moho, but stays radial. Next: per night direction (the Sun's position over a year at the site's latitude and longitude), the chord's entry point and its CRUST1.0 column, solved with NuFast-Earth's single-trajectory mode, and a 3D mantle model; then a second current Earth model, and an Earth range. Until then the Earth range is empty (one state-of-the-art model) |
 
 ### Physics scope
@@ -76,6 +76,7 @@ an issue.
 | B16 and BS05 density beyond 0.5 R_☉ | exponential tail fit, residual ≤ 0.0033 in log₁₀ n_e | `models.yaml` `tail` |
 | Cross sections below the B4 grid (0.02 MeV) | < 0.01 % of any rate | B5 spec |
 | NaN in a cross-section table counted as zero | a lower bound; `Coverage` reports the covered fraction | build, engine |
+| Reference Magnus step on continuous PREM (6.25 km) | P_iₑ within 1.5 × 10⁻⁶ of a 1.5625 km step (nuSQuIDS agrees with the finer one to 10⁻⁸; [crosschecks.md](crosschecks.md#peanuts-and-nusquids)) | `reference/earth.py` `CONVERGED_STEP_KM` |
 | BKS QED end-point divergence clipped | last ~10⁻³ of the recoil range | `reference/radiative.py` |
 | Super-K IV efficiency read from a figure | 0.08 % in efficiency | `reference/detectors/efficiency_curves.yaml` |
 | Hyper-K resolution | Super-K IV's as a stand-in | calculator preset |

@@ -71,8 +71,10 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
 5. **Folding: SNOwGLoBES agrees to 0.4 % for <sup>8</sup>B and hep** (ES, CC on <sup>40</sup>Ar) on the
    same fluxes and cross sections; below 2 MeV (<sup>7</sup>Be, pep,
    <sup>13</sup>N) its full chain is 16–21 % lower.
-6. **The tools agree; the inputs do not.** Earth solvers agree to 10⁻⁸,
-   radiative corrections to 0.1 %.
+6. **The tools agree; the inputs do not.** Three Earth solvers (NuFast-Earth,
+   PEANUTS, nuSQuIDS) agree with the reference to 10⁻⁸–10⁻⁵ on the same shells,
+   two Sun solvers to 10⁻⁴, the radiative corrections to 0.1 %; what is left
+   is each tool's hard-coded constants.
 7. **Most large spreads were outdated inputs.** The factor 5–7 between
    <sup>40</sup>Ar tables, A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on
    <sup>8</sup>B from B16: legacy models and approximations, not uncertainties.

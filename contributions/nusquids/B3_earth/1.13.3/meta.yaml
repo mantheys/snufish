@@ -1,0 +1,26 @@
+tool: nusquids
+tool_version: 1.13.3
+tool_commit: 104914d
+benchmark: B3_earth
+benchmark_version: 0.3.0
+contributor: "SNUfish maintainers (wrapper); nuSQuIDS by C. A. Arg\xFCelles, J. Salvado\
+  \ and C. N. Weaver"
+date: '2026-11-07'
+command: cd contributions/nusquids/scripts && make && python run_b3.py
+settings:
+  quantity: EvalFlavorAtNode(0) after evolving the vacuum mass eigenstate i (Set_initial_state(...,
+    mass)); one single-energy nuSQUIDS per point, oscillations only
+  build: 'SQuIDS v1.3.1 (f9e6182), nuSQuIDS v1.13.3 (104914d): build_nusquids.sh'
+  matter_potential: sqrt(2) G_F N_A rho Ye with SQuIDS's G_F = 1.1663787e-5 GeV^-2,
+    8.6e-8 below the spec's
+  gsl: rkf45 (SQuIDS default), rel_error = abs_error = 1e-10 (prem_four, prem_full,
+    native)
+  earth_models:
+    prem_prob3: 'ConstantDensity per chord segment, Set_AllowConstantDensityOscillationOnlyEvolution(true):
+      exact'
+    prem_four: the spec's polynomials along the chord, GSL, one EvolveState per region
+      crossing
+    prem_full: as prem_four
+    native: not computed in this run (optional)
+license: CC-BY-4.0
+reference: arXiv:2112.13804

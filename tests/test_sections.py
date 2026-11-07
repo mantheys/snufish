@@ -68,3 +68,19 @@ def test_b3_shows_its_approximations_on_night_observables():
     assert adn[EARTH_LABELS["prem_four"]]["shift"] / central > 0.2   # no crust: A_DN far too large
     if SOLVER_APPROXIMATION in adn:  # written with the NuFast-Earth driver only
         assert abs(adn[SOLVER_APPROXIMATION]["shift"] / central) < 0.02
+
+
+def test_tool_agreement_lists_every_tool_on_the_comparison_variant():
+    # every contributed tool appears; on the spec's tool comparison (identical inputs) each agrees with the reference
+    # within its own known differences (docs/crosschecks.md: PEANUTS's hard-coded matter potential, 1.2e-4 in B2)
+    from snufish.contribution import find_contributions
+    from snufish.sections import tool_agreement
+
+    tools = tool_agreement()
+    for benchmark, tolerance in (("B2_sun", 2e-4), ("B3_earth", 2e-5)):
+        contributed = {p.parents[1].name for p in find_contributions(benchmark)} - {"snufish-reference"}
+        rows = [r for r in tools[benchmark] if r["comparison"]]
+        assert {r["tool"] for r in rows} == contributed
+        assert all(r["max_abs"] < tolerance for r in rows)
+    assert {r["quantity"] for r in tools["B4_xsec"]} == {"es_nue", "es_numu", "es_nutau"}
+    assert all(r["max_rel"] < 0.01 for r in tools["B4_xsec"])  # ES with radiative corrections, SNOwGLoBES vs BKS

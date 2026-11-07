@@ -50,8 +50,8 @@ were computed with.
 
 `snufish.contribution.write_contribution` writes both. The scripts that
 produced a contribution live in the tool's repository or under
-`contributions/<tool>/scripts/` (NuFast-Earth is pinned as a git
-submodule there).
+`contributions/<tool>/scripts/` (NuFast-Earth and PEANUTS are pinned as
+git submodules there; nuSQuIDS by tag in its `build_nusquids.sh`).
 
 ## Validation
 

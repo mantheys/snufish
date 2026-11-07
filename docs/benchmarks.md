@@ -14,8 +14,8 @@ their `version`.
 | Step | id | Version | Link of the chain | Contributed by |
 |---|---|---|---|---|
 | B1 Oscillation parameters | [B1_osc](#b1-oscillation-parameters-b1_osc) | 0.1.0 | the parameters of every propagation | (registry, no contributions) |
-| B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth |
-| B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth |
+| B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth, peanuts |
+| B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth, peanuts (`prem_prob3`), nusquids |
 | B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
 | B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates) | 0.3.0 | interaction rates; the detector response is planned ([status.md](status.md)) | snowglobes (full chain); SNUfish folds every B4 model |
 
@@ -43,8 +43,10 @@ and samples its 1σ. The benchmark pages take `juno_2025` as the reference.
 ## B2 Sun (`B2_sun`): solar models and MSW propagation
 
 B2 covers the Sun, from the solar model to the neutrinos leaving it, in
-two parts with one spec. The solvers of part 2 agree to 3 × 10⁻⁸, so the
-solar model of part 1, not the solver, is what moves a result.
+two parts with one spec. The solvers of part 2 agree to 3 × 10⁻⁸ (NuFast-Earth)
+and 1.2 × 10⁻⁴ (PEANUTS, whose matter potential is hard-coded 3.6 × 10⁻⁴ high,
+[crosschecks.md](crosschecks.md#peanuts-and-nusquids)), so the solar model of
+part 1, not the solver, is what moves a result.
 
 ### Part 1: the solar models
 
@@ -156,7 +158,12 @@ of Lisi & Montanino (see [methods.md](methods.md#night-exposure)):
 
 The `snufish-reference` contribution solves `prem_prob3` exactly and
 `prem_four`, `prem_full` with a converged Magnus integration
-([methods.md](methods.md#earth-crossing-b3-reference)).
+([methods.md](methods.md#earth-crossing-b3-reference)). NuFast-Earth,
+PEANUTS and nuSQuIDS solve `prem_prob3` too (to 9 × 10⁻⁸, 9 × 10⁻⁶ and
+4 × 10⁻⁸ of it, each tool's constants); on `prem_four` and `prem_full`
+NuFast-Earth takes each crossing's mean density and nuSQuIDS integrates the
+polynomials (within the reference's 1.5 × 10⁻⁶ step error); PEANUTS cannot
+take PREM's odd powers of r ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)).
 
 **Products**: `B3_Energy` (P_iₑ and the regeneration P_iₑ − |U_eᵢ|²
 against energy at selected nadir angles), `B3_Nadir` (against cos η in

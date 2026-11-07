@@ -166,6 +166,76 @@ bias for the continuous models, including the default `prem_crust1`. Cutting eac
 25 km shells in the regions file NuFast-Earth reads removes it (within 0.007 % of the reference at both
 sites, 4× the driver time; 10 km: 0.004 %), which also confirms the reference independently.
 
+## PEANUTS and nuSQuIDS
+
+Two more solvers on the B2 and B3 inputs (contributions under `contributions/peanuts/`, `contributions/nusquids/`,
+drivers and pinned versions in their `scripts/`). Neither was tuned: each runs with its own constants, and every
+difference below beyond 10⁻⁸ was traced to its cause by changing that one input in a scratch run, never in the
+contribution.
+
+**PEANUTS 1.6, B2** (`peanuts.solar.Tei` at the spec's n_e(r₀)): F_i differ from the reference by up to
+1.2 × 10⁻⁴, at every solar model, where F₁ ≈ 0.28 (the steepest part of the MSW transition). Two causes:
+
+- its matter term is hard-coded, V/k = 3.868 × 10⁻⁷ / 2.533 · n_e E / Δm² (`matter_mixing.Vk`), 3.6 × 10⁻⁴ above
+  √2 G_F N_A from the spec's constants (3.868 × 10⁻⁷ m⁻¹ is 1.8 × 10⁻⁵ high, 2.533 for 2.5339 the rest).
+  Rescaling n_e by that factor brings the difference to 1.3 × 10⁻⁵;
+- the rest is its matter mixing angles: the closed forms of the zeroth order of Denton, Minakata & Parke
+  ([arXiv:1604.08167](https://arxiv.org/abs/1604.08167)), not an exact diagonalisation.
+
+The daytime P_ee averaged over each component's production moves by at most 4.6 × 10⁻⁵ (1.2 × 10⁻⁴ of itself),
+a hundred times below the B2 solar-model spread. NuFast-Earth, which diagonalises exactly, agrees to 3 × 10⁻⁸.
+
+**PEANUTS 1.6, B3** (`peanuts.earth.Pearth`, analytical mode). On `prem_prob3` it is exact (constant shells: the
+first-order term vanishes), and agrees with the reference to 8.7 × 10⁻⁶, most at high energy through the core.
+That is its Earth matter potential, 3.868 × 10⁻⁷ m⁻¹ per mol/cm³ (`potentials.MatterPotential`), 1.8 × 10⁻⁵
+above the spec's 3.86793 × 10⁻⁷: with the shell densities rescaled by it the difference falls to 2 × 10⁻¹¹ (a
+sub-grid of 1 260 points). What it cannot do:
+
+- `prem_four` and `prem_full`: its density model is an even polynomial in r per shell
+  (α + βr² + γr⁴ + …, hep-ph/9702343); PREM's polynomials have odd powers. Refitting them would be an
+  approximation of our making, so these variants are not contributed;
+- `native` (its Earth_Density.csv, the five-shell fit of hep-ph/9702343): on non-constant shells the analytical
+  evolutor is first order in the density variation about each segment's mean and is not unitary,
+  |P₁ₑ + P₂ₑ + P₃ₑ − 1| up to 9.7 × 10⁻⁴ at 20 MeV through the core (2 × 10⁻⁶ at 1 MeV, rising roughly as E²).
+  B3 checks unitarity to 10⁻⁶, so it is not contributed (`python run_b3.py --native` reproduces the numbers).
+  PEANUTS's numerical mode would not have this problem, but it integrates in Python (SciPy's LSODA, 10³–10⁴
+  output points per chord): one chord at 10 MeV ran for more than ten minutes here, against the ~58 000 chords
+  of the B3 grids.
+
+**nuSQuIDS 1.13.3, B3** (one single-energy nuSQUIDS per point, vacuum mass eigenstate in, EvalFlavorAtNode(0)
+out). On `prem_prob3`, where it rotates to the propagation eigenstates exactly, it agrees with the reference to
+3.7 × 10⁻⁸; SQuIDS's G_F (1.1663787 × 10⁻⁵ GeV⁻², PDG 2018) is 8.6 × 10⁻⁸ below the spec's, and with the
+densities rescaled by it the difference falls to 4 × 10⁻⁹ (map energies at cos η = 0.5, 0.85 and 1). On `prem_four` and `prem_full`
+it is the first tool to solve PREM's polynomials themselves rather than a mean density: the spec's polynomials
+along the chord in a Body subclass, GSL's rkf45 at relative and absolute error 10⁻¹⁰ (within 3 × 10⁻⁹ of 10⁻¹²),
+one integration per region crossing so that no step straddles a density jump.
+
+| Variant | grid | max \|nuSQuIDS − reference\| | median |
+|---|---|---|---|
+| `prem_prob3` | map, exposure | 3.7 × 10⁻⁸ | 4 × 10⁻¹⁰ |
+| `prem_four` | map | 1.3 × 10⁻⁶ | 1.4 × 10⁻⁹ |
+| `prem_four` | exposure | 2.0 × 10⁻⁷ | 1.3 × 10⁻⁹ |
+| `prem_full` | map | 1.5 × 10⁻⁶ | 1.4 × 10⁻⁹ |
+| `prem_full` | exposure | 5.4 × 10⁻⁷ | 1.4 × 10⁻⁹ |
+
+**Found by nuSQuIDS: the reference's Magnus step is converged to 1.5 × 10⁻⁶, not 4 × 10⁻⁷.** The reference's
+6.25 km step was checked over 43 chords at the 39 exposure energies; over all chords it is off by up to
+5.4 × 10⁻⁷ at those energies and 1.5 × 10⁻⁶ at the `map` grid's energies in between (6.2 MeV, cos η = 0.76–0.81),
+in P₂ₑ and P₃ₑ, where the Δm²₃₁ mode oscillates over
+a few km. On nuSQuIDS's 30 worst points of each grid, the reference with a 1.5625 km step agrees with nuSQuIDS to
+1 × 10⁻⁸ and differs from the 6.25 km reference by the full amount. This changes no product: 1.5 × 10⁻⁶ is
+10⁻⁴ of the regeneration and far below the NuFast-Earth bias above. The fix, a 1.5625 km step for the reference
+(4× its time), is left for a separate change: it rewrites the reference contribution and the B5 night built on it.
+
+**Not contributed.** nuSQuIDS in B2: it has no production-profile or phase averaging, so it would give the
+pointwise solution from r₀ to the surface instead of the phase-averaged F_i of the spec, at 6–19 s per point at
+10 MeV (growing as 1/E; about 60 CPU-hours per solar model on the B2 grid). Its `native` Earth (PREM sampled every
+0.005 R_E, Akima spline) runs in the wrapper (`--variants native`) but was not run: two more hours of GSL, for an
+Earth no other tool shares. PEANUTS's `native` and continuous PREM: above. **Tomalak & Hill** (B4,
+[arXiv:1907.03379](https://arxiv.org/abs/1907.03379)), the most precise ν–e calculation: no tables are published,
+only a Mathematica notebook with the formulas (app. K) and example values at ω = 0.3 GeV. A contribution needs
+Mathematica or a port of the notebook.
+
 ## Found by these checks
 
 - **θ13 in the app tables.** The interpolation tables are computed at the default θ13 but were fed every θ13 the

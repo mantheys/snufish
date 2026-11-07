@@ -117,7 +117,7 @@
       </section>
       <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-models" class="plot"></div></section>
     </div>
-    <section class="card"><h3 class="plot-title">Solvers on the same inputs</h3><div id="b2-tools"></div></section>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b2-tools"></div></section>
   </section>
 
   <section data-page="B3" hidden>
@@ -125,9 +125,10 @@
       <h2><span class="bench-id">B3</span> Earth · crossing the Earth at night</h2>
       <p>At night the mass eigenstates cross the Earth and partly regenerate ν<sub>e</sub>: the day-night asymmetry.
         B3 compares P(ν<sub>i</sub> → ν<sub>e</sub>) through PREM in three levels of detail (ten regions, four
-        regions, Prob3++'s four shells), averaged over each site's night. On constant shells the solvers agree to
-        10⁻⁸; on PREM's continuous regions NuFast-Earth, which computes the calculator's night, takes each crossing's
-        mean density: against the reference (fourth-order Magnus, converged) the ⁸B A<sub>DN</sub> is off by up to 2 % at
+        regions, Prob3++'s four shells), averaged over each site's night. On constant shells the four solvers agree to
+        10⁻⁸–10⁻⁵ (PEANUTS's matter potential is rounded); on PREM's continuous regions nuSQuIDS integrates the
+        polynomials and agrees with the reference to 10⁻⁶, while NuFast-Earth, which computes the calculator's night,
+        takes each crossing's mean density: against the reference (fourth-order Magnus, converged) the ⁸B A<sub>DN</sub> is off by up to 2 % at
         10–15 MeV, 0.3 % once averaged over the Super-K spectrum, and almost equally with and without the local crust.
         The state of the art is PREM with the CRUST1.0 crust under each detector, which moves A<sub>DN</sub> by −2 to
         +4 % against full PREM; the crustless models are 20–40 % high. It is the only current Earth model, so B3 has
@@ -149,7 +150,8 @@
     <section class="hero">
       <h2><span class="bench-id">B4</span> Interaction · cross sections: ν–e scattering, CC and NC</h2>
       <p>Elastic scattering on electrons is known to well under 1 %: radiative corrections (Bahcall, Kamionkowski &amp;
-        Sirlin) and SNOwGLoBES's tables differ by a per mille or less; tree level, an approximation, is 2–4 % high.
+        Sirlin) and SNOwGLoBES's tables differ by a per mille or less on the rates (up to 0.5 % point by point, ν<sub>μ</sub>
+        and ν<sub>τ</sub> in opposite directions); tree level, an approximation, is 2–4 % high.
         ν<sub>e</sub> CC on ⁴⁰Ar is not. MARLEY 2, with each of the three sets of measured Gamow–Teller
         strengths, and the shell model of Suzuki &amp; Honma agree within 11 %; the shell model of Kostensalo, Suhonen
         &amp; Zuber, which quenches the strength (g<sub>A</sub> = 1.00), is 27–35 % lower. That 37 % range is the
@@ -161,6 +163,7 @@
       <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-argon" class="plot"></div></section>
       <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-es" class="plot"></div></section>
     </div>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b4-tools"></div></section>
   </section>
 
   <section data-page="B5" hidden>

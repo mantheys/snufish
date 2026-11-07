@@ -47,10 +47,14 @@ SNUfish reports as model ranges.
    16–21 % lower, and its ⁷Be and pep rates depend on how a line is written
    into its flux table (−52 % to +55 %). The detector response is not yet
    benchmarked.
-6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
-   reference agree to 10⁻⁸, the two radiative-correction calculations of
-   ν–e scattering to 0.1 %. Every spread that matters comes from physics
-   inputs.
+6. **The tools agree; the inputs do not.** On the same constant-density
+   Earth, NuFast-Earth, nuSQuIDS and PEANUTS agree with the SNUfish reference
+   to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶; in the Sun, NuFast-Earth and PEANUTS to
+   3 × 10⁻⁸ and 1.2 × 10⁻⁴; the two radiative-correction calculations of
+   ν–e scattering to 0.1 %. The residuals are each tool's hard-coded
+   constants (PEANUTS's matter potential, 3.6 × 10⁻⁴ high in the Sun), not
+   its method ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)). Every
+   spread that matters comes from physics inputs.
 7. **Most of the large spreads were outdated inputs, not uncertainties.**
    The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
    5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth

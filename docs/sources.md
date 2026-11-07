@@ -149,8 +149,8 @@ Efficiency curves (`reference/detectors/efficiency_curves.yaml`):
 | [NuFast-Earth](https://github.com/PeterDenton/NuFast-Earth) (Denton & Parke, [arXiv:2511.04735](https://arxiv.org/abs/2511.04735)) | B2, B3 | 1.2.0-3-g327586d (git submodule) | verified |
 | [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) | B4, B5 | git 6fa928e | verified |
 | [MARLEY](https://github.com/MARLEY-MC/marley) ([arXiv:2101.11867](https://arxiv.org/abs/2101.11867)) | B4 | 2.0.0 | verified |
-| nuSQuIDS | B2, B3 (planned) | — | draft entry, no contribution |
-| PEANUTS ([arXiv:2303.15527](https://arxiv.org/abs/2303.15527)) | B2, B3 (planned) | — | draft entry, no contribution (its data directory supplies the B16 and BS05 tables) |
+| [PEANUTS](https://github.com/michelelucente/PEANUTS) (Gonzalo & Lucente, [arXiv:2303.15527](https://arxiv.org/abs/2303.15527)) | B2, B3 (`prem_prob3`) | 1.6 = 39ef11f (git submodule) | verified (its data directory also supplies the B16 and BS05 tables) |
+| [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) (Argüelles, Salvado & Weaver, [arXiv:2112.13804](https://arxiv.org/abs/2112.13804)) | B3 | 1.13.3 = 104914d on SQuIDS 1.3.1 (`build_nusquids.sh`) | verified |
 
 Notes on each tool's wrapper (what it computes, what it assumes) are in
 its catalogue entry and in `contributions/<tool>/scripts/`.
