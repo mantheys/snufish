@@ -22,7 +22,7 @@ plotipus.)
    input of each link (grids, oscillation parameters, matter profiles,
    constants) in a benchmark spec, so contributions differ only by the tool.
 2. **Show the spread that matters.** Each benchmark also carries model
-   variants (ten solar models, four Earth models, nine ν<sub>e</sub>–<sup>40</sup>Ar
+   variants (ten solar models, five Earth models, nine ν<sub>e</sub>–<sup>40</sup>Ar
    nuclear models, three ES cross-section treatments), so the difference
    between tools can be read next to the difference between physics inputs.
 3. **Every number traceable.** Every input file records its paper, table or
@@ -67,8 +67,10 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    MB22m, each beyond MB22m's own 1σ.
 3. **The crust near the detector shifts A<sub>DN</sub> by −2.5 % to +3.7 %**,
    with a size and sign set by the site. Taking it along each night chord
-   instead of under the detector moves it by at most 0.2 %: the Earth range.
-   A second crust model and a 3D mantle are not included yet.
+   instead of under the detector moves it by at most 0.2 %: the Earth range,
+   with one crust model. Han et al.'s 3D Earth (LITHO1.0 on a 3D mantle)
+   differs from it by 3–4 % of A<sub>DN</sub> at LNGS and SURF; neither is included
+   yet.
 4. **<sup>40</sup>Ar CC is uncertain by 37 % because the Gamow–Teller quenching is
    unsettled.** MARLEY 2 and the Suzuki–Honma shell model agree within 3 %;
    Kostensalo's shell model is 27–35 % lower with g<sub>A</sub> = 1.00.
@@ -76,11 +78,13 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    2 MeV.** On the same fluxes and cross sections its full chain is 16–21 %
    lower for <sup>7</sup>Be, pep and <sup>13</sup>N, because GLoBES evaluates
    flux × σ once per 0.5 MeV bin, at its midpoint (reproduced to 10⁻⁵). The
-   detector response matters more: Super-K IV's efficiency halves the
-   <sup>8</sup>B rate above its threshold, DUNE's 20 % resolution takes 4 % off.
-6. **The tools agree; the inputs do not.** Three Earth solvers (NuFast-Earth,
-   PEANUTS, nuSQuIDS) agree with the reference to 10⁻⁸–10⁻⁵ on the same
-   shells, two Sun solvers to 10⁻⁴ and the ES radiative corrections to 0.1 %,
+   detector response matters more: Super-K IV keeps 52 % of the <sup>8</sup>B
+   ES rate above its threshold; DUNE's and SNO's resolutions take 4.4 % and
+   3.6 % off the CC rate.
+6. **The tools agree; the inputs do not.** Through the same Earth,
+   NuFast-Earth, nuSQuIDS and PEANUTS agree with the reference to
+   10⁻⁸–10⁻⁵; out of the Sun, NuFast-Earth and PEANUTS to 3 × 10⁻⁸ and
+   10⁻⁴; the ES radiative corrections to 0.1 %,
    orders of magnitude below the spread of competing inputs; what is left is
    each tool's hard-coded constants. NuFast-Earth's mean density per crossing
    on PREM (0.3 % on the <sup>8</sup>B A<sub>DN</sub>) is removed in the calculator by
@@ -177,11 +181,13 @@ same names.
 | B2 Sun | **B2_sun** | Ten standard solar models (B16, BS05, B23 / SF-III) in one format (fluxes, electron density, production profiles), and the mass-eigenstate fractions leaving the Sun for every model, averaged per flux component |
 | B3 Earth | **B3_earth** | P(ν<sub>i</sub> → ν<sub>e</sub>) through the Earth on PREM variants; night averages per detector site |
 | B4 Interaction | **B4_xsec** | Cross sections per detection channel; nuclear models of <sup>40</sup>Ar as variants |
-| B5 Detector | **B5_rates** | Interactions per kton-year by solar model, detector, channel and flux component, for every B4 model (the detector response is planned) |
+| B5 Detector | **B5_rates** | Interactions per kton-year by solar model, detector, channel and flux component, for every B4 model (part 1), and the observed rates through the published responses of Super-K IV, SNO, Borexino and DUNE (part 2) |
 
 B2 and B3 combine into day and night P<sub>ee</sub> and the day-night
 asymmetry. Tools so far: the SNUfish reference solvers,
 [NuFast-Earth](https://github.com/PeterDenton/NuFast-Earth) (B2, B3),
+[PEANUTS](https://github.com/michelelucente/PEANUTS) (B2, B3),
+[nuSQuIDS](https://github.com/arguelles/nuSQuIDS) (B3),
 [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) (B4, B5) and
 [MARLEY](https://github.com/MARLEY-MC/marley) (B4); see
 [catalogue/tools](catalogue/tools). Details of every benchmark:
