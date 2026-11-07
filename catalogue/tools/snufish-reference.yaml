@@ -5,7 +5,7 @@ language: Python
 license: MIT
 repository: https://github.com/mantheys/snufish
 documentation: https://github.com/mantheys/snufish/tree/main/docs
-reference: null             # the Zenodo DOI, once the first release is archived
+reference: doi:10.5281/zenodo.24045166   # Zenodo concept DOI (every version; v0.2.0 is 10.5281/zenodo.24045167)
 maintainers: [Sergio Manthey]
 benchmarks: [B2_sun, B3_earth, B4_xsec]
 status: verified

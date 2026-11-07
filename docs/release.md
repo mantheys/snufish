@@ -1,18 +1,21 @@
 # Releasing a citable version
 
-Ready to tag: the metadata is filled in, but no tag exists and nothing is
-archived yet. The first release is **v0.2.0** (0.1.0 is the untagged development version; 0.2.0
-adds the DUNE table options: `night_fraction`, `nu_threshold`, `nc_ar40`,
-the SOLAR night).
+Released: **v0.2.0** is tagged and archived on Zenodo, version DOI
+[10.5281/zenodo.24045167](https://doi.org/10.5281/zenodo.24045167), concept
+DOI (resolves to the latest version)
+[10.5281/zenodo.24045166](https://doi.org/10.5281/zenodo.24045166). It is
+the first release: 0.1.0 is the untagged development version; 0.2.0 adds the
+DUNE table options (`night_fraction`, `nu_threshold`, `nc_ar40`, the SOLAR
+night). The steps below are what it took; repeat 2 to 4 for the next one.
 
 ## Files
 
-| File | Holds | To fill in before tagging |
+| File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | `date-released` if the tag is not made on 2026-11-07; the DOI after Zenodo mints it |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | done (`date-released` 2026-11-07, version DOI) |
 | `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | done (ORCID included) |
 | `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | done (`0.2.0`; plotipus pinned to its `v0.1.0` release) |
-| `catalogue/tools/snufish-reference.yaml` | `reference` | the concept DOI (cites every version) |
+| `catalogue/tools/snufish-reference.yaml` | `reference` | done (the concept DOI, cites every version) |
 
 ## Steps
 
