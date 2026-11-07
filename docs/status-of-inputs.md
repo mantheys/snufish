@@ -35,21 +35,21 @@ SNUfish reports as model ranges.
    5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
    models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear
    rates).
-3. **Solar composition: the open model uncertainty of the fluxes.** B23
+3. **Oscillations: JUNO now fixes Δm²₂₁ and θ₁₂.** Solar data alone give
+   Δm²₂₁ about 1.5σ lower: a physics question, not a choice of input.
+4. **Solar composition: the open model uncertainty of the fluxes.** B23
    with MB22 against AAG21: ⁸B −16 %, ⁷Be −8 %, CNO −30 %. The neutrino data
    prefer MB22 (AAG21 disfavoured by up to 2.5σ on CNO), not decisively.
-4. **⁴⁰Ar: how much the Gamow–Teller strength is quenched, about 37 %.**
+5. **Earth: the crust under the detector matters at a few per cent; 3D is
+   not yet computed.** The CRUST1.0 column moves A<sub>DN</sub> by −2.4 % (SURF)
+   to +3.8 % (SNOLAB). The crust where neutrinos enter and the 3D mantle
+   (up to ~8 % in the literature) are missing, so there is no Earth range yet.
+6. **⁴⁰Ar: how much the Gamow–Teller strength is quenched, about 37 %.**
    MARLEY 2 with the measured strengths and the shell model of Suzuki &
    Honma agree to 3 %; the shell model of Kostensalo et al. with g<sub>A</sub> =
    1.00 is 27–35 % lower, and with the free g<sub>A</sub> it agrees. The three
    measured strength sets differ by 11 % among themselves. A cross-section
    measurement at a stopped-pion source would settle it.
-5. **Earth: the crust under the detector matters at a few per cent; 3D is
-   not yet computed.** The CRUST1.0 column moves A<sub>DN</sub> by −2.4 % (SURF)
-   to +3.8 % (SNOLAB). The crust where neutrinos enter and the 3D mantle
-   (up to ~8 % in the literature) are missing, so there is no Earth range yet.
-6. **Oscillations: JUNO now fixes Δm²₂₁ and θ₁₂.** Solar data alone give
-   Δm²₂₁ about 1.5σ lower: a physics question, not a choice of input.
 
 The model ranges, state of the art against everything SNUfish offers
 (B23-MB22m, JUNO 2025, PREM with the local crust, annual rates):
@@ -58,11 +58,30 @@ The model ranges, state of the art against everything SNUfish offers
 |---|---|---|---|
 | ⁸B + hep ES in water, T > 3.49 MeV | solar model | −15.9 % (AAG21) | −19.3 % to +10.6 % |
 | | ES cross section | +0.02 % | +2.8 % (tree level) |
-| ⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV | ⁴⁰Ar nuclear model | −36.6 % (shell model, g<sub>A</sub> = 1.00) | −37 % to +1.8 % |
-| | solar model | −16.0 % | −19.4 % to +10.6 % |
+| ⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV | solar model | −16.0 % | −19.4 % to +10.6 % |
+| | ⁴⁰Ar nuclear model | −36.6 % (shell model, g<sub>A</sub> = 1.00) | −37 % to +1.8 % |
 | ⁷Be ES in scintillator | solar model | −7.8 % | −11.5 % to +0.6 % |
 | A<sub>DN</sub>, ⁸B ES at Kamioka | Earth model | none (one current model): 1.52 % | 1.50 % to 2.07 % |
 | A<sub>DN</sub>, ⁸B CC on ⁴⁰Ar at SURF | Earth model | none: 2.84 % | 2.84 % to 4.02 % |
+
+## Oscillation parameters
+
+**State of the art.** JUNO's first result (59 days,
+[arXiv:2511.14593](https://arxiv.org/abs/2511.14593)) is the most precise
+measurement of Δm²₂₁ and θ₁₂ and dominates any global fit. NuFIT 6.1
+(Esteban et al., [arXiv:2601.09791](https://arxiv.org/abs/2601.09791),
+eq. 3.1) includes it: sin²θ₁₂ = 0.3096 −0.0073 +0.0057, Δm²₂₁ = 7.530
+−0.097 +0.096 × 10⁻⁵ eV² (added as `nufit61_global`; θ₁₃, θ₂₃, δ and Δm²₃₁
+stay at the NuFIT 6.0 values used for every set). The solar-only sets
+(all solar, SK + SNO; Super-K, [arXiv:2312.12907](https://arxiv.org/abs/2312.12907))
+are also current: they are the other side of the solar–reactor comparison
+of Δm²₂₁ (6.1 against 7.5 × 10⁻⁵ eV², about 1.5σ). That difference is a
+physics question SNUfish is built to look at (`snufish scan`), not a choice
+between inputs, so the calculator does not fold it into a range either.
+
+**Legacy.** NuFIT 6.0 (before JUNO; superseded by 6.1), KamLAND 2013 (the
+reactor input before JUNO; less precise in both parameters than JUNO's 59
+days) and solar + KamLAND 2024 (its reactor side superseded by JUNO).
 
 ## Solar models
 
@@ -102,25 +121,6 @@ B23-MB22m's.
 **Not included.** The 2025 composition revisions (Lodders & Bergemann;
 [arXiv:2503.05402](https://arxiv.org/abs/2503.05402)) have no published
 standard solar model yet.
-
-## Oscillation parameters
-
-**State of the art.** JUNO's first result (59 days,
-[arXiv:2511.14593](https://arxiv.org/abs/2511.14593)) is the most precise
-measurement of Δm²₂₁ and θ₁₂ and dominates any global fit. NuFIT 6.1
-(Esteban et al., [arXiv:2601.09791](https://arxiv.org/abs/2601.09791),
-eq. 3.1) includes it: sin²θ₁₂ = 0.3096 −0.0073 +0.0057, Δm²₂₁ = 7.530
-−0.097 +0.096 × 10⁻⁵ eV² (added as `nufit61_global`; θ₁₃, θ₂₃, δ and Δm²₃₁
-stay at the NuFIT 6.0 values used for every set). The solar-only sets
-(all solar, SK + SNO; Super-K, [arXiv:2312.12907](https://arxiv.org/abs/2312.12907))
-are also current: they are the other side of the solar–reactor comparison
-of Δm²₂₁ (6.1 against 7.5 × 10⁻⁵ eV², about 1.5σ). That difference is a
-physics question SNUfish is built to look at (`snufish scan`), not a choice
-between inputs, so the calculator does not fold it into a range either.
-
-**Legacy.** NuFIT 6.0 (before JUNO; superseded by 6.1), KamLAND 2013 (the
-reactor input before JUNO; less precise in both parameters than JUNO's 59
-days) and solar + KamLAND 2024 (its reactor side superseded by JUNO).
 
 ## Earth
 

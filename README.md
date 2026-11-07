@@ -64,15 +64,15 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
 2. **Most large spreads were outdated inputs.** The factor 5–7 between
    <sup>40</sup>Ar tables, A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on
    <sup>8</sup>B from B16: legacy models and approximations, not uncertainties.
-3. **Solar composition** (B23 MB22 vs AAG21) is the open flux uncertainty:
+3. **JUNO fixes Δm²<sub>21</sub>**; solar data alone sit 1.5σ lower, a physics
+   question rather than an input choice.
+4. **Solar composition** (B23 MB22 vs AAG21) is the open flux uncertainty:
    <sup>8</sup>B 16 %, <sup>7</sup>Be 8 %, CNO 30 %.
-4. **<sup>40</sup>Ar: the quenching of the Gamow–Teller strength**, about 37 %:
-   MARLEY 2 and the Suzuki–Honma shell model agree to 3 %; the Kostensalo
-   shell model (g<sub>A</sub> = 1.00) is 27–35 % lower.
 5. **Earth: the local crust moves A<sub>DN</sub> by −2 to +4 %**; the 3D Earth
    (up to ~8 %) is not yet computed, so the Earth range is missing.
-6. **JUNO fixes Δm²<sub>21</sub>**; solar data alone sit 1.5σ lower, a physics
-   question rather than an input choice.
+6. **<sup>40</sup>Ar: the quenching of the Gamow–Teller strength**, about 37 %:
+   MARLEY 2 and the Suzuki–Honma shell model agree to 3 %; the Kostensalo
+   shell model (g<sub>A</sub> = 1.00) is 27–35 % lower.
 
 ## Results so far
 

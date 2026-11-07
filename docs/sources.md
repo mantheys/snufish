@@ -15,6 +15,25 @@ retrieval date, the method (`table` or `digitised`) and a licence.
 Digitised values are flagged in every plot that uses them. Catalogue fields
 are filled from the tool's own repository or paper, never from memory.
 
+## Oscillation parameters
+
+`reference/oscillation/parameter_sets.yaml`. Normal ordering; errors are
+1σ, `[minus, plus]`.
+
+| Set | Δm²₂₁ (10⁻⁵ eV²) | sin²θ₁₂ | Source |
+|---|---|---|---|
+| defaults (θ₁₃, θ₂₃, δ, Δm²₃₁) | — | — | NuFIT 6.0, [arXiv:2410.05380](https://arxiv.org/abs/2410.05380), table 1 (IC19 w/o SK-atm, NO) |
+| `nufit61_global` | 7.530 −0.097 +0.096 | 0.3096 −0.0073 +0.0057 | NuFIT 6.1 with the first JUNO data, [arXiv:2601.09791](https://arxiv.org/abs/2601.09791), eq. 3.1 |
+| `nufit60_global` | 7.49 ± 0.19 | 0.307 −0.011 +0.012 | NuFIT 6.0 |
+| `juno_2025` | 7.50 ± 0.12 | 0.3092 ± 0.0087 | JUNO, [arXiv:2511.14593](https://arxiv.org/abs/2511.14593) (59 days) |
+| `kamland_2013` | 7.54 −0.18 +0.19 | 0.316 −0.026 +0.034 | KamLAND, Phys. Rev. D 88, 033001 (2013), as quoted in arXiv:2312.12907 fig. 47 |
+| `solar_global_2024` | 6.10 −0.81 +0.95 | 0.306 ± 0.013 | Super-K, [arXiv:2312.12907](https://arxiv.org/abs/2312.12907), all solar |
+| `sk_sno_2024` | 6.10 −0.75 +1.04 | 0.305 ± 0.014 | Super-K, arXiv:2312.12907, SK + SNO |
+| `solar_kamland_2024` | 7.50 −0.18 +0.19 | 0.307 ± 0.012 | Super-K, arXiv:2312.12907, solar + KamLAND |
+
+The calculator's published checks add the parameter values stated by each
+paper they reproduce (`PAPER_SETS` in `web/checks.js`).
+
 ## Solar models
 
 `reference/ssm/<model>.dat`, `benchmarks/B2_sun/models.yaml`, written by
@@ -45,25 +64,6 @@ uncertainties only; BS05 neither.
 | ¹⁷F | Bahcall & Ulrich (1988) | 1.740 MeV |
 | ⁷Be | lines 861.3 keV (89.56 %), 384.3 keV (10.44 %) | — |
 | pep | line 1.442 MeV | — |
-
-## Oscillation parameters
-
-`reference/oscillation/parameter_sets.yaml`. Normal ordering; errors are
-1σ, `[minus, plus]`.
-
-| Set | Δm²₂₁ (10⁻⁵ eV²) | sin²θ₁₂ | Source |
-|---|---|---|---|
-| defaults (θ₁₃, θ₂₃, δ, Δm²₃₁) | — | — | NuFIT 6.0, [arXiv:2410.05380](https://arxiv.org/abs/2410.05380), table 1 (IC19 w/o SK-atm, NO) |
-| `nufit61_global` | 7.530 −0.097 +0.096 | 0.3096 −0.0073 +0.0057 | NuFIT 6.1 with the first JUNO data, [arXiv:2601.09791](https://arxiv.org/abs/2601.09791), eq. 3.1 |
-| `nufit60_global` | 7.49 ± 0.19 | 0.307 −0.011 +0.012 | NuFIT 6.0 |
-| `juno_2025` | 7.50 ± 0.12 | 0.3092 ± 0.0087 | JUNO, [arXiv:2511.14593](https://arxiv.org/abs/2511.14593) (59 days) |
-| `kamland_2013` | 7.54 −0.18 +0.19 | 0.316 −0.026 +0.034 | KamLAND, Phys. Rev. D 88, 033001 (2013), as quoted in arXiv:2312.12907 fig. 47 |
-| `solar_global_2024` | 6.10 −0.81 +0.95 | 0.306 ± 0.013 | Super-K, [arXiv:2312.12907](https://arxiv.org/abs/2312.12907), all solar |
-| `sk_sno_2024` | 6.10 −0.75 +1.04 | 0.305 ± 0.014 | Super-K, arXiv:2312.12907, SK + SNO |
-| `solar_kamland_2024` | 7.50 −0.18 +0.19 | 0.307 ± 0.012 | Super-K, arXiv:2312.12907, solar + KamLAND |
-
-The calculator's published checks add the parameter values stated by each
-paper they reproduce (`PAPER_SETS` in `web/checks.js`).
 
 ## Earth
 

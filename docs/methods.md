@@ -216,29 +216,31 @@ reproduces the true-energy rates (tested).
 budget` command). Two kinds are kept apart.
 
 **Sampled** (Monte Carlo, n = 400 draws by default, fixed seed), each
-reported as a standard deviation and combined in "total sampled":
+reported as a standard deviation and combined in "total sampled", in the
+order of the calculator's steps (B1 to B5):
 
-- **Oscillation parameters**: each parameter of the set drawn
+- **Oscillation parameters** (B1): each parameter of the set drawn
   independently from a split normal (different σ below and above the
   central value) — no source publishes their correlations.
-- **Solar fluxes**: multipliers drawn from a multivariate normal with the
+- **Solar fluxes** (B2): multipliers drawn from a multivariate normal with the
   model's fractional errors and, for B23, its published correlation
   matrix (Cholesky). BS05 publishes no errors: no flux row. With the SNO
   NC ⁸B flux, ⁸B is drawn independently with its 3.81 %. A single
   component's flux cancels in A_DN and in the ratio, so it gets no row
   there.
-- **Statistics**, when an exposure is given: Poisson, half the exposure by
+- **Measured nuclear strengths** (B4, MARLEY 2 models): see below.
+- **Statistics** (B5), when an exposure is given: Poisson, half the exposure by
   day and half by night, no backgrounds. For A_DN,
   σ² = (4D/S²)² N + (4N/S²)² D with S = D + N in counts.
-- **Detector**: energy scale and resolution as half the difference of the
+- **Detector** (B5): energy scale and resolution as half the difference of the
   quantity at ±1σ; the normalisation scales a rate (and cancels in A_DN).
   Each is applied as one Gaussian draw per sample.
-- **Measured nuclear strengths** (MARLEY 2 models): see below.
 
 **Model ranges**, reported as [min, max] over the state-of-the-art
 alternatives and never folded into a σ (the range depends on which models
-exist, not on a probability): cross-section model (CC), ES radiative
-corrections (ES), Earth model (night quantities only), solar model. Legacy
+exist, not on a probability), again in step order: solar model (B2), Earth
+model (B3, night quantities only), cross-section model (B4, CC) or ES
+radiative corrections (B4, ES). Legacy
 models and approximations ([status-of-inputs.md](status-of-inputs.md),
 `reference/status.yaml`) are left out; `budget(..., legacy=True)` adds a
 `legacy spread` row per choice over every model, as context. A range that does not
