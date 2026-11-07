@@ -30,7 +30,7 @@ an issue.
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E_ν only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
 | Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %); BKS and Marciano & Parsa bound it at the solar precision |
-| 3D Earth | `prem_crust1` puts the CRUST1.0 column of each site above PREM's Moho, but stays radial. Next: per night direction (the Sun's position over a year at the site's latitude and longitude), the chord's entry point and its CRUST1.0 column, solved with NuFast-Earth's single-trajectory mode, and a 3D mantle model; then a second current Earth model, and an Earth range. Until then the Earth range is empty (one state-of-the-art model) |
+| 3D Earth | Two current Earth models make B3's range: `prem_crust1` (the CRUST1.0 column of each site above PREM, radial) and `prem_crust1_3d` (the CRUST1.0 crust along every night chord, solved chord by chord with NuFast-Earth's single-trajectory mode); they differ by ≤ 0.17 % of A_DN. Missing: a 3D mantle (Han et al. use SAW642AN) and a second crust model (LITHO1.0): Han et al.'s 3D shifts differ from SNUfish's by ~0.05 pp (3–4 % of A_DN) at LNGS and SURF ([crosschecks.md](crosschecks.md#crust-along-each-chord-3d)), more than the current range |
 
 ### Physics scope
 
@@ -51,12 +51,14 @@ an issue.
   `Setup(orbit=True)` scales day and night rates by the site's mean
   (1 AU/R)² ([crosschecks.md](crosschecks.md#earthsun-distance)). Not
   modelled: deeper nights near perihelion (< 0.2 % of A_DN), time-resolved
-  seasonal spectra, and the 3D Earth (radial PREM variants only).
+  seasonal spectra; the 3D crust (`prem_crust1_3d`) uses the Sun's directions but not their
+  distance.
 - **B3's Earth models end in PREM's 3 km of ocean.** The engine and the
   calculator default to `prem_crust1` (the CRUST1.0 column of each site
-  above PREM's Moho, [crosschecks.md](crosschecks.md#local-crust)), but the
-  B3 benchmark has no crust variant: its detector sits in the ocean, which
-  shifts A_DN by −2.4 % to +3.8 % against the local crust at the five sites.
+  above PREM's Moho, [crosschecks.md](crosschecks.md#local-crust)) and offer
+  `prem_crust1_3d` (the crust along each chord), but the B3 benchmark has no
+  crust variant: its detector sits in the ocean, which shifts A_DN by −2.5 %
+  to +3.7 % against the local crust at the five sites.
 - **Detector at the surface.** B3 sets the detector depth to 0.
 - **CC visible energy is E_ν − Q** with no neutron, binding or quenching
   losses; NC on deuterium deposits 6.25 MeV (capture on ²H in pure D₂O),
@@ -70,7 +72,8 @@ an issue.
 |---|---|---|
 | Adiabatic F_i in B2 | O(10⁻⁶) for the B2 parameters | `reference/sun.py` |
 | App tables instead of exact solvers | 2 × 10⁻⁴ (rates), 1 % (A_DN) | `engine.TableProbabilities` |
-| NuFast-Earth's mean density per region crossing (the engine's night for `prem_four`, `prem_full`, `prem_crust1`) | ⁸B A_DN −0.2 to −1.9 % (`prem_crust1`, `prem_full`), +0.6 to +1.3 % (`prem_four`) against the B3 reference ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density)) | `scan.night_grid` |
+| PREM's continuous regions cut into 50 km shells for NuFast-Earth (the engine's night for `prem_four`, `prem_full`, `prem_crust1`; without the cut, NuFast-Earth's mean density per crossing is off by up to 2 % in ⁸B A_DN) | ⁸B A_DN within 0.05 % (0.1 % `prem_four`) of 10 km shells at 4–20 MeV ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density)) | `scan.SPLIT_KM` |
+| `prem_crust1_3d`: the crust of the ~130 chords in each of the 1001 nadir cells averaged before solving; chords in pieces of near-constant density | ≤ 1.3 × 10⁻⁴ in P₂ₑ (≤ 0.3 % of the regeneration); A_DN within 0.07 % of 10 km pieces | `earth3d` |
 | θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A_DN over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
 | ⁸B shape truncated at 15.2 MeV (true endpoint ~16.5 MeV) | ~10⁻⁴ of the flux; matters above 15 MeV (⁸B background to hep) | `reference/ssm/shapes/` |
 | B16 and BS05 density beyond 0.5 R_☉ | exponential tail fit, residual ≤ 0.0033 in log₁₀ n_e | `models.yaml` `tail` |
@@ -112,11 +115,11 @@ an issue.
 From [crosschecks.md](crosschecks.md):
 
 - Super-K's expected A_DN for the SK-I range at Δm²₂₁ = 4.8 × 10⁻⁵ eV²:
-  −3.84 % published, −3.32 % here (13.5 % off) while 6.1 and
-  7.5 × 10⁻⁵ eV² agree to 2.5 %; Super-K's own 2014 paper expects −3.3 %
+  −3.84 % published, −3.37 % here (12.3 % off) while 6.1 and
+  7.5 × 10⁻⁵ eV² agree to 1.7 %; Super-K's own 2014 paper expects −3.3 %
   there, as SNUfish does.
 - Capozzi, Li, Zhu & Beacom's DUNE CC A_DN at 4.85 × 10⁻⁵ eV²: −7.90 %
-  published, −6.87 % here; the ten- and four-region PREM bracket it.
+  published, −6.96 % here; the ten- and four-region PREM bracket it.
 - JUNO's −1.6 % expected A_DN at 7.5 × 10⁻⁵ eV² in its text, against
   −1.4 % from its own table 1 and −1.38 % here.
 

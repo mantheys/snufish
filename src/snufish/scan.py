@@ -25,7 +25,7 @@ import subprocess
 import numpy as np
 import yaml
 
-from . import crust
+from . import crust, earth3d
 from .exposure import cell_weights
 from .fluxes import components
 from .paths import repo_root
@@ -35,6 +35,11 @@ from .solar import production_weights
 from .spec import load_spec, pmns
 
 COMPONENT = "B8"
+# NuFast-Earth takes each region crossing's mean density; cutting the continuous (PREM polynomial) regions into
+# shells of at most SPLIT_KM makes it follow the profile: A_DN of 8B within 0.05 % (prem_crust1, prem_full;
+# 0.1 % prem_four) of 10 km shells at 4-20 MeV, for 1.6x the driver time (docs/crosschecks.md). The default of the
+# night solvers and the app tables; split_km=None gives NuFast-Earth's own treatment (its B3 contribution).
+SPLIT_KM = 50.0
 
 
 @functools.lru_cache(maxsize=1)
@@ -83,7 +88,7 @@ def _nufast_driver():
     return path
 
 
-def night_probabilities(osc, earth_model, latitude_deg, site=None, split_km=None):
+def night_probabilities(osc, earth_model, latitude_deg, site=None, split_km=SPLIT_KM):
     """(energies MeV, array [E, 3] of P(nu_i -> nu_e) averaged over the night at
     the given latitude), on the B3 exposure grid. ``site``: for the site-dependent
     Earth models (:mod:`snufish.crust`); ``split_km``: see :func:`night_grid`."""
@@ -91,26 +96,37 @@ def night_probabilities(osc, earth_model, latitude_deg, site=None, split_km=None
     return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude_deg)))
 
 
-def night_grid(osc, earth_model, site=None, split_km=None, depth_km=None, cos_grid=None):
+def night_grid(osc, earth_model, site=None, split_km=SPLIT_KM, depth_km=None, cos_grid=None):
     """(energies MeV, cos nadir, array [E, cos, 3] of P(nu_i -> nu_e)) on the
     B3 exposure grid, before averaging over a site's night. ``split_km``: cut the
     continuous regions into shells of at most this, so that NuFast-Earth's mean
-    density per crossing follows the profile (:func:`crust.split`); ``depth_km``:
+    density per crossing follows the profile (:func:`crust.split`; None: one mean
+    density per region crossing, NuFast-Earth's own treatment); ``depth_km``:
     the detector depth (default B3's, 0); ``cos_grid``: (start, stop, step) of cos
-    nadir in place of B3's."""
+    nadir in place of B3's. ``earth_model`` may also be ``regions:FILE``, a regions
+    file solved as it is (crust.write_regions; split it first), or ``trajectories:FILE``
+    (earth3d.write_trajectories, one chord per cos nadir of the B3 grid)."""
     spec = load_spec("B3_earth")
     grid = {a: dict(v) for a, v in spec["grids"]["exposure"].items()}
     if cos_grid is not None:
         grid["cos_nadir"].update(zip(("start", "stop", "step"), map(float, cos_grid)))
-    if earth_model in crust.SITE_MODELS:
-        if site is None:
-            raise ValueError(f"{earth_model} depends on the site")
+    if earth_model in crust.SITE_MODELS and site is None:
+        raise ValueError(f"{earth_model} depends on the site")
+    if earth_model == earth3d.MODEL:  # one chord per cos nadir of the B3 grid, not radial (earth3d.py)
+        if cos_grid is not None or depth_km:
+            raise ValueError(f"{earth_model} is solved on the B3 grid, detector at the surface")
+        regions, earth_model = None, f"trajectories:{earth3d.trajectories_file(site)}"
+    elif earth_model in crust.SITE_MODELS:
         regions = crust.regions(earth_model, site)
         name = f"{earth_model}_{site}"
+    elif earth_model.startswith(("regions:", "trajectories:")):  # a regions or chords file, solved as it is
+        regions = None
     else:
         regions = spec["earth_models"][earth_model].get("regions")
         name = earth_model
-    if split_km and regions:
+    if earth_model.startswith(("trajectories:", "regions:")):
+        pass
+    elif split_km and regions:
         earth_model = f"regions:{crust.write_regions(crust.split(regions, split_km), f'{name}_split{split_km:g}')}"
     elif earth_model in crust.SITE_MODELS:
         earth_model = f"regions:{crust.regions_file(earth_model, site)}"

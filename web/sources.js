@@ -103,7 +103,7 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   if (step === "b3") {
     const site = d.sites[setup.site];
     return [S(`${setup.site}: latitude ${site.latitude_deg}° N (${site.source})`, null, link(site.source)),
-            SOURCES.exposure, SOURCES.prem, ...(setup.earth_model === "prem_crust1" ? [SOURCES.crust1] : []), SOURCES.nufast, SOURCES.nufast_code,
+            SOURCES.exposure, SOURCES.prem, ...(setup.earth_model.startsWith("prem_crust1") ? [SOURCES.crust1] : []), SOURCES.nufast, SOURCES.nufast_code,
             ...(setup.orbit ? [SOURCES.orbit, SOURCES.orbit_check] : [])];
   }
   if (step === "b4") {

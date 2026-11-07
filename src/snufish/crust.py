@@ -9,7 +9,9 @@ where a chord enters the Earth, a 3D effect, is not included.
 """
 
 import functools
+import hashlib
 import math
+import os
 import tempfile
 from pathlib import Path
 
@@ -18,7 +20,7 @@ import yaml
 from .paths import repo_root
 from .spec import load_spec
 
-SITE_MODELS = ("prem_crust1",)
+SITE_MODELS = ("prem_crust1", "prem_crust1_3d")  # the second: earth3d.py
 CRUST_YE = 0.494  # as PREM's crust in the B3 spec
 
 
@@ -32,8 +34,12 @@ def columns():
 
 
 def available():
-    """The site-dependent models that can be built (the CRUST1.0 columns are there)."""
-    return list(SITE_MODELS) if columns() else []
+    """The site-dependent models that can be built (the CRUST1.0 columns, and for prem_crust1_3d the whole grid,
+    are there)."""
+    if not columns():
+        return []
+    grid = (repo_root() / "reference" / "earth" / "crust1_global.npz").exists()
+    return [m for m in SITE_MODELS if m == "prem_crust1" or grid]
 
 
 def regions(earth_model, site):
@@ -76,10 +82,15 @@ def split(regions_list, step_km):
 
 def write_regions(regions_list, name):
     """A file of the regions in the NuFast-Earth driver's `regions:` format (one per line: outer radius, Ye,
-    coefficients)."""
-    path = Path(tempfile.gettempdir()) / f"snufish_{name}.regions"
-    path.write_text("".join(f"{r['outer_radius_km']} {r['ye']} {' '.join(map(str, r['coefficients']))}\n"
-                            for r in regions_list))
+    coefficients). Named by its content and written whole (a unique temporary file renamed into place): the
+    export's workers, and other checkouts on the same machine, write the same models at once."""
+    text = "".join(f"{r['outer_radius_km']} {r['ye']} {' '.join(map(str, r['coefficients']))}\n" for r in regions_list)
+    digest = hashlib.sha256(text.encode()).hexdigest()[:12]
+    path = Path(tempfile.gettempdir()) / f"snufish_{name}_{digest}.regions"
+    if not path.exists():
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, prefix=path.name, delete=False) as handle:
+            handle.write(text)
+        os.replace(handle.name, path)
     return str(path)
 
 

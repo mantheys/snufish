@@ -1,7 +1,7 @@
 # Which inputs are the state of the art, which are legacy, and which are
 # approximations. Read by the engine (model ranges), the web page (labels,
 # warnings) and the docs (docs/status-of-inputs.md, where the literature
-# behind every entry is discussed). Reviewed 2026-10-30.
+# behind every entry is discussed). Reviewed 2026-11-07.
 #
 #   current        state of the art. Entries of one category marked current
 #                  compete with each other: their spread is the model
@@ -109,8 +109,12 @@ parameter_set:
 earth_model:
   prem_crust1:
     status: current
-    summary: "PREM under the Moho, the CRUST1.0 column of the detector's 1 × 1 degree cell above it (Laske et al. 2013): the continental crust the night neutrinos cross last, in place of PREM's ocean and average crust. Still radial: the crust where a chord enters the Earth and the 3D mantle are not included."
+    summary: "PREM under the Moho, the CRUST1.0 column of the detector's 1 × 1 degree cell above it (Laske et al. 2013): the continental crust the night neutrinos cross last, in place of PREM's ocean and average crust. Radial: the column under the detector stands for the crust everywhere. Competes with prem_crust1_3d, the crust each chord actually crosses: their spread is the crust's model uncertainty."
     refs: [https://igppweb.ucsd.edu/~gabi/crust1.html]
+  prem_crust1_3d:
+    status: current
+    summary: "PREM below, and along every night chord the CRUST1.0 crust it actually crosses: the cells near the detector and where the chord enters the Earth, for the Sun's directions over a year at the site's latitude and longitude (solved chord by chord with NuFast-Earth's single-trajectory mode). Competes with prem_crust1. No 3D mantle: PREM under the Moho."
+    refs: [https://igppweb.ucsd.edu/~gabi/crust1.html, arXiv:2607.24421, arXiv:2001.08030]
   prem_full:
     status: approximation
     superseded_by: prem_crust1

@@ -63,8 +63,9 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    question rather than an input choice.
 2. **Solar composition** (B23 MB22 vs AAG21) is the open flux uncertainty:
    <sup>8</sup>B 16 %, <sup>7</sup>Be 8 %, CNO 30 %.
-3. **Earth: the local crust moves A<sub>DN</sub> by −2 to +4 %**; the 3D Earth
-   (up to ~8 %) is not yet computed, so the Earth range is missing.
+3. **Earth: the crust near the detector moves A<sub>DN</sub> by −2.5 to +3.7 %**;
+   along each chord instead of under the detector, by at most 0.2 % more (the
+   Earth range). A second crust model and a 3D mantle are still missing.
 4. **<sup>40</sup>Ar: the quenching of the Gamow–Teller strength**, about 37 %:
    MARLEY 2 and the Suzuki–Honma shell model agree to 3 %; the Kostensalo
    shell model (g<sub>A</sub> = 1.00) is 27–35 % lower.
@@ -73,7 +74,8 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    <sup>13</sup>N) its full chain is 16–21 % lower.
 6. **The tools agree; the inputs do not.** Earth solvers agree to 10⁻⁸
    on constant shells, radiative corrections to 0.1 %; NuFast-Earth's mean
-   density on continuous PREM moves the <sup>8</sup>B A<sub>DN</sub> by 0.3 %.
+   density on continuous PREM moves the <sup>8</sup>B A<sub>DN</sub> by 0.3 %, removed
+   by cutting it into 50 km shells, as the calculator's night does.
 7. **Most large spreads were outdated inputs.** The factor 5–7 between
    <sup>40</sup>Ar tables, A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on
    <sup>8</sup>B from B16: legacy models and approximations, not uncertainties.

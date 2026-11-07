@@ -205,7 +205,7 @@ documented in `src/snufish/engine.py`; the main ones:
 | `solar_model` | a B2 solar model id |
 | `components` | tuple of pp, pep, hep, Be7, B8, N13, O15, F17 |
 | `b8_flux` | `model` or `sno_nc` (measured) |
-| `site`, `earth_model` | a B3 site; `prem_crust1` (default), `prem_full`, `prem_four`, `prem_prob3` |
+| `site`, `earth_model` | a B3 site; `prem_crust1` (default), `prem_crust1_3d`, `prem_full`, `prem_four`, `prem_prob3` |
 | `detector`, `channel` | `water` (es, cc_nue_o16), `argon` (es, cc_nue_ar40, nc_ar40), `scintillator_pc`, `scintillator_lab` (es), `heavy_water` (es, cc_nue_d, nc_d) |
 | `es_model`, `xsec_model` | `bks`, `tree`, `snowglobes`; a B4 variant of the channel |
 | `period` | `day`, `night`, `annual` |

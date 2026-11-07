@@ -44,8 +44,7 @@
         approximation that some tools make. The table attributes every source of the calculator's error budget to the
         step it comes from, for five reference observables, counting state-of-the-art inputs only: published
         uncertainties, the spread between competing current models and, for B5, the statistics of 100 kt·yr.
-        Approximations and legacy models are shown on each benchmark's own page; the one exception is B3, whose single
-        current Earth model leaves no spread: the shift to PREM's average crust stands in for it.</p>
+        Approximations and legacy models are shown on each benchmark's own page.</p>
       <p class="hint" id="reference-note"></p>
     </section>
     <section class="card">
@@ -53,8 +52,8 @@
       <div id="matrix" class="matrix"></div>
       <p class="hint official-caption">Sampled: the 1σ spread from published uncertainties. Model range: the largest
         deviation from the nominal among the competing state-of-the-art alternatives (not a σ); legacy models are
-        plotted and labelled on each step's page but never counted here. *B3: the shift to PREM's average crust and
-        ocean, an approximation standing in for the spread of the crust model. B5: the statistical 1σ of 100 kt·yr
+        plotted and labelled on each step's page but never counted here. B3: the two current crust models, under the
+        detector and along each chord. B5: the statistical 1σ of 100 kt·yr
         (10 kt for 10 years); the detector response is the calculator's own input.</p>
     </section>
     <section class="card">
@@ -126,13 +125,15 @@
       <p>At night the mass eigenstates cross the Earth and partly regenerate ν<sub>e</sub>: the day-night asymmetry.
         B3 compares P(ν<sub>i</sub> → ν<sub>e</sub>) through PREM in three levels of detail (ten regions, four
         regions, Prob3++'s four shells), averaged over each site's night. On constant shells the solvers agree to
-        10⁻⁸; on PREM's continuous regions NuFast-Earth, which computes the calculator's night, takes each crossing's
-        mean density: against the reference (fourth-order Magnus, converged) the ⁸B A<sub>DN</sub> is off by up to 2 % at
-        10–15 MeV, 0.3 % once averaged over the Super-K spectrum, and almost equally with and without the local crust.
-        The state of the art is PREM with the CRUST1.0 crust under each detector, which moves A<sub>DN</sub> by −2 to
-        +4 % against full PREM; the crustless models are 20–40 % high. It is the only current Earth model, so B3 has
-        no model range yet: the crust where neutrinos enter and the 3D mantle (up to ~8 %) are not yet computed. The
-        bars below are approximations, signed shifts against it.</p>
+        10⁻⁸; on PREM's continuous regions NuFast-Earth takes each crossing's mean density, off by up to 2 % in the ⁸B
+        A<sub>DN</sub> at 10–15 MeV against the reference (fourth-order Magnus, converged). The calculator's night
+        therefore cuts those regions into 50 km shells (within 0.05 %); the bar "mean density per region crossing" is
+        what NuFast-Earth's own treatment would shift. The state of the art is PREM with the CRUST1.0 crust, in two
+        competing models: the column under the detector (radial) and the crust along each night chord (3D, near the
+        detector and where the chord enters). Against full PREM they move A<sub>DN</sub> by −2.5 to +3.7 %; against
+        each other by at most 0.2 %, B3's model range: the far side of a chord averages out. Not yet included: a second
+        crust model (LITHO1.0, ~0.05 pp different at LNGS and SURF in Han et al.) and a 3D mantle. The crustless
+        models are 20–40 % high; the other bars are approximations, signed shifts against the default.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b3-impact" class="plot"></div></section>
     <div class="trio">
