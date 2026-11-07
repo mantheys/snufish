@@ -222,8 +222,7 @@ export function budgetPlot(node, result) {
   const fill = (colour) => `<i style="background:${colour}"></i>`;
   htmlLegend(node, rows.map((r, i) => ({ label: `<b>${letters[i]}</b> ${named(r)}`, title: `${r.Source} (${r.Kind})`,
                                          colour: colour(r), fill: true })),
-             `${fill(c.sampled)}sampled 1σ${ranges ? ` ${fill(c.range)}state-of-the-art model range (largest deviation)` : ""}`
-             + `${legacy ? ` ${fill(c.legacy)}spread with legacy models and approximations: context, not an uncertainty` : ""}`);
+             `${fill(c.sampled)}sampled 1σ${ranges ? ` ${fill(c.range)}model range` : ""}${legacy ? ` ${fill(c.legacy)}with legacy (context)` : ""}`);
   const xTitle = quantity !== "adn" ? "Relative uncertainty (%)" : `Uncertainty (${unit})`;
   return Plotly.react(node, traces, layout(c, node, "Uncertainties", xTitle, "",
     { barmode: "overlay", showlegend: false, margin: { l: 30, r: 16, t: 24, b: 48 }, xaxis: { range: [0, 1.22 * Math.max(...sizes)] },

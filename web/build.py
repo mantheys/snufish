@@ -20,7 +20,7 @@ from pathlib import Path
 
 WEB = Path(__file__).resolve().parent
 ROOT = WEB.parent
-PAGE = ["index.html", "rates.html", "benchmarks.html", "benchmarks.js", "style.css", "app.js", "engine.js", "plots.js",
+PAGE = ["index.html", "rates.html", "benchmarks.html", "benchmarks.js", "home.js", "style.css", "app.js", "engine.js", "plots.js",
         "export.js", "sources.js", "checks.js", "official.js", "plotipus-worker.js"]
 
 

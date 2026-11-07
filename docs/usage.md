@@ -120,6 +120,8 @@ SNUfish's folding).
 |---|---|
 | `scripts/import_ssm.py --b23 <dir> --peanuts <dir>` | convert the published solar model tables into `reference/ssm/` and `benchmarks/B1_ssm/models.yaml` (inputs read as numbers only) |
 | `scripts/crosscheck.py [--exact]` | recompute the published numbers of [crosschecks.md](crosschecks.md) (app tables, or with `--exact` the B2 solver and NuFast-Earth); needs `build/app` |
+| `scripts/dune_solar_tables.py [--earth <model>]` | the CC, ES and NC rate tables of DUNE solar analyses in SOLAR's conventions ([dune-solar-tables.md](dune-solar-tables.md)) |
+| `scripts/dune_phase1_rates.py [--out <dir>]` | the raw rates of the DUNE solar Phase I paper as LaTeX macros, a table and JSON ([dune-solar-tables.md](dune-solar-tables.md#phase-i-paper)); NuFast-Earth driver needed |
 | `scripts/readme_images.py` | render the README figures (`input/plots/readme_scripts.txt`) in light and dark into `docs/images/` |
 | `contributions/<tool>/scripts/run_*.py` | produce a tool's contribution (see each script's docstring for how to build the tool) |
 
@@ -272,7 +274,7 @@ official figure recomputed ([crosschecks.md](crosschecks.md)).
 **Actions.** "Render with plotipus" draws the plotipus figures in the
 browser (Pyodide in a worker, ~15 s the first time, ~2 s after);
 "Download" gives a zip with the result as Parquet, the figures, a plotipus
-command list and colour registry (`plotipus run app`); "Copy link" encodes
+command list and colour registry (`plotipus run app`); "Share" copies a link that encodes
 the setup in the URL (imported files are not part of it).
 
 **Accuracy.** Probabilities come from the app tables: 2 × 10⁻⁴ for rates
