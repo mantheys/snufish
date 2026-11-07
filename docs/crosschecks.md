@@ -26,19 +26,19 @@ gammas too and gives about twice the events above 5 MeV.
 | Borexino 1707.09279, tab. II | pp, ⁷Be, pep rates with B16-GS98 (cpd/100 t) | 131.1, 47.9, 2.74 | 131.8, 47.96, 2.756 | +0.5, +0.1, +0.6 % |
 | Super-K 2312.12907, §VII D | Borexino oscillated/unoscillated, pp, pep, ⁷Be | 0.689, 0.614, 0.638 | 0.689, 0.612, 0.633 | ≤ 0.9 % (energy windows not given) |
 | JUNO 2006.11760, tab. 1 | ⁸B ES, Δm² 4.8 and 7.5 × 10⁻⁵, all energies and > 2 MeV (cpd/kt) | 4.15, 2.76, 4.36, 2.90 | 4.139, 2.754, 4.343, 2.884 | −0.2 to −0.6 % |
-| JUNO 2006.11760, tab. 7 | A<sub>DN</sub> at Δm² 4.8 × 10⁻⁵ in 2–16, 5–16, 3–5, 2–3 MeV | −2.9, −3.4, −2.5, −2.1 % | −2.8, −3.4, −2.5, −2.1 % | within the table's rounding |
-| Super-K 2312.12907, §VIII | expected A<sub>DN</sub>, SK-IV range, Δm² 6.1 × 10⁻⁵ | −2.38 % | −2.32 % | 2.5 % |
-| | expected A<sub>DN</sub>, SK-I range, Δm² 6.1 and 7.5 × 10⁻⁵ | −2.42, −1.72 % | −2.37, −1.67 % | 2.3, 2.6 % |
+| JUNO 2006.11760, tab. 7 | A<sub>DN</sub> at Δm² 4.8 × 10⁻⁵ in 2–16, 5–16, 3–5, 2–3 MeV | −2.9, −3.4, −2.5, −2.1 % | −2.9, −3.5, −2.5, −2.2 % | within 0.13 pp (the table rounds to 0.1 pp; its statistical errors are 0.9–3.2 pp) |
+| Super-K 2312.12907, §VIII | expected A<sub>DN</sub>, SK-IV range, Δm² 6.1 × 10⁻⁵ | −2.38 % | −2.34 % | 1.7 % |
+| | expected A<sub>DN</sub>, SK-I range, Δm² 6.1 and 7.5 × 10⁻⁵ | −2.42, −1.72 % | −2.38, −1.70 % | 1.5, 1.3 % |
 | Hajjar, Nairat & Beacom 2606.18347, tab. I | DUNE ⁸B νₑ CC events, electron T > 5 MeV, 20 kt·yr, NuFIT 6.0, SNO flux | 21,722 | 21,914 | +0.9 % |
 | Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE ⁸B νₑ CC events, T > 5 MeV, 100 kt·yr, Δm² 4.85 × 10⁻⁵ | 9.9 × 10⁴ / 0.88 = 1.125 × 10⁵ | 1.061 × 10⁵ | −5.7 % |
 | | DUNE ⁸B ES events, T > 5 MeV, 100 kt·yr | 2.6 × 10⁴ / 0.81 = 3.21 × 10⁴ | 3.41 × 10⁴ | +6.2 % |
 | | DUNE hep νₑ CC events, T > 11 MeV, 100 kt·yr | 150 | 155 | +3.3 % (hep flux 7.95 × 10³ here, 8.25 × 10³ there) |
 | Ioannisian, Smirnov & Wyler 1702.06097, sec. IV | DUNE ⁸B νₑ CC events with E<sub>ν</sub> > 11 MeV, 40 kt, one year | 27,000 | 27,871 | +3.2 % |
-| | A<sub>DN</sub>, E<sub>ν</sub> > 11 MeV, Δm² 7.5 and 5.0 × 10⁻⁵ ("about 4 %" and "6.5 %" as N/D − 1) | −3.92, −6.30 % | −3.99, −6.83 % | 1.7, 8.5 % |
+| | A<sub>DN</sub>, E<sub>ν</sub> > 11 MeV, Δm² 7.5 and 5.0 × 10⁻⁵ ("about 4 %" and "6.5 %" as N/D − 1) | −3.92, −6.30 % | −3.83, −6.75 % | 2.4, 7.2 % |
 
 JUNO writes the tree-level cross section with g₁ ≈ 0.73, g₂ ≈ 0.23 (sin²θ<sub>W</sub> = 0.23). SNUfish's tree level uses
 0.23857 and comes out 2.2 % above JUNO's numbers; with radiative corrections (BKS, the default) it is within
-0.6 %: the two shifts happen to cancel. SNUfish's Super-K asymmetries are 2.2–2.8 % smaller than
+0.6 %: the two shifts happen to cancel. SNUfish's Super-K asymmetries are 1.3–1.7 % smaller than
 Super-K's because PREM ends in 3 km of ocean (see Investigated): with rock in its place they agree to −0.7 to +1.9 %.
 
 Capozzi et al. count events outside (CC) or inside (ES) a 40° cone around the Sun that holds 88 % and 81 % of them;
@@ -51,15 +51,15 @@ their asymmetries are quoted as "about".
 
 | Source | Quantity | Published | SNUfish | Note |
 |---|---|---|---|---|
-| Super-K 2312.12907, §VIII | expected A<sub>DN</sub>, SK-I range, Δm² 4.8 × 10⁻⁵ | −3.84 % | −3.32 % (exact solvers: same) | 13.5 % off, while 6.1 and 7.5 × 10⁻⁵ agree to 2.5 %. θ₁₃ = 0 gives −3.48 % (exact); not explained. The value is quoted "for reference" at the previously favoured Δm²; it may come from an older calculation. |
-| Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE A<sub>DN</sub>, νₑ CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (from D = 3.04 × 10⁴, N = 3.29 × 10⁴) | −7.90 % | −6.87 % (four-region PREM: −8.75 %) | 13 % off. At DUNE's energies the asymmetry follows the Earth's outer layers: the ten-region PREM, with its crust, and the four-region one, without, bracket the paper's value. The paper describes its Earth treatment only through its ref. 49. |
+| Super-K 2312.12907, §VIII | expected A<sub>DN</sub>, SK-I range, Δm² 4.8 × 10⁻⁵ | −3.84 % | −3.37 % (exact solvers: same) | 12.3 % off, while 6.1 and 7.5 × 10⁻⁵ agree to 1.7 %. θ₁₃ = 0 gives −3.48 % (exact); not explained. The value is quoted "for reference" at the previously favoured Δm²; it may come from an older calculation. |
+| Capozzi, Li, Zhu & Beacom 1808.08232 | DUNE A<sub>DN</sub>, νₑ CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (from D = 3.04 × 10⁴, N = 3.29 × 10⁴) | −7.90 % | −6.96 % (four-region PREM: −8.68 %) | 12 % off. At DUNE's energies the asymmetry follows the Earth's outer layers: the ten-region PREM, with its crust, and the four-region one, without, bracket the paper's value. The paper describes its Earth treatment only through its ref. 49. |
 | JUNO 2006.11760, sec. 4.2 | expected A<sub>DN</sub>, Δm² 7.5 × 10⁻⁵, 2–16 MeV | −1.6 % | −1.38 % | JUNO's own table 1 at this Δm² (1.44 day, 1.46 night) gives −1.4 % ± 0.7 % from rounding, consistent with SNUfish; the −1.6 % in the text is not. |
 
 ## Measurements: SNUfish's prediction
 
 | Source | Quantity | Measured | SNUfish | Pull |
 |---|---|---|---|---|
-| Super-K 2312.12907 | events, 22.5 kt, 2970 days (fig. 28 efficiency, SNO NC flux) | 65,443 ± 1,005 | 64,538 | −0.9σ (the NC flux alone is ±3.8 %) |
+| Super-K 2312.12907 | events, 22.5 kt, 2970 days (fig. 28 efficiency, SNO NC flux) | 65,443 ± 1,005 | 64,541 | −0.9σ (the NC flux alone is ±3.8 %) |
 | | ⁸B flux / SNO NC flux | 2.314/5.25 = 0.441 ± 0.009 | 0.433 | −0.9σ |
 | SNO nucl-ex/0502021 | φ<sub>CC</sub>/φ<sub>NC</sub> | 0.340 −0.039 +0.037 | 0.334 | −0.2σ |
 | | φ<sub>ES</sub>/φ<sub>NC</sub> | 0.476 ± 0.06 | 0.438 | −0.6σ |
@@ -91,15 +91,17 @@ diurnal parallax) accounts for 0.009 pp of it. The remaining 0.002–0.005 pp is
 to 2.16 % at Kamioka and 1.46 % to 2.34 % at SURF: +23 to +60 % of the oscillation-only asymmetry. Left out:
 nights near perihelion are also deeper (more core crossings); weighting the nadir exposure by (1 AU/R)² changes
 A<sub>DN</sub> by +0.05 % (Jiangmen) to +0.14 % (SURF) of itself. The 3D Earth (Han et al.: up to 0.2 pp, ~8 % of A<sub>DN</sub> at
-CallioLab, site dependent) is not modelled: SNUfish's Earth models are radial (PREM variants).
+CallioLab, site dependent) is the crust along each chord here ([below](#crust-along-each-chord-3d)), without a 3D
+mantle.
 
 ## Investigated
 
 - **PREM's ocean.** Full PREM ends in 3 km of water (1.02 g/cm³), and the B3 detector sits at the surface, in it.
   The day-night asymmetry is most sensitive to the density just under the detector, so for continental sites
   (all of SNUfish's) PREM under-predicts it. With rock (2.6 g/cm³) in place of the ocean (a driver variant in the
-  paper repository), Super-K's expected asymmetries go from 2.2–2.8 % above SNUfish's to −0.7 to +1.9 %:
-  SK-IV range at 6.1 × 10⁻⁵, −2.314 % → −2.392 % (Super-K: −2.38 %). DUNE's argon CC A<sub>DN</sub> at SURF moves
+  paper repository), Super-K's expected asymmetries went from 2.2–2.8 % above SNUfish's to −0.7 to +1.9 %:
+  SK-IV range at 6.1 × 10⁻⁵, −2.314 % → −2.392 % (Super-K: −2.38 %); NuFast-Earth's mean density per crossing then,
+  50 km shells now (−2.34 % with the ocean). DUNE's argon CC A<sub>DN</sub> at SURF moves
   by +4.9 % of itself. `prem_prob3` and `prem_four` have no crust at all (3.3 and 3.8 g/cm³ at the surface) and
   give 14–33 % larger asymmetries: as a model range they measure the missing crust, not an Earth-model uncertainty.
 - **Super-K at 4.8 × 10⁻⁵.** Super-K's 2014 paper (arXiv:1312.5176) expects −3.3 % at Δm² = 4.8 × 10⁻⁵
@@ -179,10 +181,78 @@ Gamow–Teller operator is quenched in ⁴⁰Ar is the open question behind the 
 ## Local crust
 
 The CRUST1.0 column under each detector in place of PREM's ocean and average crust (`prem_crust1`) moves
-the ⁸B A<sub>DN</sub> (B23-MB22m, JUNO 2025 parameters, exact solvers) by +1.5 % at Kamioka (ES, T > 3.49 MeV),
-+2.2 % at LNGS, +3.8 % at SNOLAB, +3.0 % at Jiangmen (ES, T > 2 MeV) and −2.4 % at SURF (argon CC,
-E<sub>vis</sub> > 5 MeV), of itself. SURF's crust is 49 km thick and lighter than the PREM mantle it replaces; the
-others gain dense rock where PREM has ocean.
+the annual ⁸B A<sub>DN</sub> (B23-MB22m, JUNO 2025, exact solvers on 50 km shells, `scripts/earth3d_literature.py --part
+sites`), of itself:
+
+| Site | ES in water, T > 3.49 MeV | CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV |
+|---|---|---|
+| Kamioka | +1.41 % | +1.05 % |
+| LNGS | +2.13 % | +1.54 % |
+| SURF | −1.71 % | −2.54 % |
+| SNOLAB | +3.70 % | +2.78 % |
+| Jiangmen | +2.84 % | +2.40 % |
+
+SURF's crust is 49 km thick and lighter than the PREM mantle it replaces; the others gain dense rock where PREM
+has ocean. (Before the night was cut into thin shells, NuFast-Earth's mean density per region crossing put
+these at +1.5, +2.2, −2.4 (argon), +3.8 and +3.0 % (ES above 2 MeV).)
+
+## Crust along each chord (3D)
+
+`prem_crust1_3d` (`snufish.earth3d`) takes, at every point of a night chord within the crust, the layer of the
+CRUST1.0 cell the point lies under (the whole 1° × 1° grid, `reference/earth/crust1_global.npz`), and PREM under
+the local Moho. The chords are the Sun's directions every 2 minutes over 2026 at the site's latitude and
+longitude (solar coordinates of the Astronomical Almanac, the Earth rotation angle); the nadir exposure stays
+B3's W(η), so the model differs from `prem_crust1` by the crust alone. Each of the 1001 cells in cos η is
+solved once, with the crust of its ~130 chords averaged at equal distance from the detector and from the entry
+point, in NuFast-Earth's single-trajectory mode (the B3 driver's `trajectories:FILE`), the chord cut where the
+density changes by 0.05 g/cm³ or every 50 km. Checks (`tests/test_earth3d.py`):
+
+- the driver solves a chord in the neutrino's order (from the entry point), against the B3 reference
+  propagator on an asymmetric chord, to 10⁻⁷;
+- with the detector's column put everywhere, the chords give `prem_crust1` (Magnus, 10 km shells) to
+  2 × 10⁻⁴ in P_iₑ, and A<sub>DN</sub> within 0.05 % at 5, 10 and 15 MeV over the whole night;
+- the time sampling of the Sun reproduces W(η) of Lisi & Montanino within 1 % per 0.1 in cos η;
+- averaging the crust within a cell before solving, instead of averaging P over its chords: ≤ 1.3 × 10⁻⁴ in
+  P₂ₑ at Kamioka (0.3 % of the regeneration at cos η = 0.05, 10⁻⁴ of it elsewhere), while single chords
+  differ from each other by 3 × 10⁻⁴ to 6 × 10⁻³ (first order in the density change, so the average commutes);
+- piece size: A<sub>DN</sub> of ⁸B within 0.07 % of 10 km pieces at 4–20 MeV.
+
+Against the local crust under the detector, the crust along each chord moves the annual A<sub>DN</sub> by **−0.17 to
++0.16 %** of itself at the five sites (ES in water above 3.49 MeV: Kamioka −0.17 %, LNGS −0.05 %, SURF −0.09 %,
+SNOLAB −0.04 %, Jiangmen +0.03 %; CC on ⁴⁰Ar above 5 MeV: 0.00, +0.05, +0.16, −0.01, +0.05 %). The far side
+of a chord barely matters: its contribution to the regeneration is averaged out over the phases of the many
+chords, as Ioannisian, Smirnov & Wyler and Bakhti & Smirnov find for structure far from the detector; what the
+asymmetry sees is the crust near the detector, which `prem_crust1` already has. The two are the current Earth
+models and their spread is B3's model range.
+
+**Published numbers.** Han et al. ([arXiv:2607.24421](https://arxiv.org/abs/2607.24421), table 7.1) compute the
+day-night asymmetry of the ⁸B νₑ flux (0.1–16 MeV, B16-GS98, PDG 2025 parameters) through PREM (Yₑ = 0.50 and
+0.467) and through a 3D Earth, LITHO1.0 (crust and lithosphere to 320 km) on the SAW642AN mantle; the shift Δ is
+"up to ∼8 %" of A<sub>DN</sub> in their text, 6.3 % at CallioLab and at most 4.8 % at SNUfish's sites in their table.
+Their 1D value is A^osc_DN − Δ (pp):
+
+| Site | 1D, Han et al. | 1D, SNUfish (their Yₑ) | Δ, Han et al. (LITHO1.0 + SAW642AN) | local crust (`prem_crust1`) | crust along each chord (`prem_crust1_3d`) |
+|---|---|---|---|---|---|
+| Kamioka | 1.382 | 1.376 | +0.025 | +0.029 | +0.024 |
+| LNGS | 1.352 | 1.347 | +0.001 | +0.044 | +0.041 |
+| SURF | 1.342 | 1.331 | +0.049 | +0.001 | −0.003 |
+| SNO (SNOLAB) | 1.329 | 1.323 | +0.064 | +0.070 | +0.069 |
+| JUNO (Jiangmen) | 1.427 | 1.413 | +0.050 | +0.050 | +0.050 |
+
+(`scripts/earth3d_literature.py --part han`; SNUfish's shifts are from `prem_full`, with B3's Yₑ.) The 1D
+asymmetry is reproduced to 0.4–1 %. The 3D shift is reproduced to 0.005 pp at Kamioka, SNOLAB and Jiangmen,
+and not at LNGS (+0.041 against +0.001 pp) and SURF (−0.003 against +0.049 pp): there LITHO1.0 and CRUST1.0
+differ, or the SAW642AN mantle matters; the table does not separate the two. Most of Han et al.'s shift is the
+crust near the detector, which SNUfish counts in both current models: the ~8 % is not on top of it. The
+difference between two crust models, ~0.05 pp or 3–4 % of A<sub>DN</sub> at LNGS and SURF, is larger than the spread of
+SNUfish's two current models and is not in it: a second crust model (LITHO1.0) is the next step.
+
+Bakhti & Smirnov ([arXiv:2001.08030](https://arxiv.org/abs/2001.08030), sec. IV; Hyper-K, ES with T > 6.5 MeV,
+σ_E/E = 15 %, A_ND = N/D − 1, Δm²₂₁ = 7.5 × 10⁻⁵, θ₁₃ = 8.4°, θ₁₂ not stated: 0.307 here) find A_ND = 0.022 with
+CRUST1.0 and "about 5 %" more with a PREM whose crust reaches the surface (no ocean). SNUfish
+(`--part bakhti`, B16-GS98): 0.0201 with that PREM, 0.0195 with either CRUST1.0 model, 2.7 % smaller; with
+PREM's ocean, 0.0193. The direction is reproduced, the size half; their absolute value is 11 % higher (first
+order in the matter potential, θ₁₂ and fluxes not stated).
 
 ## NuFast-Earth on continuous density
 
@@ -201,10 +271,19 @@ reference for continuous density (fourth-order Magnus, converged to 4 × 10⁻�
 
 (NuFast-Earth / reference − 1.) Energy by energy over 4–20 MeV the bias oscillates with energy, between
 −5.1 % and +2.9 % for `prem_full` and −2.0 % and +4.3 % for `prem_four` across the five sites
-(`B23_DayNight`, the two tools on the same Earth models); rates integrate it down to the table's size. The engine's night tables come from NuFast-Earth, so its A<sub>DN</sub> carries this
-bias for the continuous models, including the default `prem_crust1`. Cutting each polynomial region into
-25 km shells in the regions file NuFast-Earth reads removes it (within 0.007 % of the reference at both
-sites, 4× the driver time; 10 km: 0.004 %), which also confirms the reference independently.
+(`B23_DayNight`, the two tools on the same Earth models); rates integrate it down to the table's size. Cutting each polynomial region into thin shells in the
+regions file NuFast-Earth reads removes it (25 km: within 0.007 % of the reference at both sites; 10 km:
+0.004 %), which also confirms the reference independently.
+
+**The calculator's night is now on 50 km shells** (`scan.SPLIT_KM`; the app tables, `ExactProbabilities` and
+`snufish scan`; `split_km=None` gives NuFast-Earth's own treatment, which its B3 contribution keeps). Against
+10 km shells the night-averaged ⁸B A<sub>DN</sub> at 4–20 MeV is then within 0.05 % (`prem_crust1` at Kamioka and SURF,
+`prem_full`) and 0.10 % (`prem_four`), energy by energy; without the cut, 2.9–3.6 %; 25 km shells: 0.03 %,
+for 1.4× the time of 50 km. The cost: a night grid takes 1.6× the driver time of the mean density per crossing
+(0.42 against 0.27 s for `prem_crust1`); the tables keep their size (the night is averaged before it is
+stored). The B3 row "mean density per region crossing" of the benchmark pages is the shift NuFast-Earth's own
+treatment would put on the calculator's result: the exact solvers without and with the cut, the latter what the
+tables hold.
 
 ## PEANUTS and nuSQuIDS
 

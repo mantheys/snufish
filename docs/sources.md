@@ -73,6 +73,7 @@ uncertainties only; BS05 neither.
 | `prem_prob3`, `prem_four`, `prem_full` | copied from NuFast-Earth `src/Earth.cpp` @ 327586d |
 | Yₑ = 0.466 (core), 0.494 (mantle) | hep-ph/0002149, as in NuFast-Earth |
 | Local crust (`prem_crust1`) | CRUST1.0 (Laske, Masters, Ma & Pasyanos 2013, [igppweb.ucsd.edu/~gabi/crust1.html](https://igppweb.ucsd.edu/~gabi/crust1.html)), the 1° × 1° cell of each site; `reference/earth/crust1_sites.yaml`, written by `scripts/import_crust1.py` (retrieved 2026-10-30, archive sha256 in the file); laboratory longitudes to 0.01° |
+| Crust along each chord (`prem_crust1_3d`) | the whole CRUST1.0 grid, `reference/earth/crust1_global.npz` (int16, lossless), written by `scripts/import_crust1.py` from the same archive; Sun's position: low-precision formulae of the Astronomical Almanac, Earth rotation angle (IERS) |
 | Night exposure W(η; λ) | Lisi & Montanino, [hep-ph/9702343](https://arxiv.org/abs/hep-ph/9702343), table II, as implemented in NuFast-Earth `src/Solar.cpp` |
 | Kamioka 36.48°, LNGS 42.45°, SNOLAB 46.47° | hep-ph/9702343, fig. 3 |
 | SURF 44.356° | [arXiv:1707.02322](https://arxiv.org/abs/1707.02322), table 1 |

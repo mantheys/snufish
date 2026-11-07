@@ -51,7 +51,7 @@ def test_split_regions_thin_the_polynomial_regions_only():
     assert crust.split(shells, 1.0)[-2:] == shells[-2:]
 
 
-def test_b3_shows_its_approximations_on_night_observables():
+def test_b3_has_a_model_range_and_its_approximations_on_night_observables():
     import json
     from pathlib import Path
 
@@ -60,13 +60,17 @@ def test_b3_shows_its_approximations_on_night_observables():
     path = Path(__file__).resolve().parents[1] / "build" / "app" / "sections.json"
     if not path.exists():
         pytest.skip("run snufish export-sections")
-    from snufish.sections import CRUST_PROXY, EARTH_LABELS, SOLVER_APPROXIMATION
+    from snufish.sections import EARTH_LABELS, SOLVER_APPROXIMATION
 
     data = json.loads(path.read_text())["observables"]
-    adn = {r["source"]: r for r in data["water_es_adn"]["rows"] if r["section"] == "B3"}
+    rows = [r for r in data["water_es_adn"]["rows"] if r["section"] == "B3"]
+    ranges = [r for r in rows if r["kind"] == "model range"]
+    # two current Earth models (the local crust, radial, and the crust along each chord): a range, no stand-in
+    assert [r["source"] for r in ranges] == ["Earth model"] and ranges[0]["low"] < ranges[0]["high"]
+    assert not any("overview" in r for r in rows)
+    adn = {r["source"]: r for r in rows if r["kind"] != "model range"}
     assert set(EARTH_LABELS.values()) <= set(adn) <= {*EARTH_LABELS.values(), SOLVER_APPROXIMATION}
     assert all(r["kind"] == "approximation" for r in adn.values())
-    assert [r["source"] for r in adn.values() if r.get("overview")] == [EARTH_LABELS[CRUST_PROXY]]
     central = data["water_es_adn"]["central"]
     assert adn[EARTH_LABELS["prem_four"]]["shift"] / central > 0.2   # no crust: A_DN far too large
     if SOLVER_APPROXIMATION in adn:  # written with the NuFast-Earth driver only

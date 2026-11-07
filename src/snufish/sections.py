@@ -14,13 +14,13 @@ uncertainties of each observable's detector (its response from the B5 spec,
 part 2: ``RESPONSE``). B2 adds the
 approximations some solvers make about where neutrinos are produced
 (``TREATMENTS``): signed shifts of the observable, computed with the exact
-B2 solver (the tables hold each component's own profile only). B3 adds the
-Earth models that approximate the state of the art (reference/status.yaml),
-as signed shifts from it: with a single current Earth model, B3 has no
-model range, and the overview shows the shift to PREM's average crust
-(``CRUST_PROXY``, flagged ``overview``) in its place; and the solver's
-approximation, NuFast-Earth's mean density per region crossing, against
-thin shells (``SPLIT_KM``). With them,
+B2 solver (the tables hold each component's own profile only). B3's model
+range is the engine's, over the current Earth models (the local crust under
+the detector, radial, and the crust along each night chord, earth3d.py); B3
+adds the Earth models that approximate the state of the art
+(reference/status.yaml), as signed shifts from it, and the solver's
+approximation, NuFast-Earth's mean density per region crossing, against the
+thin shells (scan.SPLIT_KM) the tables and the exact solvers use. With them,
 per benchmark, the curves its pages plot (solar profiles, P_ee per
 component, regeneration per Earth model) and the agreement between tools.
 """
@@ -69,15 +69,12 @@ SINGLE_DENSITY = 100 * 2 / 3
 TREATMENTS = {"B8": "every component on the 8B production profile",
               "centre": "every component produced at the centre",
               "single": f"one density for every component, n_e = {SINGLE_DENSITY:.1f} N_A/cm³ (NuFast-Earth's examples)"}
-# no competing current Earth model, so no B3 range: the overview shows the shift to PREM's average crust, the
-# standard reference Earth, in its place (the crust under the site is what moves A_DN; status.yaml)
-CRUST_PROXY = "prem_full"
 EARTH_LABELS = {"prem_full": "PREM's average crust and ocean (prem_full)",
                 "prem_four": "no crust, PREM's four main regions (prem_four)",
                 "prem_prob3": "four shells of constant density (prem_prob3)"}
-# the solver's approximation: NuFast-Earth takes each region crossing's mean density; SPLIT_KM shells remove it
-SOLVER_APPROXIMATION = "mean density per region crossing (NuFast-Earth, the engine's night)"
-SPLIT_KM = 25.0
+# the solver's approximation: NuFast-Earth takes each region crossing's mean density; the tables and the exact
+# solvers cut the continuous regions into scan.SPLIT_KM shells, which removes it
+SOLVER_APPROXIMATION = "mean density per region crossing (NuFast-Earth's own PREM treatment)"
 ENERGIES = np.geomspace(0.1, 20.0, 120)
 RADII = np.round(np.arange(0.0, 0.4001, 0.0025), 6)
 
@@ -102,21 +99,6 @@ class ProductionTreatment:
 
     def night(self, osc, earth_model, site):
         return self._night.night(osc, earth_model, site)
-
-
-class ThinShellNight:
-    """The exact solvers, with the continuous Earth regions cut into SPLIT_KM shells for NuFast-Earth."""
-
-    def day(self, osc, solar_model, component, energies):
-        from .export import ExactProbabilities
-
-        return ExactProbabilities().day(osc, solar_model, component, energies)
-
-    def night(self, osc, earth_model, site):
-        from .export import site_latitude
-        from .scan import night_probabilities
-
-        return night_probabilities(osc, earth_model, site_latitude(site), site, split_km=SPLIT_KM)
 
 
 def _section(source):
@@ -176,16 +158,13 @@ def impacts(inputs, tables, params):
                 kind = engine.status(inputs, "earth_model", m)["status"]
                 if kind == "current":
                     continue
-                row = dict(section="B3", source=EARTH_LABELS.get(m, m), kind=kind,
-                           shift=value(tables, setup.replace(earth_model=m)) - central)
-                if m == CRUST_PROXY:
-                    row["overview"] = True
-                rows.append(row)
-            if _has_driver():
+                rows.append(dict(section="B3", source=EARTH_LABELS.get(m, m), kind=kind,
+                                 shift=value(tables, setup.replace(earth_model=m)) - central))
+            if _has_driver():  # what the tables would carry with NuFast-Earth's own treatment
                 from .export import ExactProbabilities
 
                 rows.append(dict(section="B3", source=SOLVER_APPROXIMATION, kind="approximation",
-                                 shift=value(ExactProbabilities()) - value(ThinShellNight())))
+                                 shift=value(ExactProbabilities(split_km=None)) - value(ExactProbabilities())))
         out[name] = dict(label=o["label"], quantity=q, central=central, rows=rows)
     return out
 

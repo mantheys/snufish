@@ -16,7 +16,8 @@ jobs:
       - run: pip install ruff==0.17.3
       - run: ruff check .
 
-  # The app tables (snufish export-app, ~6 min) and the NuFast-Earth driver, built once and shared: without
+  # The app tables (snufish export-app, ~30 min: ~6x the CPU of before the 50 km shells and the 3D crust; cached on
+  # the inputs and the code) and the NuFast-Earth driver, built once and shared: without
   # them the table tests, the scan and the JS-against-Python test (test_web_engine.py) are skipped.
   tables:
     runs-on: ubuntu-latest

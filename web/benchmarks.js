@@ -13,7 +13,7 @@ const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth"
 const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
                 scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water" };
-const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)",
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)",
                 native: "The tool's own Earth model" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
@@ -47,11 +47,8 @@ const pct = (v) => {
 const FLOOR = 1e-4; // per cent: the left end of the log axes
 
 // the overview counts state-of-the-art contributions only: sampled uncertainties and ranges over current models
-// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page, but for
-// B3, which has a single current Earth model and so no range: the shift to PREM's average crust stands in for it
-// (flagged "overview", drawn pale)
+// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page
 const stateOfTheArt = (r) => r.kind === "sampled" || r.kind === "model range";
-const inOverview = (r) => stateOfTheArt(r) || r.overview;
 
 function largest(rows, central, keep) {
   let best = null;
@@ -66,12 +63,11 @@ function largest(rows, central, keep) {
 
 function matrix() {
   const obs = page.sections.observables, accent = colours().sampled;
-  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && inOverview(r)]);
+  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && stateOfTheArt(r)]);
   const cell = (best) => {
     if (!best) return `<td class="num empty">–</td>`;
     const strength = best.value ? Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5)) : 0;
-    const proxy = !["sampled", "model range"].includes(best.kind);
-    return `<td class="num${proxy ? " proxy" : ""}" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}${proxy ? "*" : ""}</td>`;
+    return `<td class="num" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}</td>`;
   };
   $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; day-night asymmetry in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
     Object.entries(obs).map(([id, o]) => `<tr><th title="${plain(sup(o.label))}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
@@ -84,7 +80,7 @@ function overviewPlot() {
   const c = colours(), id = $("overview-observable").value, o = page.sections.observables[id], node = $("plot-overview");
   // grouped by step, B1 at the top (Plotly draws the first category at the bottom), the largest first within a step
   const step = (r) => Object.keys(SECTIONS).indexOf(r.section);
-  const rows = o.rows.filter(inOverview)
+  const rows = o.rows.filter(stateOfTheArt)
     .sort((a, b) => step(b) - step(a) || Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
   const traces = Object.keys(SECTIONS).map((s) => {
     const mine = rows.filter((r) => r.section === s);
@@ -92,11 +88,10 @@ function overviewPlot() {
              x: mine.map((r) => Math.max(Math.abs(size(r, o.central)), FLOOR)),
              text: mine.map((r) => `${pct(size(r, o.central))} · ${r.kind}`), textposition: "outside", cliponaxis: false,
              textfont: { size: 11, color: c.secondary }, hovertemplate: "%{y}: %{text}<extra></extra>",
-             marker: { color: mine.map((r) => (stateOfTheArt(r) ? seriesColour(s) : alpha(seriesColour(s), 0.35))),
-                       line: { color: seriesColour(s), width: mine.map((r) => (stateOfTheArt(r) ? 0 : 1.5)) } } };
+             marker: { color: seriesColour(s) } };
   });
   htmlLegend(node, Object.keys(SECTIONS).map((s) => ({ label: SECTIONS[s], colour: seriesColour(s), fill: true })),
-             "State-of-the-art inputs; pale: B3 has a single current Earth model, so the shift to PREM's average crust stands in for its spread.");
+             "State-of-the-art inputs: sampled uncertainties and the ranges over current models.");
   node.style.height = `${Math.max(360, 34 * rows.length + 90)}px`;
   // the labels sit to the right of the bars, on a log axis: about two decades of room beyond the largest bar
   const top = Math.max(FLOOR, ...rows.map((r) => Math.abs(size(r, o.central))));

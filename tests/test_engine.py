@@ -107,7 +107,8 @@ def test_table_budget_matches_exact_budget():
     table = budget(**kwargs, probabilities=engine.TableProbabilities(APP))["Budget"].set_index(["Quantity", "Source"])
     assert list(table.index) == list(exact.index)
     assert np.allclose(table.Central, exact.Central, rtol=5e-3)
-    assert np.allclose(table.Relative, exact.Relative, rtol=0.03)
+    # atol: a tiny row (the Earth range of an annual rate, 7e-4) is held to the tables' precision (2e-4 for rates)
+    assert np.allclose(table.Relative, exact.Relative, rtol=0.03, atol=1e-4)
 
 
 def test_check_rejects_mismatched_options(inputs):
@@ -342,7 +343,7 @@ def test_model_ranges_compare_the_state_of_the_art_only(inputs):
     assert set(engine.alternatives(inputs, argon, "xsec_model")) == {
         "ar40_marley2_bhattacharya2009", "ar40_marley2_liu1998", "ar40_marley2_bhattacharya1998", "ar40_ksz2018"}
     assert set(engine.alternatives(inputs, argon, "solar_model")) == {"b23_mb22m", "b23_mb22p", "b23_aag21"}
-    assert engine.alternatives(inputs, water, "earth_model") == ["prem_crust1"]
+    assert engine.alternatives(inputs, water, "earth_model") == ["prem_crust1", "prem_crust1_3d"]  # the crust: two models
     assert engine.alternatives(inputs, water, "es_model") == ["bks", "snowglobes"]
     assert "tree" in engine.alternatives(inputs, water, "es_model", scope="all")
     assert engine.status(inputs, "solar_model", "b16_gs98")["superseded_by"] == "b23_mb22m"

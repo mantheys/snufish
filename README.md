@@ -65,9 +65,10 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
 2. **Solar composition is the largest open flux uncertainty.** AAG21
    predicts 16 % less <sup>8</sup>B, 8 % less <sup>7</sup>Be and 30 % less CNO than
    MB22m, each beyond MB22m's own 1σ.
-3. **The crust under the detector shifts A<sub>DN</sub> by −2.4 % to +3.8 %**,
-   with a size and sign set by the site. The 3D Earth (up to ~8 %) is not
-   computed yet, so no Earth uncertainty is counted.
+3. **The crust near the detector shifts A<sub>DN</sub> by −2.5 % to +3.7 %**,
+   with a size and sign set by the site. Taking it along each night chord
+   instead of under the detector moves it by at most 0.2 %: the Earth range.
+   A second crust model and a 3D mantle are not included yet.
 4. **<sup>40</sup>Ar CC is uncertain by 37 % because the Gamow–Teller quenching is
    unsettled.** MARLEY 2 and the Suzuki–Honma shell model agree within 3 %;
    Kostensalo's shell model is 27–35 % lower with g<sub>A</sub> = 1.00.
@@ -81,7 +82,9 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
    PEANUTS, nuSQuIDS) agree with the reference to 10⁻⁸–10⁻⁵ on the same
    shells, two Sun solvers to 10⁻⁴ and the ES radiative corrections to 0.1 %,
    orders of magnitude below the spread of competing inputs; what is left is
-   each tool's hard-coded constants.
+   each tool's hard-coded constants. NuFast-Earth's mean density per crossing
+   on PREM (0.3 % on the <sup>8</sup>B A<sub>DN</sub>) is removed in the calculator by
+   50 km shells.
 7. **Most large spreads were outdated inputs, not uncertainties.** The
    <sup>40</sup>Ar tables of SNOwGLoBES differ by a factor 5–7, Earth models without
    a crust overstate A<sub>DN</sub> by up to 40 %, and B16 gives 6.5 % more <sup>8</sup>B.
