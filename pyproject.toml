@@ -13,8 +13,8 @@ requires-python = ">=3.10"
 dependencies = ["numpy", "pandas", "pyarrow", "pyyaml", "scipy"]
 
 [project.optional-dependencies]
-# plotipus pinned to a commit, so the plots CI makes are reproducible; bump it deliberately
-plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git@cb57f98adf6c1e6896948e62aba2c28c1970da60"]
+# plotipus pinned to a release (Zenodo DOI 10.5281/zenodo.24044062), so the plots CI makes are reproducible; bump it deliberately
+plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git@v0.1.0"]
 dev = ["pytest", "ruff==0.17.3"]
 
 [project.scripts]

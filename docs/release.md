@@ -11,14 +11,15 @@ the SOLAR night).
 |---|---|---|
 | `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | `date-released` if the tag is not made on 2026-11-07; the DOI after Zenodo mints it |
 | `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | done (ORCID included) |
-| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | done (`0.2.0`); the plotipus pin moves to its `v0.1.0` tag once that exists |
+| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | done (`0.2.0`; plotipus pinned to its `v0.1.0` release) |
 | `catalogue/tools/snufish-reference.yaml` | `reference` | the concept DOI (cites every version) |
 
 ## Steps
 
-0. Release plotipus `v0.1.0` first (its own `CITATION.cff` and
-   `.zenodo.json`), then pin `plotipus @ git+https://github.com/mantheys/plotipus.git@v0.1.0`
-   in `pyproject.toml`, so the archive names a released plotting version.
+0. Done: plotipus `v0.1.0` is released (version DOI
+   [10.5281/zenodo.24044062](https://doi.org/10.5281/zenodo.24044062),
+   concept DOI 10.5281/zenodo.24044061) and `pyproject.toml` pins
+   `plotipus @ git+https://github.com/mantheys/plotipus.git@v0.1.0`.
 1. Link the repository in Zenodo (GitHub integration, switch it on for
    `mantheys/snufish`). From then on every GitHub release is archived.
 2. Fill in the table above; bump `version` in `pyproject.toml` and
