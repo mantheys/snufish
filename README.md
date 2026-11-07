@@ -1,5 +1,7 @@
 # SNUfish
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/mantheys)
+
 **Calculator: [mantheys.github.io/snufish](https://mantheys.github.io/snufish/)** ·
 **Documentation: [docs/](docs/README.md)**
 
