@@ -79,7 +79,7 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
   // the benchmarks B1–B5 (oscillation parameters, Sun, Earth, interaction, detector)
   const d = inputs.data;
   if (step === "result") {
-    const out = [S("Rates: interactions per kiloton-year; A_DN = 2(N − D)/(N + D) of the night and day rates")];
+    const out = [S("Rates: interactions per kiloton-year; A<sub>DN</sub> = 2(N − D)/(N + D) of the night and day rates")];
     if (quantity === "adn" && setup.channel === "es" && setup.site === "Kamioka") out.push(SOURCES.sk_solar);
     return out;
   }

@@ -1,6 +1,6 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
-import { budgetPlot, distributionPlot, officialPlot, spectrumPlot, themeIcon } from "./plots.js";
+import { ADN, budgetPlot, distributionPlot, officialPlot, plain, spectrumPlot, themeIcon } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
 import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
          reproduced } from "./checks.js";
@@ -161,7 +161,7 @@ function buildControls() {
   $("check").replaceChildren(option("", "None: set the steps by hand"), envelope, ...Object.entries(groups).map(([name, list]) => {
     const group = document.createElement("optgroup");
     group.label = name;
-    list.forEach((c) => group.append(option(c.id, `${c.group}: ${c.label}`)));
+    list.forEach((c) => group.append(option(c.id, plain(`${c.group}: ${c.label}`))));
     return group;
   }));
   // state-of-the-art choices first; legacy ones (kept to reproduce papers) and approximations apart, and labelled
@@ -450,7 +450,7 @@ function publishedLine(r) {
     shown = `Measured: <b>${digits(p.value)}</b> −${digits(p.minus, 2)} +${digits(p.plus, 2)}${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff}), `
           + `${Math.abs(pull).toFixed(1)}σ ${pull > 0 ? "above" : "below"} it`;
   } else shown = `Published: <b>${digits(p.value)}</b>${unit} · SNUfish <b>${digits(ours)}</b>${unit} (${diff})`;
-  const convention = p.kind === "adn" ? " A_DN here in the paper's convention (D − N)/mean, the opposite sign of the headline's." : "";
+  const convention = p.kind === "adn" ? ` ${ADN} here in the paper's convention (D − N)/mean, the opposite sign of the headline's.` : "";
   return `<div class="sub check-line"><b>${c.group}: ${c.label}</b> (${sourceLink(c)}). ${shown}.${convention}</div>`;
 }
 

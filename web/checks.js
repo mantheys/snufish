@@ -111,10 +111,10 @@ export const CHECKS = [
     source: "JUNO arXiv:2006.11760, table 1 (day + night)", arxiv: "2006.11760", figure: "juno3",
     note: "JUNO's tree-level cross section with sin²θ_W = 0.23; within 0.6 % of the radiatively corrected one (the default)." })),
   ...[[2, 16, -0.029], [5, 16, -0.034], [3, 5, -0.025], [2, 3, -0.021]].map(([lo, hi, value]) => ({
-    id: `juno_adn_${lo}_${hi}`, group: "JUNO", label: `A_DN, ${lo}–${hi} MeV, Δm² 4.8 × 10⁻⁵`,
+    id: `juno_adn_${lo}_${hi}`, group: "JUNO", label: `A<sub>DN</sub>, ${lo}–${hi} MeV, Δm² 4.8 × 10⁻⁵`,
     values: { ...JUNO, set: "paper_juno_48", threshold: lo, quantity: "adn" }, window: [lo, hi],
     published: { kind: "adn", value }, source: "JUNO arXiv:2006.11760, table 7", arxiv: "2006.11760", figure: "juno7" })),
-  { id: "juno_adn_75", group: "JUNO", label: "A_DN, 2–16 MeV, Δm² 7.5 × 10⁻⁵ (not reproduced)",
+  { id: "juno_adn_75", group: "JUNO", label: "A<sub>DN</sub>, 2–16 MeV, Δm² 7.5 × 10⁻⁵ (not reproduced)",
     values: { ...JUNO, set: "paper_juno_75", threshold: 2, quantity: "adn" }, window: [2, 16],
     published: { kind: "adn", value: -0.016 }, source: "JUNO arXiv:2006.11760, sec. 4.2", arxiv: "2006.11760", figure: "juno7",
     note: "JUNO's own table 1 at this Δm² (1.44 by day, 1.46 by night) gives −1.4 % ± 0.7 % from its rounding, as SNUfish does; the −1.6 % of the text does not follow from it." },
@@ -127,13 +127,13 @@ export const CHECKS = [
     values: { preset: "sk4", set: "paper_sk_61", quantity: "ratio" },
     published: { kind: "ratio", value: 2.314 / 5.25, minus: 0.009, plus: 0.009, measured: true },
     source: "Super-K arXiv:2312.12907 (2.314 × 10⁶) over SNO NC (5.25 × 10⁶)", arxiv: "2312.12907", note: "Super-K's error only; the SNO NC flux adds ±3.8 %." },
-  { id: "sk_adn4", group: "Super-K IV", label: "Expected A_DN, SK-IV, Δm² 6.1 × 10⁻⁵",
+  { id: "sk_adn4", group: "Super-K IV", label: "Expected A<sub>DN</sub>, SK-IV, Δm² 6.1 × 10⁻⁵",
     values: { preset: "sk4", set: "paper_sk_61", quantity: "adn" },
     published: { kind: "adn", value: -0.0238 }, source: "Super-K arXiv:2312.12907, sec. VIII", arxiv: "2312.12907", figure: "sk49",
     note: "Super-K's amplitude fit weights the zenith-angle shape by energy bin; this is the plain rate asymmetry (~2.5 % smaller)." },
   ...[["paper_sk_61", -0.0242], ["paper_sk_75", -0.0172], ["paper_sk_48", -0.0384]].map(([set, value]) => ({
     id: `sk1_${set.slice(-2)}`, group: "Super-K IV",
-    label: `Expected A_DN, SK-I range (T > 4.49 MeV), Δm² ${{ 48: "4.8", 61: "6.1", 75: "7.5" }[set.slice(-2)]} × 10⁻⁵${set.endsWith("48") ? " (not reproduced)" : ""}`,
+    label: `Expected A<sub>DN</sub>, SK-I range (T > 4.49 MeV), Δm² ${{ 48: "4.8", 61: "6.1", 75: "7.5" }[set.slice(-2)]} × 10⁻⁵${set.endsWith("48") ? " (not reproduced)" : ""}`,
     values: { ...SK1, set }, published: { kind: "adn", value }, source: "Super-K arXiv:2312.12907, sec. VIII", arxiv: "2312.12907", figure: "sk52",
     note: set.endsWith("48")
       ? "13.5 % off, while 6.1 and 7.5 × 10⁻⁵ agree to 2.5 %; the exact solvers give the same, θ13 = 0 only −3.48 %. Quoted \"for reference\" at the previously favoured Δm²: perhaps an older calculation."
@@ -153,7 +153,7 @@ export const CHECKS = [
   { id: "dune_hep", group: "DUNE", label: "hep νe CC events, electron T > 11 MeV, 100 kt·yr (Capozzi et al. 2019)",
     values: { ...CAPOZZI, ...MARLEY, components: ["hep"], threshold: 11 }, electron: 0.07, published: { kind: "events", value: 150 },
     ...CAPOZZI_SOURCE, note: "The paper's hep flux is 8.25 × 10³ cm⁻² s⁻¹, B23-GS98's here 7.95 × 10³ (3.8 % fewer events)." },
-  { id: "dune_adn", group: "DUNE", label: "A_DN, νe CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (Capozzi et al. 2019; not reproduced)",
+  { id: "dune_adn", group: "DUNE", label: "A<sub>DN</sub>, νe CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (Capozzi et al. 2019; not reproduced)",
     values: { ...CAPOZZI, ...MARLEY, threshold: 6, quantity: "adn" }, electron: 0.07, published: { kind: "adn", value: (3.04 - 3.29) / 3.165 },
     ...CAPOZZI_SOURCE, note: "From the paper's D = 3.04 × 10⁴ and N = 3.29 × 10⁴ signal events. At DUNE's energies the asymmetry follows the Earth's outer layers: −6.9 % with the ten-region PREM, −8.7 % with the four-region one (no crust); the paper does not describe its Earth model beyond citing its method (ref. 49)." },
   { id: "dune_hnb", group: "DUNE", label: "⁸B νe CC events, electron T > 5 MeV, 20 kt·yr (Hajjar et al. 2026)",
@@ -165,7 +165,7 @@ export const CHECKS = [
     published: { kind: "events", value: 27000 }, source: "Ioannisian, Smirnov & Wyler, arXiv:1702.06097, sec. IV", arxiv: "1702.06097",
     note: "Eν > 11 MeV as visible energy above 11 − 1.504 MeV, unsmeared. The paper's cross section is an approximation (σ ∝ p_e E_e above 5.8 MeV) and its oscillation parameters are not stated." },
   ...[["paper_dune_isw_75", "7.5", 0.04], ["paper_dune_isw_50", "5.0", 0.065]].map(([set, dm2, excess]) => ({
-    id: `dune_isw_adn_${dm2[0]}`, group: "DUNE", label: `A_DN, Eν > 11 MeV, Δm² ${dm2} × 10⁻⁵ (Ioannisian et al. 2017)`,
+    id: `dune_isw_adn_${dm2[0]}`, group: "DUNE", label: `A<sub>DN</sub>, Eν > 11 MeV, Δm² ${dm2} × 10⁻⁵ (Ioannisian et al. 2017)`,
     values: { ...DUNE, set, threshold: 11 - 1.504, "res-b": 0, quantity: "adn" }, published: { kind: "adn", value: -excess / (1 + excess / 2) },
     source: "Ioannisian, Smirnov & Wyler, arXiv:1702.06097, sec. IV", arxiv: "1702.06097",
     note: `The paper's "about ${100 * excess} %" night excess N/D − 1, here as (D − N)/mean.` })),

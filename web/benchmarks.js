@@ -12,7 +12,7 @@ const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
 const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
-                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A_DN, water" };
+                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water" };
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
@@ -417,7 +417,7 @@ function paperNumber(p, v) {
   return minus(Number(v.toPrecision(4)).toString());
 }
 
-const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A_DN" };
+const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A<sub>DN</sub>" };
 const ES = { bks: "BKS radiative corrections", tree: "ES at tree level", snowglobes: "SNOwGLoBES ES" };
 const STATUS_LABEL = { legacy: "legacy", approximation: "approximation", reproduction: "paper's parameters" }; // as app.js
 const ORDERS = { size: (r) => -Math.abs(r.relative), shift: (r) => -Math.abs(r.shift), calculator: (r) => r.order };

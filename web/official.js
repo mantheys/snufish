@@ -42,7 +42,7 @@ function superK(ctx, check, combined) {
   return {
     title: combined ? "Super-K fig. 52: SK-I–IV day-night asymmetry against Δm²₂₁" : "Super-K fig. 49: SK-IV day-night asymmetry against Δm²₂₁",
     source: `Super-K, arXiv:2312.12907, fig. ${combined ? 52 : 49} and sec. VIII`, url: ARXIV("2312.12907"),
-    caption: "SNUfish's expected A_DN (plain rate asymmetry, (D − N)/mean) over the Δm²₂₁ range of its tables (3–11 × 10⁻⁵ eV²; "
+    caption: "SNUfish's expected A<sub>DN</sub> (plain rate asymmetry, (D − N)/mean) over the Δm²₂₁ range of its tables (3–11 × 10⁻⁵ eV²; "
            + "the figure spans 2–22). Points: the expected and measured asymmetries the paper prints (measured: stat ⊕ syst); "
            + "its measured best-fit line over Δm²₂₁ is only drawn, not tabulated.",
     columns: table(rows), xLabel: "Δm²₂₁ (10⁻⁵ eV²)", yLabel: "Day/night asymmetry (%)",
@@ -86,9 +86,9 @@ function junoAsymmetry(ctx) {
   return {
     title: "JUNO table 7: day-night asymmetry per energy window",
     source: "JUNO, arXiv:2006.11760, table 7", url: ARXIV("2006.11760"),
-    caption: "A_DN = (D − N)/mean at Δm²₂₁ = 4.8 × 10⁻⁵ eV² in JUNO's visible-energy windows. JUNO's errors are its expected "
+    caption: "A<sub>DN</sub> = (D − N)/mean at Δm²₂₁ = 4.8 × 10⁻⁵ eV² in JUNO's visible-energy windows. JUNO's errors are its expected "
            + "ten-year uncertainties.",
-    columns: table(rows), xLabel: "Visible-energy window", yLabel: "A_DN (%)", points: ["JUNO (table 7)", "SNUfish"], horizontal: 0,
+    columns: table(rows), xLabel: "Visible-energy window", yLabel: "A<sub>DN</sub> (%)", points: ["JUNO (table 7)", "SNUfish"], horizontal: 0,
   };
 }
 
