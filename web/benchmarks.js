@@ -4,7 +4,7 @@
 import * as engine from "./engine.js";
 import { DISPLAY } from "./engine.js";
 import { CHECKS, PAPER_SETS, UNITS, checkSetup, currentSetup, reproduced } from "./checks.js";
-import { CONFIG, alpha, colours, htmlLegend, layout, themeIcon } from "./plots.js";
+import { CONFIG, alpha, colours, htmlLegend, layout, math, plain, themeIcon } from "./plots.js";
 
 const DATA = "data/";
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
@@ -12,7 +12,7 @@ const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
 const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
-                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A_DN, water" };
+                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water" };
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
@@ -24,7 +24,7 @@ const $ = (id) => document.getElementById(id);
 // the palette without its two greys (series 4 and 9), which read as the oscillation bars and muted lines
 const palette = () => [1, 2, 3, 5, 6, 7, 8, 10].map((n) => getComputedStyle(document.documentElement).getPropertyValue(`--series-${n}`).trim());
 const page = { sections: null, inputs: null, tab: "overview" };
-const sup = (s) => s.replace(/\b(7Be|8B|40Ar|16O|13N|15O|17F)\b/g, (m) => ({ "7Be": "⁷Be", "8B": "⁸B", "40Ar": "⁴⁰Ar", "16O": "¹⁶O",
+const sup = (s) => math(s).replace(/\b(7Be|8B|40Ar|16O|13N|15O|17F)\b/g, (m) => ({ "7Be": "⁷Be", "8B": "⁸B", "40Ar": "⁴⁰Ar", "16O": "¹⁶O",
                                                                            "13N": "¹³N", "15O": "¹⁵O", "17F": "¹⁷F" })[m]);
 
 // ------------------------------------------------------------------ sizes
@@ -72,8 +72,8 @@ function matrix() {
     const proxy = !["sampled", "model range"].includes(best.kind);
     return `<td class="num${proxy ? " proxy" : ""}" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}${proxy ? "*" : ""}</td>`;
   };
-  $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; A_DN in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
-    Object.entries(obs).map(([id, o]) => `<tr><th title="${sup(o.label)}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
+  $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; day-night asymmetry in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
+    Object.entries(obs).map(([id, o]) => `<tr><th title="${plain(sup(o.label))}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
       columns.map(([, , keep]) => cell(largest(o.rows, o.central, keep))).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
@@ -205,7 +205,7 @@ function b2Models() {
   const neTraces = names.map((m, i) => ({ x: b1d.radius, y: b1d.models[m].log_ne.map((v) => 10 ** v), mode: "lines", name: models[m].label,
     line: { color: palette()[i % 8], width: m === ref ? 2.6 : 1.4, dash: i >= 8 ? "dot" : undefined }, hovertemplate: `r = %{x:.3f}: %{y:.4g}<extra>${models[m].label}</extra>` }));
   htmlLegend(node, neTraces.map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash })));
-  Plotly.react(node, neTraces, layout(c, node, "Electron density", "r / R☉", "n_e (N_A / cm³)",
+  Plotly.react(node, neTraces, layout(c, node, "Electron density", "r / R☉", "n<sub>e</sub> (N<sub>A</sub> / cm³)",
     { showlegend: false, hovermode: "closest", yaxis: { type: "log" }, xaxis: { range: [0, 0.4] } }), CONFIG);
 }
 
@@ -249,23 +249,23 @@ function b2Propagation() {
   let node = $("plot-b2-components");
   let traces = ORDER.map((comp) => trace(comp, b2d.treatments.own[comp], DISPLAY[comp], c.component[comp]));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color, fill: t.mode === "markers" })), "Lines: monoenergetic (points)");
-  Plotly.react(node, traces, layout(c, node, `Daytime P_ee by component (${models[ref].label})`, "Neutrino energy (MeV)", "P_ee (day)",
+  Plotly.react(node, traces, layout(c, node, `Daytime P<sub>ee</sub> by component (${models[ref].label})`, "Neutrino energy (MeV)", "P<sub>ee</sub> (day)",
     { showlegend: false, hovermode: "closest", xaxis: energyAxis }), CONFIG);
 
   const comp = $("b2-component").value, labels = b2d.treatment_labels;
   node = $("plot-b2-treatments");
   traces = Object.keys(b2d.treatments).map((t, i) => trace(comp, b2d.treatments[t][comp], labels[t], i ? palette()[i] : c.text, i ? "dash" : undefined));
   htmlLegend(node, traces.map((t) => ({ label: sup(t.name), colour: t.line.color, dash: t.line.dash === "dash" })));
-  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: where it is produced`, "Neutrino energy (MeV)", "P_ee (day)",
+  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: where it is produced`, "Neutrino energy (MeV)", "P<sub>ee</sub> (day)",
     { showlegend: false, hovermode: "x unified", xaxis: energyAxis }), CONFIG);
 
   node = $("plot-b2-models");
   const base = b2d.models[ref][comp];
   traces = Object.keys(b2d.models).map((m, i) => trace(comp, b2d.models[m][comp].map((v, k) => 1e3 * (v - base[k])), models[m].label, palette()[i % 8], i >= 8 ? "dot" : undefined));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash, fill: t.mode === "markers" })));
-  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: density and production of each model`, "Neutrino energy (MeV)", `P_ee − P_ee(${models[ref].label}) (×10⁻³)`,
+  Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: density and production of each model`, "Neutrino energy (MeV)", `P<sub>ee</sub> − P<sub>ee</sub>(${models[ref].label}) (×10⁻³)`,
     { showlegend: false, hovermode: "closest", xaxis: energyAxis }), CONFIG);
-  $("b2-tools").innerHTML = toolTable(page.sections.tools.B2_sun, "F_i", "B2 fixes the production radius and energy grid; every solver gets the same n_e(r).");
+  $("b2-tools").innerHTML = toolTable(page.sections.tools.B2_sun, "F<sub>i</sub>", "B2 fixes the production radius and energy grid; every solver gets the same n<sub>e</sub>(r).");
 }
 
 function toolTable(rows, what, note) {
@@ -285,13 +285,13 @@ function b3() {
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.3g} MeV: %{y:.3f}<extra>${EARTH[m] || m}</extra>` }));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
   const axis = { ...energyAxis, range: [Math.log10(1), Math.log10(20)] };
-  Plotly.react(node, traces, layout(c, node, `⁸B regeneration at ${site}`, "Neutrino energy (MeV)", "P_ee(night) − P_ee(day) (%)",
+  Plotly.react(node, traces, layout(c, node, `⁸B regeneration at ${site}`, "Neutrino energy (MeV)", "P<sub>ee</sub>(night) − P<sub>ee</sub>(day) (%)",
     { showlegend: false, hovermode: "x unified", xaxis: axis }), CONFIG);
   node = $("plot-b3-sites");
   traces = Object.keys(page.inputs.sites).map((s, i) => ({ x: b3d.energy, y: b3d.models.prem_full[s].map((v) => 100 * v), mode: "lines", name: s,
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.3g} MeV: %{y:.3f}<extra>${s}</extra>` }));
   htmlLegend(node, traces.map((t) => ({ label: `${t.name} (${page.inputs.sites[t.name].latitude_deg.toFixed(1)}° N)`, colour: t.line.color })));
-  Plotly.react(node, traces, layout(c, node, "⁸B regeneration by site (PREM, ten regions)", "Neutrino energy (MeV)", "P_ee(night) − P_ee(day) (%)",
+  Plotly.react(node, traces, layout(c, node, "⁸B regeneration by site (PREM, ten regions)", "Neutrino energy (MeV)", "P<sub>ee</sub>(night) − P<sub>ee</sub>(day) (%)",
     { showlegend: false, hovermode: "x unified", xaxis: axis }), CONFIG);
   $("b3-tools").innerHTML = toolTable(page.sections.tools.B3_earth, "P", "P(νᵢ → νₑ) on B3's energy × nadir grids, for the Earth models both tools compute.");
 }
@@ -322,7 +322,7 @@ function b4() {
     { showlegend: false, hovermode: "closest", yaxis: { range: [0.3, 2] } }), CONFIG);
   node = $("plot-b4-es");
   const es = page.inputs.es_radiative_ratio;
-  const esTraces = [["nue", "νₑ"], ["numu", "ν_μ,τ"]].map(([f, label], i) => ({ x: es[f].energy, y: es[f].ratio, mode: "lines", name: label,
+  const esTraces = [["nue", "νₑ"], ["numu", "ν<sub>μ,τ</sub>"]].map(([f, label], i) => ({ x: es[f].energy, y: es[f].ratio, mode: "lines", name: label,
     line: { color: palette()[i], width: 2.2 }, hovertemplate: `%{x:.2f} MeV: %{y:.4f}<extra>${label}</extra>` }));
   htmlLegend(node, esTraces.map((t) => ({ label: t.name, colour: t.line.color })));
   Plotly.react(node, esTraces, layout(c, node, "ES: SNOwGLoBES over tree level", "Neutrino energy (MeV)", "σ(SNOwGLoBES) / σ(tree)",
@@ -333,8 +333,8 @@ function b4() {
 // ------------------------------------------------------------------ B5
 
 const DETECTOR_LABEL = { water: "Water", heavy_water: "Heavy water", scintillator_pc: "Scintillator", argon: "Argon" };
-const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visible energy Eν − 1.504 MeV",
-                     cc_nue_o16: "CC: visible energy Eν − 15.42 MeV", cc_nue_d: "CC: visible energy Eν − 1.442 MeV" };
+const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visible energy E<sub>ν</sub> − 1.504 MeV",
+                     cc_nue_o16: "CC: visible energy E<sub>ν</sub> − 15.42 MeV", cc_nue_d: "CC: visible energy E<sub>ν</sub> − 1.442 MeV" };
 
 function b5Observed() {
   // part 2: observed spectra through each detector's published response (B5_Observed), one line per detector and channel
@@ -358,7 +358,7 @@ function b5Observed() {
                                          line: { color: palette()[i % 8], dash: "dot", width: 1 } }));
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
   Plotly.react(node, traces, layout(c, node, `Observed spectra, ${comp === "all" ? "all components" : DISPLAY[comp]} (B16-GS98, by day)`,
-    "Observed energy (MeV): ES, electron kinetic energy; CC, Eν − Q", "Interactions / (kt·yr·MeV)",
+    "Observed energy (MeV): ES, electron kinetic energy; CC, E<sub>ν</sub> − Q", "Interactions / (kt·yr·MeV)",
     { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: [-3, 7] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
   const fmt = (v) => (v >= 100 ? v.toFixed(0) : v.toPrecision(3));
   $("b5-observed").innerHTML = `<table><thead><tr><th>Detector</th><th>Response</th><th>Channel</th><th class="num">Threshold (MeV)</th>
@@ -457,7 +457,7 @@ function paperNumber(p, v) {
   return minus(Number(v.toPrecision(4)).toString());
 }
 
-const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A_DN" };
+const UNIT_OF = { rate: (p) => UNITS[p.unit][1], events: () => "events", ratio: () => "ratio", adn: () => "A<sub>DN</sub>" };
 const ES = { bks: "BKS radiative corrections", tree: "ES at tree level", snowglobes: "SNOwGLoBES ES" };
 const STATUS_LABEL = { legacy: "legacy", approximation: "approximation", reproduction: "paper's parameters" }; // as app.js
 const ORDERS = { size: (r) => -Math.abs(r.relative), shift: (r) => -Math.abs(r.shift), calculator: (r) => r.order };
@@ -545,7 +545,7 @@ async function discrepancies() {
         + `<td class="num start">${published}<span class="unit">${UNIT_OF[p.kind](p)}${p.measured ? ", measured" : ""}</span></td><td class="num">${paperNumber(p, r.ours)}</td>`
         + `<td class="num" style="background:${shade("reproduction", heat(r.relative))}" title="SNUfish ÷ published − 1${points}">${signedPct(r.relative)}</td>`
         + `<td class="inputs">${inputsCell(r)}</td>`
-        + `<td class="inputs start">${replaced.length ? replaced.map((f) => `<span class="input" title="${f.summary.replace(/"/g, "&quot;")}">${inputName(f.category, f.name)} → ${inputName(f.category, f.by)}</span>`).join("") : `<span class="muted">nothing</span>`}</td>`
+        + `<td class="inputs start">${replaced.length ? replaced.map((f) => `<span class="input" title="${plain(math(f.summary)).replace(/"/g, "&quot;")}">${inputName(f.category, f.name)} → ${inputName(f.category, f.by)}</span>`).join("") : `<span class="muted">nothing</span>`}</td>`
         + (changed ? `<td class="num">${paperNumber(p, r.current)}</td>`
             + `<td class="num" style="background:${shade("update", heat(r.shift))}" title="State of the art ÷ published − 1: ${signedPct(r.currentRelative)}">${signedPct(r.shift)}</td>`
           : `<td class="num muted">same</td>${empty}`) + `</tr>`;
@@ -589,7 +589,7 @@ function setupTheme() {
 }
 
 const fill = (select, entries, value) => {
-  select.replaceChildren(...entries.map(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; o.selected = v === value; return o; }));
+  select.replaceChildren(...entries.map(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = plain(l); o.selected = v === value; return o; }));
   select.addEventListener("change", render);
 };
 

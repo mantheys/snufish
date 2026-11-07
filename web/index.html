@@ -14,8 +14,8 @@
 <header class="top">
   <h1>SNUfish <span>solar neutrino rates and their uncertainties</span></h1>
   <div class="actions">
-    <a class="button ghost-link" href="benchmarks.html">Benchmarks</a>
     <a class="button" href="rates.html">Calculator</a>
+    <a class="button ghost-link" href="benchmarks.html">Benchmarks</a>
     <button id="theme" class="ghost icon" type="button" aria-label="Colour theme"></button>
   </div>
 </header>
@@ -47,46 +47,50 @@
     <div class="findings">
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a></span>
-        <p><b>JUNO fixes Δm²₂₁</b>; solar data alone sit 1.5σ lower: a physics question, not a
-          choice of input.</p>
+        <p><b>Reactors fix Δm²₂₁; the Sun prefers it 1.5σ lower.</b> JUNO measures 7.50 × 10⁻⁵ eV² to 1.6 %, solar
+          data alone give 6.1 × 10⁻⁵ eV² to about 15 %, and both agree on sin²θ₁₂. The gap is physics to resolve, not an
+          input to choose.</p>
         <h3 class="plot-title"></h3><div id="plot-f1" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B2">B2</a></span>
-        <p><b>Solar composition</b> (B23 with MB22 or AAG21) is the open flux uncertainty:
-          ⁸B 16 %, ⁷Be 8 %, CNO 30 %.</p>
+        <p><b>Solar composition is the largest open flux uncertainty.</b> AAG21 predicts 16 % less ⁸B, 8 % less ⁷Be
+          and 30 % less CNO than MB22m, each beyond MB22m's own 1σ. MB22p and MB22m agree to 1 %.</p>
         <h3 class="plot-title"></h3><div id="plot-f2" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B3">B3</a></span>
-        <p><b>Earth: the crust under the detector moves A<sub>DN</sub> by −2 to +4 %</b>; the
-          3D Earth (up to ~8 %) is not yet computed, so no Earth uncertainty is counted.</p>
+        <p><b>The crust under the detector shifts A<sub>DN</sub> by −2.4 % to +3.8 %</b>, with a size and sign set by
+          the site. The 3D Earth (up to ~8 % in the literature) is not computed yet, so no Earth uncertainty is
+          counted.</p>
         <h3 class="plot-title"></h3><div id="plot-f3" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
-        <p><b>⁴⁰Ar: how much the Gamow–Teller strength is quenched</b>, about 37 %: MARLEY 2
-          and the Suzuki–Honma shell model agree to 3 %, the Kostensalo shell model (g<sub>A</sub> = 1.00) is 27–35 %
-          lower.</p>
+        <p><b>⁴⁰Ar CC is uncertain by 37 % because the Gamow–Teller quenching is unsettled.</b> MARLEY 2 and the
+          Suzuki–Honma shell model agree within 3 %. Kostensalo's shell model is 27–35 % lower with g<sub>A</sub> = 1.00
+          and agrees with the free g<sub>A</sub>. A stopped-pion measurement would settle it.</p>
         <h3 class="plot-title"></h3><div id="plot-f4" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B5">B5</a></span>
-        <p><b>Folding: SNOwGLoBES agrees to 0.4 % for ⁸B and hep</b> on the same fluxes and cross sections; below
-          2 MeV (⁷Be, pep, ¹³N) its full chain is 16–21 % lower. The detector response is not yet benchmarked.</p>
+        <p><b>SNOwGLoBES matches SNUfish to 0.4 % for ⁸B and hep, not below 2 MeV.</b> On the same fluxes and cross
+          sections its full chain is 16–21 % lower for ⁷Be, pep and ¹³N. The detector response is not benchmarked
+          yet.</p>
         <h3 class="plot-title"></h3><div id="plot-f5" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
-        <p><b>The tools agree; the inputs do not.</b> Earth solvers agree to 10⁻⁸, the ν–e
-          radiative corrections to 0.1 %.</p>
+        <p><b>The tools agree; the inputs do not.</b> Earth solvers agree to 10⁻⁸ and the two ES radiative corrections
+          to 0.1 %, orders of magnitude below the spread of competing inputs. The largest tool effect, NuFast-Earth's
+          mean density per crossing on PREM, moves the ⁸B A<sub>DN</sub> by 0.3 %.</p>
         <h3 class="plot-title"></h3><div id="plot-f6" class="plot"></div>
       </article>
       <article class="card finding">
         <span class="chips-b"><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
-        <p><b>Most large spreads were outdated inputs.</b> The factor 5–7 between ⁴⁰Ar tables,
-          A<sub>DN</sub> up to 40 % high without a crust, +6.5 % on ⁸B from B16: legacy models and approximations, not
-          uncertainties.</p>
+        <p><b>Most large spreads were outdated inputs, not uncertainties.</b> SNOwGLoBES's ⁴⁰Ar tables differ by a
+          factor 5–7, Earth models without a crust overstate A<sub>DN</sub> by up to 40 %, and B16 gives 6.5 % more ⁸B.
+          SNUfish labels these legacy or approximations and keeps them out of the ranges.</p>
         <h3 class="plot-title"></h3><div id="plot-f7" class="plot"></div>
       </article>
     </div>

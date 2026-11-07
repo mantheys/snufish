@@ -2,7 +2,7 @@
 // export-sections) and data/inputs.json, and the About tab (how the numbers are made, the status of every input,
 // credits).
 import * as engine from "./engine.js";
-import { CONFIG, colours, htmlLegend, layout, themeIcon } from "./plots.js";
+import { ADN, CONFIG, colours, htmlLegend, layout, math, themeIcon } from "./plots.js";
 import { CREDITS, render as renderSources } from "./sources.js";
 
 const DATA = "data/";
@@ -10,11 +10,12 @@ const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const DISPLAY = { pp: "pp", pep: "pep", hep: "hep", Be7: "⁷Be", B8: "⁸B", N13: "¹³N", O15: "¹⁵O", F17: "¹⁷F" };
 const MARLEY = "ar40_marley2_bhattacharya2009";
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
-               ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model, Kostensalo 2018 (g_A = 1)",
-               ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley: "SNOwGLoBES MARLEY (p,n)",
+               ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model, Kostensalo 2018 (g<sub>A</sub> = 1)",
+               ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed", ar40_marley: "SNOwGLoBES MARLEY (p,n)",
                ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "SNOwGLoBES KLMV", default: "SNOwGLoBES default" };
 const SHORT_XS = { ar40_marley1_bhattacharya2009: "MARLEY v1", ar40_marley: "SNOwGLoBES MARLEY", ar40_marley1: "SNOwGLoBES ⁴⁰Ti",
-                   ar40_klmv: "KLMV", default: "SNOwGLoBES default" };
+                   ar40_klmv: "KLMV", default: "SNOwGLoBES default",
+                   ar40_marley1_allowed: "MARLEY v1 allowed" };
 const $ = (id) => document.getElementById(id);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const series = (n) => css(`--series-${n}`);
@@ -50,7 +51,7 @@ function toolsVsInputs() {
   const es = Math.max(...["water_es_b8", "scint_es_be7"].map((o) => row(o, "ES radiative corrections") || 0));
   const bars = [
     ["B2 Sun: solvers (|ΔP|)", worst(tools.B2_sun), "tools"],
-    ["B3 Earth: solvers (|ΔP|)", worst(tools.B3_earth), "tools"],
+    ["B3 Earth: solvers, shells (|ΔP|)", worst(tools.B3_earth?.filter((r) => r.variant === "prem_prob3")), "tools"], // exact for both
     ["B4 ES: radiative corr.", es, "tools"],
     ["B1 osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
     ["B2 composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
@@ -71,22 +72,24 @@ function outdated() {
   // 7. legacy inputs and approximations against the state of the art: shifts, not uncertainties
   const c = colours(), node = $("plot-f7"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status || {};
   const at5 = (n) => 100 * (interp(xs[n].energy, xs[n].sigma, 5) / interp(xs[MARLEY].energy, xs[MARLEY].sigma, 5) - 1);
+  // short names on the axis (step, then what differs), the full description on hover
   const bars = Object.keys(xs).filter((n) => !n.includes("#") && status.xsec_model?.cc_nue_ar40?.[n]?.status === "legacy")
-    .map((n) => [`B4 ⁴⁰Ar σ(5 MeV), ${SHORT_XS[n] || n}`, at5(n), "legacy"]).sort((a, b) => b[1] - a[1]);
+    .map((n) => [`B4 ${SHORT_XS[n] || n}`, at5(n), "legacy", `⁴⁰Ar CC cross section at 5 MeV: ${XSEC[n] || n}`]).sort((a, b) => b[1] - a[1]);
   // A_DN of 8B without a crust (PREM's four regions) against PREM + the local crust (computed by adn())
-  if (page.adn) for (const [site, kind, label] of [["Kamioka", "water", "⁸B ES"], ["SURF", "argon", "⁸B CC ⁴⁰Ar"]]) {
+  if (page.adn) for (const [site, kind, label] of [["Kamioka", "water", "⁸B ES in water"], ["SURF", "argon", "⁸B CC on ⁴⁰Ar"]]) {
     const a = page.adn[site][kind];
-    bars.push([`B3 A_DN ${label}, no crust (${site})`, 100 * (a.prem_four / a.prem_crust1 - 1), "approximation"]);
+    bars.push([`B3 no crust, ${site}`, 100 * (a.prem_four / a.prem_crust1 - 1), "approximation",
+               `${ADN} of ${label} at ${site}, PREM without a crust (four regions)`]);
   }
   const m = d.solar_models;
-  if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 ⁸B flux, B16 GS98", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy"]);
-    bars.sort((a, b) => a[0].slice(0, 2).localeCompare(b[0].slice(0, 2))); // B2, B3, B4: the calculator's order
-const colour = { legacy: css("--series-7"), approximation: c.muted };
+  if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 B16 ⁸B flux", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy", "⁸B flux of B16-GS98"]);
+  bars.sort((a, b) => a[0].slice(0, 2).localeCompare(b[0].slice(0, 2))); // B2, B3, B4: the calculator's order
+  const colour = { legacy: css("--series-7"), approximation: c.muted };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[2]]) },
                   text: bars.map((b) => pct(b[1])), textposition: "outside", cliponaxis: false, textfont: { size: 11, color: c.secondary },
-                  hovertemplate: "%{y}: %{text}<extra></extra>" };
+                  customdata: bars.map((b) => b[3]), hovertemplate: "%{customdata}: %{text}<extra></extra>" };
   htmlLegend(node, [{ label: "legacy input", colour: colour.legacy, fill: true }, { label: "approximation", colour: colour.approximation, fill: true }],
-             `Against MARLEY 2 (⁴⁰Ar), PREM + local crust (A_DN${page.adn ? "" : ": computing…"}), B23 MB22m (flux)`);
+             `B2: ⁸B flux against B23 MB22m; B3: ⁸B ${ADN} against PREM + local crust${page.adn ? "" : " (computing…)"}; B4: ⁴⁰Ar σ at 5 MeV against MARLEY 2`);
   const lo = Math.min(0, ...bars.map((b) => b[1])), hi = Math.max(0, ...bars.map((b) => b[1])), span = hi - lo;
   return Plotly.react(node, [trace], layout(c, node, "Legacy inputs and approximations: shifts, not uncertainties", "Shift from the state of the art (%)", "",
     { showlegend: false, margin: { l: 20, r: 56, t: 16, b: 48 }, xaxis: { range: [lo - 0.3 * span, hi + 0.25 * span], zeroline: true, zerolinecolor: c.muted },
@@ -98,13 +101,15 @@ function composition() {
   const c = colours(), node = $("plot-f2"), models = page.inputs.solar_models, status = page.inputs.status?.solar_model || {};
   const ref = "b23_mb22m", current = Object.keys(models).filter((k) => status[k]?.status === "current");
   const colourOf = [series(1), series(2), series(3)];
-  const traces = current.map((k, i) => ({
+  // MB22m drawn first, so the other models' markers sit on top of it at 1, and listed last in the legend
+  const colour = Object.fromEntries(current.map((k, i) => [k, colourOf[i % 3]]));
+  const traces = [ref, ...current.filter((k) => k !== ref)].map((k) => ({
     x: ORDER.map((comp) => DISPLAY[comp]), y: ORDER.map((comp) => models[k].fluxes[comp] / models[ref].fluxes[comp]),
-    mode: "markers", name: models[k].label, marker: { color: colourOf[i % 3], size: k === ref ? 9 : 8, symbol: k === ref ? "diamond" : "circle" },
-    error_y: k === ref ? { type: "data", array: ORDER.map((comp) => models[k].flux_uncertainty[comp]), color: colourOf[i % 3], thickness: 1.5, width: 4 } : undefined,
+    mode: "markers", name: models[k].label, marker: { color: colour[k], size: k === ref ? 9 : 8, symbol: k === ref ? "diamond" : "circle" },
+    error_y: k === ref ? { type: "data", array: ORDER.map((comp) => models[k].flux_uncertainty[comp]), color: colour[k], thickness: 1.5, width: 4 } : undefined,
     hovertemplate: `%{x}: %{y:.3f}<extra>${models[k].label}</extra>` }));
-  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })), `Error bars: ${models[ref].label}'s published 1σ`);
-  return Plotly.react(node, traces, layout(c, node, "The state-of-the-art solar models disagree on composition", "Component", `Flux over ${models[ref].label}`,
+  htmlLegend(node, [...traces.slice(1), traces[0]].map((t) => ({ label: t.name, colour: t.marker.color, fill: true })), `Error bars: ${models[ref].label}'s published 1σ`);
+  return Plotly.react(node, traces, layout(c, node, "State-of-the-art solar models: fluxes against MB22m", "Component", `Flux over ${models[ref].label}`,
     { showlegend: false, hovermode: "closest", xaxis: { minor: { ticks: "" } }, shapes: [flat(c, 1)] }), CONFIG);
 }
 
@@ -112,7 +117,7 @@ function composition() {
 // ratio to MARLEY 2 with the (p,n) strengths on the same quantity
 const PUBLISHED_AR40 = [
   ["Shell model, Suzuki & Honma 2013", 14.05 / 13.66, 0, "electrons above 5 MeV, PRC 87, 014607"],
-  ["Shell model, Kostensalo 2018, free g_A", 2.64 / 2.72, 0, "⁸B-folded, PRC 97, 034309, sec. III E"],
+  ["Shell model, Kostensalo 2018, free g<sub>A</sub>", 2.64 / 2.72, 0, "⁸B-folded, PRC 97, 034309, sec. III E"],
 ];
 
 function argon() {
@@ -138,8 +143,8 @@ function argon() {
                   textfont: { size: 11, color: "#fff" }, hovertemplate: "%{y}: %{x:.3f}<extra>%{customdata}</extra>" };
   htmlLegend(node, [{ label: "folded over the ⁸B spectrum (SNUfish tables)", colour: colour.table, fill: true },
                     { label: "published value only", colour: colour.published, fill: true }],
-             "Kostensalo, g_A = 1.00: with its published error");
-  return Plotly.react(node, [trace], layout(c, node, "νₑ CC on ⁴⁰Ar: how much the strength is quenched", "σ / σ(MARLEY 2, B(GT) (p,n) 2009)", "",
+             "Error bar: the published error of Kostensalo, g<sub>A</sub> = 1.00");
+  return Plotly.react(node, [trace], layout(c, node, "νₑ CC on ⁴⁰Ar, ⁸B-folded, against MARLEY 2", "σ / σ(MARLEY 2, B(GT) (p,n) 2009)", "",
     { showlegend: false, margin: { l: 20, r: 20, t: 16, b: 48 }, xaxis: { range: [0, 1.15] },
       yaxis: { autorange: "reversed", automargin: true },
       shapes: [{ type: "line", yref: "paper", y0: 0, y1: 1, x0: 1, x1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
@@ -148,15 +153,15 @@ function argon() {
 function earth() {
   // 3. (B3) the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
   const c = colours(), node = $("plot-f3"), sites = Object.keys(page.inputs.sites);
-  const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E_vis > 5 MeV", c.range]];
+  const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV", c.range]];
   const traces = page.adn ? kinds.map(([kind, name, colour]) => {
     const y = sites.map((site) => 100 * (page.adn[site][kind].prem_crust1 / page.adn[site][kind].prem_full - 1));
     return { type: "bar", x: sites, y, name, marker: { color: colour }, text: y.map(pct), textposition: "outside", cliponaxis: false,
              textfont: { size: 10, color: c.secondary }, hovertemplate: `%{x}: %{text}<extra>${name}</extra>` };
   }) : [];
   htmlLegend(node, kinds.map(([, name, colour]) => ({ label: name, colour, fill: true })),
-             page.adn ? `Annual A_DN, ${page.inputs.parameter_sets.sets[page.sections.set]?.label || page.sections.set}, B23 MB22m` : "Computing A_DN at the five sites…");
-  return Plotly.react(node, traces, layout(c, node, "The crust under the detector", "", "A_DN, local crust over PREM (%)",
+             page.adn ? `Annual ${ADN}, ${page.inputs.parameter_sets.sets[page.sections.set]?.label || page.sections.set}, B23 MB22m` : `Computing ${ADN} at the five sites…`);
+  return Plotly.react(node, traces, layout(c, node, "The crust under the detector", "", `${ADN}, local crust over PREM (%)`,
     { showlegend: false, barmode: "group", bargap: 0.3, xaxis: { minor: { ticks: "" } }, yaxis: { range: [-4, 6] }, shapes: [flat(c, 0)] }), CONFIG);
 }
 
@@ -200,17 +205,18 @@ function oscillations() {
   // 1. (B1) Delta m^2_21 and sin^2 theta_12 of the state-of-the-art parameter sets, with their 1 sigma
   const c = colours(), node = $("plot-f1"), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
   const shown = Object.keys(sets).filter((k) => status[k]?.status === "current");
-  const colourOf = { reactor: series(1), global: series(2), solar: series(3) }, symbol = { reactor: "square", global: "diamond", solar: "circle" };
+  const symbol = { reactor: "square", global: "diamond", solar: "circle" }; // a colour per set: SK + SNO and all solar share a kind
   const seen = new Set();
-  const traces = shown.map((k) => {
-    const p = sets[k], dm = p.dm2_21_eV2, s = p.sin2_theta12;
+  const palette = [1, 2, 3, 5].map(series); // not series 4, a grey that reads as muted
+  const traces = shown.map((k, i) => {
+    const p = sets[k], dm = p.dm2_21_eV2, s = p.sin2_theta12, colour = palette[i % 4];
     // two sets can share a point (SK + SNO and all solar): the second a hair to the right, so both show
     const key = `${s.value}|${dm.value}`, x = s.value + (seen.has(key) ? 0.0015 : 0);
     seen.add(key);
     return { x: [x], y: [1e5 * dm.value], mode: "markers", name: p.label,
-             marker: { color: colourOf[p.kind] || series(5), size: 10, symbol: symbol[p.kind] || "circle", line: { width: 0 } },
-             error_x: { type: "data", symmetric: false, array: [s.error[1]], arrayminus: [s.error[0]], color: colourOf[p.kind], thickness: 1.4, width: 3 },
-             error_y: { type: "data", symmetric: false, array: [1e5 * dm.error[1]], arrayminus: [1e5 * dm.error[0]], color: colourOf[p.kind], thickness: 1.4, width: 3 },
+             marker: { color: colour, size: 10, symbol: symbol[p.kind] || "circle", line: { width: 0 } },
+             error_x: { type: "data", symmetric: false, array: [s.error[1]], arrayminus: [s.error[0]], color: colour, thickness: 1.4, width: 3 },
+             error_y: { type: "data", symmetric: false, array: [1e5 * dm.error[1]], arrayminus: [1e5 * dm.error[0]], color: colour, thickness: 1.4, width: 3 },
              hovertemplate: `sin²θ₁₂ = ${s.value.toFixed(4)}, Δm²₂₁ = %{y:.2f} × 10⁻⁵ eV²<extra>${p.label}</extra>` };
   });
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })), "State-of-the-art parameter sets, 1σ");
@@ -263,7 +269,7 @@ function statusTable(d) {
     for (const [channel, table] of tables)
       for (const [key, s] of Object.entries(table))
         rows.push(`<tr><td><span class="bench-id">${STEP_OF[category]}</span></td><td>${title}</td><td>${name(category, key, channel)}</td><td><span class="badge ${s.status}">${BADGE[s.status]}</span></td>
-          <td>${s.summary}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
+          <td>${math(s.summary)}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
   }
   $("status-table").innerHTML = rows.length
     ? `<table><thead><tr><th>Step</th><th>Choice</th><th>Input</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";
