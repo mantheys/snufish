@@ -51,7 +51,7 @@ def test_split_regions_thin_the_polynomial_regions_only():
     assert crust.split(shells, 1.0)[-2:] == shells[-2:]
 
 
-def test_b3_shows_its_approximations_on_night_observables():
+def test_b3_has_a_model_range_and_its_approximations_on_night_observables():
     import json
     from pathlib import Path
 
@@ -60,14 +60,34 @@ def test_b3_shows_its_approximations_on_night_observables():
     path = Path(__file__).resolve().parents[1] / "build" / "app" / "sections.json"
     if not path.exists():
         pytest.skip("run snufish export-sections")
-    from snufish.sections import CRUST_PROXY, EARTH_LABELS, SOLVER_APPROXIMATION
+    from snufish.sections import EARTH_LABELS, SOLVER_APPROXIMATION
 
     data = json.loads(path.read_text())["observables"]
-    adn = {r["source"]: r for r in data["water_es_adn"]["rows"] if r["section"] == "B3"}
+    rows = [r for r in data["water_es_adn"]["rows"] if r["section"] == "B3"]
+    ranges = [r for r in rows if r["kind"] == "model range"]
+    # two current Earth models (the local crust, radial, and the crust along each chord): a range, no stand-in
+    assert [r["source"] for r in ranges] == ["Earth model"] and ranges[0]["low"] < ranges[0]["high"]
+    assert not any("overview" in r for r in rows)
+    adn = {r["source"]: r for r in rows if r["kind"] != "model range"}
     assert set(EARTH_LABELS.values()) <= set(adn) <= {*EARTH_LABELS.values(), SOLVER_APPROXIMATION}
     assert all(r["kind"] == "approximation" for r in adn.values())
-    assert [r["source"] for r in adn.values() if r.get("overview")] == [EARTH_LABELS[CRUST_PROXY]]
     central = data["water_es_adn"]["central"]
     assert adn[EARTH_LABELS["prem_four"]]["shift"] / central > 0.2   # no crust: A_DN far too large
     if SOLVER_APPROXIMATION in adn:  # written with the NuFast-Earth driver only
         assert abs(adn[SOLVER_APPROXIMATION]["shift"] / central) < 0.02
+
+
+def test_tool_agreement_lists_every_tool_on_the_comparison_variant():
+    # every contributed tool appears; on the spec's tool comparison (identical inputs) each agrees with the reference
+    # within its own known differences (docs/crosschecks.md: PEANUTS's hard-coded matter potential, 1.2e-4 in B2)
+    from snufish.contribution import find_contributions
+    from snufish.sections import tool_agreement
+
+    tools = tool_agreement()
+    for benchmark, tolerance in (("B2_sun", 2e-4), ("B3_earth", 2e-5)):
+        contributed = {p.parents[1].name for p in find_contributions(benchmark)} - {"snufish-reference"}
+        rows = [r for r in tools[benchmark] if r["comparison"]]
+        assert {r["tool"] for r in rows} == contributed
+        assert all(r["max_abs"] < tolerance for r in rows)
+    assert {r["quantity"] for r in tools["B4_xsec"]} == {"es_nue", "es_numu", "es_nutau"}
+    assert all(r["max_rel"] < 0.01 for r in tools["B4_xsec"])  # ES with radiative corrections, SNOwGLoBES vs BKS

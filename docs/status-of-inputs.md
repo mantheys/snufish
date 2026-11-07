@@ -1,6 +1,6 @@
 # State of the art, legacy and approximations
 
-SNUfish offers ten solar models, seven oscillation parameter sets, four
+SNUfish offers ten solar models, seven oscillation parameter sets, five
 Earth models, three ν–e cross sections and nine ν<sub>e</sub>–⁴⁰Ar models.
 They are not equals. Some are the current best calculations and
 measurements and compete with each other; some have been superseded and are
@@ -34,10 +34,14 @@ SNUfish reports as model ranges.
    predicts 16 % less ⁸B, 8 % less ⁷Be and 30 % less CNO than MB22m, each
    beyond MB22m's own 1σ; MB22p and MB22m agree to 1 %. The neutrino data
    prefer MB22 (AAG21 disfavoured by up to 2.5σ on CNO), not decisively.
-3. **The crust under the detector shifts A<sub>DN</sub> by −2.4 % to +3.8 %.**
-   The CRUST1.0 column sets the size and sign per site, from SURF (−2.4 %)
-   to SNOLAB (+3.8 %). The crust where neutrinos enter and the 3D mantle
-   (up to ~8 % in the literature) are missing, so there is no Earth range yet.
+3. **Earth: the crust near the detector matters at a few per cent; the
+   rest of the chord hardly.** The CRUST1.0 crust moves A<sub>DN</sub> by −2.5 %
+   (SURF) to +3.7 % (SNOLAB). Taking it along each night chord instead of
+   under the detector moves it by at most 0.2 %: that is the Earth range.
+   The literature's "up to ~8 %" for the 3D Earth is mostly this local
+   crust. The range has one crust model: Han et al.'s 3D Earth (LITHO1.0 on
+   a 3D mantle) differs from it by ~0.05 pp, 3–4 % of A<sub>DN</sub>, at LNGS and
+   SURF; a second crust model and a 3D mantle are still missing.
 4. **⁴⁰Ar CC is uncertain by 37 % because the Gamow–Teller quenching is
    unsettled.** MARLEY 2 with the measured strengths and the shell model of Suzuki &
    Honma agree to 3 %; the shell model of Kostensalo et al. with g<sub>A</sub> =
@@ -56,12 +60,17 @@ SNUfish reports as model ranges.
    Super-K IV's efficiency keeps 52 % of the ⁸B ES interactions above
    3.49 MeV; SNO's and DUNE's resolutions take 3.6 % and 4.4 % off the CC rate
    above 5.5 and 5 MeV.
-6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
-   reference agree to 10⁻⁸ on constant shells, the two radiative-correction
-   calculations of ν–e scattering to 0.1 %. On PREM's continuous density
-   NuFast-Earth takes each crossing's mean density: up to 2 % in the ⁸B
-   A<sub>DN</sub> at one energy, 0.3 % over the Super-K spectrum (Kamioka). Every spread that matters comes from physics
-   inputs.
+6. **The tools agree; the inputs do not.** On the same constant-density
+   Earth, NuFast-Earth, nuSQuIDS and PEANUTS agree with the SNUfish reference
+   to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶; in the Sun, NuFast-Earth and PEANUTS to
+   3 × 10⁻⁸ and 1.2 × 10⁻⁴; the two radiative-correction calculations of
+   ν–e scattering to 0.1 %. The residuals are each tool's hard-coded
+   constants (PEANUTS's matter potential, 3.6 × 10⁻⁴ high in the Sun), not
+   its method ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)). On
+   PREM's continuous density NuFast-Earth takes each crossing's mean density:
+   up to 2 % in the ⁸B A<sub>DN</sub> at one energy, 0.3 % over the Super-K
+   spectrum (Kamioka); cut into 50 km shells, as the calculator's night now
+   is, 0.05 %. Every spread that matters comes from physics inputs.
 7. **Most large spreads were outdated inputs, not uncertainties.**
    The factor 5–7 between ⁴⁰Ar tables at 5 MeV (SNOwGLoBES tables cut at
    5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
@@ -78,8 +87,8 @@ The model ranges, state of the art against everything SNUfish offers
 | ⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV | solar model | −16.0 % | −19.4 % to +10.6 % |
 | | ⁴⁰Ar nuclear model | −36.6 % (shell model, g<sub>A</sub> = 1.00) | −37 % to +1.8 % |
 | ⁷Be ES in scintillator | solar model | −7.8 % | −11.5 % to +0.6 % |
-| A<sub>DN</sub>, ⁸B ES at Kamioka | Earth model | none (one current model): 1.52 % | 1.50 % to 2.07 % |
-| A<sub>DN</sub>, ⁸B CC on ⁴⁰Ar at SURF | Earth model | none: 2.84 % | 2.84 % to 4.02 % |
+| A<sub>DN</sub>, ⁸B ES at Kamioka | Earth model | −0.17 % (crust along each chord): 1.512–1.514 % | 1.49 % to 2.03 % |
+| A<sub>DN</sub>, ⁸B CC on ⁴⁰Ar at SURF | Earth model | +0.20 % (crust along each chord): 2.829–2.835 % | 2.83 % to 3.95 % |
 
 ## Oscillation parameters
 
@@ -141,25 +150,40 @@ standard solar model yet.
 
 ## Earth
 
-**State of the art: PREM with the local crust (`prem_crust1`).** PREM
-(Dziewonski & Anderson 1981) remains the reference Earth for neutrino
-propagation, but its top 24 km are an average crust ending in 3 km of
-ocean, and the day-night asymmetry is most sensitive to the density the
-neutrinos cross last. `prem_crust1` keeps PREM under the Moho and puts the
-CRUST1.0 column of the detector's 1° × 1° cell above it (Laske et al.
-2013; `reference/earth/crust1_sites.yaml`): continental crust 30–49 km
-thick at the five sites. A<sub>DN</sub> of ⁸B moves by −2.4 % (SURF, whose
-49 km crust is lighter than the mantle PREM puts there) to +3.8 % (SNOLAB)
-of itself ([crosschecks.md](crosschecks.md)). It is solved by NuFast-Earth
-like PREM (the driver's `regions:` model), checked to reproduce PREM
-exactly when given PREM's regions.
+**State of the art: PREM with the CRUST1.0 crust, under the detector
+(`prem_crust1`) and along each chord (`prem_crust1_3d`).** PREM (Dziewonski
+& Anderson 1981) remains the reference Earth for neutrino propagation, but
+its top 24 km are an average crust ending in 3 km of ocean, and the
+day-night asymmetry is most sensitive to the density the neutrinos cross
+last. `prem_crust1` keeps PREM under the Moho and puts the CRUST1.0 column
+of the detector's 1° × 1° cell above it (Laske et al. 2013;
+`reference/earth/crust1_sites.yaml`): continental crust 30–49 km thick at
+the five sites. A<sub>DN</sub> of ⁸B moves by −2.5 % (SURF, whose 49 km
+crust is lighter than the mantle PREM puts there) to +3.7 % (SNOLAB) of
+itself ([crosschecks.md](crosschecks.md#local-crust)). It is radial: the
+column under the detector stands for the crust everywhere.
+`prem_crust1_3d` takes instead, along every night chord (the Sun's
+directions over a year at the site's latitude and longitude), the CRUST1.0
+crust the chord actually crosses, near the detector and where it enters
+the Earth, and PREM under the local Moho; it is solved chord by chord with
+NuFast-Earth's single-trajectory mode
+([crosschecks.md](crosschecks.md#crust-along-each-chord-3d)). The two
+compete; their spread, the Earth range, is at most 0.17 % of A<sub>DN</sub>
+at the five sites: the far side of a chord is averaged out, and the crust
+near the detector is in both.
 
-Still not modelled, so still not a range: the crust where a chord enters
-the Earth (the column under the detector stands for the whole surface)
-and the 3D mantle, which move A<sub>DN</sub> by up to ~8 % at some sites
-(Han et al.; Bakhti & Smirnov, [arXiv:2001.08030](https://arxiv.org/abs/2001.08030)).
-With one state-of-the-art Earth model the calculator reports no Earth
-range; that is a missing uncertainty, not a small one.
+The literature's "up to ~8 %" for the 3D Earth (Han et al.,
+[arXiv:2607.24421](https://arxiv.org/abs/2607.24421): LITHO1.0 on the
+SAW642AN mantle, against PREM with its ocean) is mostly that same local
+crust: its table gives at most 6.3 % (CallioLab) and 0.1–4.8 % at
+SNUfish's sites, and SNUfish's shift from PREM to the crust along each
+chord reproduces it to 0.005 pp at Kamioka, SNOLAB and Jiangmen. At LNGS
+and SURF the two differ by ~0.05 pp (3–4 % of A<sub>DN</sub>): there the two
+crust models (or the 3D mantle) disagree. Bakhti & Smirnov
+([arXiv:2001.08030](https://arxiv.org/abs/2001.08030)) find CRUST1.0
+"about 5 %" below a PREM without ocean at Hyper-K; SNUfish gives 2.7 %.
+**Not modelled**: a second crust model (LITHO1.0) and a 3D mantle; the
+first looks the larger missing uncertainty.
 
 **Approximations.** `prem_full` (PREM's ocean and average crust under
 every detector), `prem_four` (the four main PREM regions, the mantle
@@ -260,9 +284,8 @@ agrees to about 1 %. Current.
 - **Home page.** The table of every input and its status (from
   `data/inputs.json`).
 - **Benchmark pages.** Legacy models and approximations are labelled in
-  every legend; the overview counts state-of-the-art ranges only, except B3,
-  where the shift to PREM's average crust stands in (drawn pale) for the missing
-  Earth range.
+  every legend; the overview counts state-of-the-art ranges only (for B3, the
+  two crust models).
 - **Command line.** `snufish status` prints the table; `snufish budget`
   and `snufish scan` print a note for any legacy input they are given; the
   Python engine's `status`, `not_current` and `budget(..., legacy=True)`

@@ -20,6 +20,18 @@ git submodule update --init                    # if cloned without --recurse-sub
 make -C contributions/nufast-earth/scripts     # builds b2_driver and b3_driver
 ```
 
+The other tools' contributions are committed data; only regenerating them
+needs the tools. Each is pinned (versions in `catalogue/tools/`):
+
+```bash
+# PEANUTS 1.6: the submodule contributions/peanuts/scripts/PEANUTS, run from its checkout
+pip install -r contributions/peanuts/scripts/requirements.txt    # numba, mpmath
+(cd contributions/peanuts/scripts && python run_b2.py && python run_b3.py)
+# nuSQuIDS 1.13.3 on SQuIDS 1.3.1: build_nusquids.sh clones and builds both into scripts/local
+# (needs g++, GSL and HDF5 headers: apt install libgsl-dev libhdf5-dev)
+(cd contributions/nusquids/scripts && make && python run_b3.py --jobs 8)    # hours: GSL on continuous PREM
+```
+
 ## Command line
 
 | Command | Does | Needs |
@@ -205,7 +217,7 @@ documented in `src/snufish/engine.py`; the main ones:
 | `solar_model` | a B2 solar model id |
 | `components` | tuple of pp, pep, hep, Be7, B8, N13, O15, F17 |
 | `b8_flux` | `model` or `sno_nc` (measured) |
-| `site`, `earth_model` | a B3 site; `prem_crust1` (default), `prem_full`, `prem_four`, `prem_prob3` |
+| `site`, `earth_model` | a B3 site; `prem_crust1` (default), `prem_crust1_3d`, `prem_full`, `prem_four`, `prem_prob3` |
 | `detector`, `channel` | `water` (es, cc_nue_o16), `argon` (es, cc_nue_ar40, nc_ar40), `scintillator_pc`, `scintillator_lab` (es), `heavy_water` (es, cc_nue_d, nc_d) |
 | `es_model`, `xsec_model` | `bks`, `tree`, `snowglobes`; a B4 variant of the channel |
 | `period` | `day`, `night`, `annual` |

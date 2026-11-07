@@ -14,13 +14,13 @@ uncertainties of each observable's detector (its response from the B5 spec,
 part 2: ``RESPONSE``). B2 adds the
 approximations some solvers make about where neutrinos are produced
 (``TREATMENTS``): signed shifts of the observable, computed with the exact
-B2 solver (the tables hold each component's own profile only). B3 adds the
-Earth models that approximate the state of the art (reference/status.yaml),
-as signed shifts from it: with a single current Earth model, B3 has no
-model range, and the overview shows the shift to PREM's average crust
-(``CRUST_PROXY``, flagged ``overview``) in its place; and the solver's
-approximation, NuFast-Earth's mean density per region crossing, against
-thin shells (``SPLIT_KM``). With them,
+B2 solver (the tables hold each component's own profile only). B3's model
+range is the engine's, over the current Earth models (the local crust under
+the detector, radial, and the crust along each night chord, earth3d.py); B3
+adds the Earth models that approximate the state of the art
+(reference/status.yaml), as signed shifts from it, and the solver's
+approximation, NuFast-Earth's mean density per region crossing, against the
+thin shells (scan.SPLIT_KM) the tables and the exact solvers use. With them,
 per benchmark, the curves its pages plot (solar profiles, P_ee per
 component, regeneration per Earth model) and the agreement between tools.
 """
@@ -30,10 +30,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from . import engine
 from .export import MARLEY_DEFAULT
-from .paths import build_dir, contributions_dir
+from .paths import build_dir, contributions_dir, repo_root
 from .reference.sun import adiabatic_fractions, fractions_at_density
 from .scan import _with_oscillation
 from .solar import COMPONENTS, electron_density, production_weights, table
@@ -68,15 +69,12 @@ SINGLE_DENSITY = 100 * 2 / 3
 TREATMENTS = {"B8": "every component on the 8B production profile",
               "centre": "every component produced at the centre",
               "single": f"one density for every component, n_e = {SINGLE_DENSITY:.1f} N_A/cm³ (NuFast-Earth's examples)"}
-# no competing current Earth model, so no B3 range: the overview shows the shift to PREM's average crust, the
-# standard reference Earth, in its place (the crust under the site is what moves A_DN; status.yaml)
-CRUST_PROXY = "prem_full"
 EARTH_LABELS = {"prem_full": "PREM's average crust and ocean (prem_full)",
                 "prem_four": "no crust, PREM's four main regions (prem_four)",
                 "prem_prob3": "four shells of constant density (prem_prob3)"}
-# the solver's approximation: NuFast-Earth takes each region crossing's mean density; SPLIT_KM shells remove it
-SOLVER_APPROXIMATION = "mean density per region crossing (NuFast-Earth, the engine's night)"
-SPLIT_KM = 25.0
+# the solver's approximation: NuFast-Earth takes each region crossing's mean density; the tables and the exact
+# solvers cut the continuous regions into scan.SPLIT_KM shells, which removes it
+SOLVER_APPROXIMATION = "mean density per region crossing (NuFast-Earth's own PREM treatment)"
 ENERGIES = np.geomspace(0.1, 20.0, 120)
 RADII = np.round(np.arange(0.0, 0.4001, 0.0025), 6)
 
@@ -101,21 +99,6 @@ class ProductionTreatment:
 
     def night(self, osc, earth_model, site):
         return self._night.night(osc, earth_model, site)
-
-
-class ThinShellNight:
-    """The exact solvers, with the continuous Earth regions cut into SPLIT_KM shells for NuFast-Earth."""
-
-    def day(self, osc, solar_model, component, energies):
-        from .export import ExactProbabilities
-
-        return ExactProbabilities().day(osc, solar_model, component, energies)
-
-    def night(self, osc, earth_model, site):
-        from .export import site_latitude
-        from .scan import night_probabilities
-
-        return night_probabilities(osc, earth_model, site_latitude(site), site, split_km=SPLIT_KM)
 
 
 def _section(source):
@@ -175,16 +158,13 @@ def impacts(inputs, tables, params):
                 kind = engine.status(inputs, "earth_model", m)["status"]
                 if kind == "current":
                     continue
-                row = dict(section="B3", source=EARTH_LABELS.get(m, m), kind=kind,
-                           shift=value(tables, setup.replace(earth_model=m)) - central)
-                if m == CRUST_PROXY:
-                    row["overview"] = True
-                rows.append(row)
-            if _has_driver():
+                rows.append(dict(section="B3", source=EARTH_LABELS.get(m, m), kind=kind,
+                                 shift=value(tables, setup.replace(earth_model=m)) - central))
+            if _has_driver():  # what the tables would carry with NuFast-Earth's own treatment
                 from .export import ExactProbabilities
 
                 rows.append(dict(section="B3", source=SOLVER_APPROXIMATION, kind="approximation",
-                                 shift=value(ExactProbabilities()) - value(ThinShellNight())))
+                                 shift=value(ExactProbabilities(split_km=None)) - value(ExactProbabilities())))
         out[name] = dict(label=o["label"], quantity=q, central=central, rows=rows)
     return out
 
@@ -275,14 +255,23 @@ def _contribution(tool, benchmark):
     return pd.read_parquet(paths[-1]) if paths else None
 
 
+def _tool_name(tool):
+    path = repo_root() / "catalogue" / "tools" / f"{tool}.yaml"
+    return yaml.safe_load(path.read_text()).get("name", tool) if path.exists() else tool
+
+
 def tool_agreement():
-    """Largest difference of each tool from the SNUfish reference on the cases both computed (B2, B3), and B5's
-    full-chain rates over SNUfish's folding of the same inputs."""
+    """Largest difference of each tool from the SNUfish reference on the cases both computed (B2, B3; B4's ES
+    with radiative corrections, relative), and B5's
+    full-chain rates over SNUfish's folding of the same inputs. ``comparison`` marks the spec's required variant
+    (B2 b16_gs98, B3 prem_prob3), the one every tool solves on identical inputs."""
     out = {}
     for benchmark, axis in (("B2_sun", "radius"), ("B3_earth", "cos_nadir")):
-        ref = _contribution("snufish-reference", benchmark)
+        ref, spec = _contribution("snufish-reference", benchmark), load_spec(benchmark)
+        required = {name for name, v in spec.variants.items() if v.get("required")}
+        tools = sorted({p.parents[2].name for p in contributions_dir().glob(f"*/{benchmark}/*/data.parquet")} - {"snufish-reference"})
         rows = []
-        for tool in ("nufast-earth",):
+        for tool in tools:
             other = _contribution(tool, benchmark)
             if ref is None or other is None:
                 continue
@@ -290,8 +279,25 @@ def tool_agreement():
             both = ref.merge(other, on=keys, suffixes=("_ref", "_tool"))
             diff = (both.value_tool - both.value_ref).abs()
             for variant, d in diff.groupby(both.variant):
-                rows.append(dict(tool=tool, variant=variant, points=int(d.size), max_abs=float(d.max())))
+                rows.append(dict(tool=tool, name=_tool_name(tool), variant=variant, comparison=variant in required,
+                                 points=int(d.size), max_abs=float(d.max())))
         out[benchmark] = rows
+    # B4: the radiatively corrected nu-e cross sections, SNOwGLoBES's tables (Marciano & Parsa) against the
+    # reference's BKS, relative, where both have a value (SNOwGLoBES's ES tables start at 0.5 MeV)
+    ref, rows = _contribution("snufish-reference", "B4_xsec"), []
+    for tool in ("snowglobes",):
+        other = _contribution(tool, "B4_xsec")
+        if ref is None or other is None:
+            continue
+        both = ref[ref.variant == "es_bks"].merge(other[other.variant == "default"], on=["grid", "quantity", "energy"],
+                                                  suffixes=("_ref", "_tool")).dropna(subset=["value_ref", "value_tool"])
+        both = both[(both.value_ref > 0) & (both.value_tool > 0)]
+        for quantity, b in both.groupby("quantity"):
+            rel = b.value_tool / b.value_ref - 1
+            rows.append(dict(tool=tool, name=_tool_name(tool), variant="es_bks", quantity=quantity, points=int(len(b)),
+                             energy_min=float(b.energy.min()), max_rel=float(rel.abs().max()), min_rel=float(rel.min()),
+                             max_rel_signed=float(rel.max())))
+    out["B4_xsec"] = rows
     chain = build_dir() / "B5_Chain.parquet"
     if chain.exists():
         frame = pd.read_parquet(chain)

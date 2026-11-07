@@ -11,10 +11,14 @@
 //
 // Usage: b3_driver MODEL s12sq s13sq s23sq delta_deg dm2_21 dm2_31 depth_km
 //                  E_start E_stop E_step cos_start cos_stop cos_step
-// MODEL: prem_prob3 | prem_four | prem_full | native | regions:FILE. Energies in MeV.
+// MODEL: prem_prob3 | prem_four | prem_full | native | regions:FILE | trajectories:FILE. Energies in MeV.
 // FILE: one radial region per line, innermost first: outer radius (km), Ye, then the coefficients c_k of
 // rho(x) = sum_k c_k x^k with x = r / 6371 km (the B3 spec's `regions`); NuFast-Earth takes each crossing's
 // mean density, as for its own PREM models.
+// trajectories:FILE: one chord per nadir, solved in NuFast-Earth's single-trajectory mode (Set_Trajectory), for
+// densities that are not radial (snufish.earth3d). Per chord a line "cos_nadir n", then n lines "length_km rhoYe"
+// in the order the neutrino crosses them (from where it enters the Earth to the detector). The chords replace the
+// cos-nadir grid of the command line (its three values are ignored) and the depth (the chords end at the detector).
 // Output, one line per grid point: E_MeV cos_nadir m00 m01 m02 m10 ... m22
 
 #include <cmath>
@@ -79,6 +83,38 @@ class Regions : public Earth_Density
 		std::vector<std::vector<double>> coefficients;
 };
 
+struct Chord { double cos_nadir; std::vector<std::pair<double,double>> pieces; };
+
+static std::vector<Chord> read_chords(const char *path)
+{
+	FILE *file = fopen(path, "r");
+	if (!file) { fprintf(stderr, "cannot read %s\n", path); exit(1); }
+	std::vector<Chord> chords;
+	double c; int n;
+	while (fscanf(file, "%lf %d", &c, &n) == 2)
+	{
+		Chord chord{c, {}};
+		for (int k = 0; k < n; k++)
+		{
+			double length, rhoye;
+			if (fscanf(file, "%lf %lf", &length, &rhoye) != 2) { fprintf(stderr, "short chord in %s\n", path); exit(1); }
+			if (length > 0) chord.pieces.emplace_back(length, rhoye);
+		}
+		chords.push_back(chord);
+	}
+	fclose(file);
+	return chords;
+}
+
+static void print_row(double e, double c, const Matrix3r &m)
+{
+	printf("%.10g %.10g", e, c);
+	for (int a = 0; a < 3; a++)
+		for (int b = 0; b < 3; b++)
+			printf(" %.15g", m.arr[a][b]);
+	printf("\n");
+}
+
 static std::vector<double> grid(double start, double stop, double step)
 {
 	std::vector<double> values;
@@ -99,6 +135,33 @@ int main(int argc, char **argv)
 	double p[13];
 	for (int i = 0; i < 13; i++) p[i] = atof(argv[i + 2]);
 
+	std::vector<double> energies_mev = grid(p[7], p[8], p[9]);
+	if (!strncmp(model, "trajectories:", 13))
+	{
+		std::vector<Chord> chords = read_chords(model + 13);
+		std::vector<double> energies_gev;
+		for (double e : energies_mev) energies_gev.push_back(1e-3 * e);
+		// night[chord][energy]: mass state i -> flavour, as solar_night_in_earth in Earth mode
+		std::vector<std::vector<Matrix3r>> night(chords.size());
+		Matrix3r vacuum;
+		for (unsigned int j = 0; j < chords.size(); j++)
+		{
+			Probability_Engine engine;
+			engine.Set_Oscillation_Parameters(p[0], p[1], p[2], p[3] * M_PI / 180, p[4], p[5], true);
+			engine.Set_E_Spectra(energies_gev);
+			if (chords[j].pieces.empty())  // above the horizon: no matter, |U_ei|^2
+				chords[j].pieces.emplace_back(1e-9, 0.0);
+			engine.Set_Trajectory(chords[j].pieces);
+			engine.Calculate_Internal_Amplitudes();
+			for (unsigned int i = 0; i < energies_mev.size(); i++)
+				night[j].push_back(engine.Inner_Amplitude_to_Probability_Solar(engine.internal_amplitudes[i][0]));
+		}
+		for (unsigned int i = 0; i < energies_mev.size(); i++)
+			for (unsigned int j = 0; j < chords.size(); j++)
+				print_row(energies_mev[i], chords[j].cos_nadir, night[j][i]);
+		return 0;
+	}
+
 	std::unique_ptr<Earth_Density> earth;
 	if (!strcmp(model, "prem_prob3")) earth.reset(new PREM_Prob3());
 	else if (!strcmp(model, "prem_four")) earth.reset(new PREM_Four());
@@ -107,7 +170,6 @@ int main(int argc, char **argv)
 	else if (!strncmp(model, "regions:", 8)) earth.reset(new Regions(model + 8));
 	else { fprintf(stderr, "unknown model %s\n", model); return 1; }
 
-	std::vector<double> energies_mev = grid(p[7], p[8], p[9]);
 	std::vector<double> cos_nadirs = grid(p[10], p[11], p[12]);
 	std::vector<double> energies_gev, coszs;
 	for (double e : energies_mev) energies_gev.push_back(1e-3 * e);
@@ -139,12 +201,6 @@ int main(int argc, char **argv)
 
 	for (unsigned int i = 0; i < energies_mev.size(); i++)
 		for (unsigned int j = 0; j < cos_nadirs.size(); j++)
-		{
-			printf("%.10g %.10g", energies_mev[i], cos_nadirs[j]);
-			for (int a = 0; a < 3; a++)
-				for (int b = 0; b < 3; b++)
-					printf(" %.15g", night[i][j].arr[a][b]);
-			printf("\n");
-		}
+			print_row(energies_mev[i], cos_nadirs[j], night[i][j]);
 	return 0;
 }

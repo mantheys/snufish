@@ -69,7 +69,9 @@ the right factor first. For constant density it is exactly the shell
 propagator. Steps of 6.25 km (`CONVERGED_STEP_KM`) give P<sub>ie</sub> within
 4 × 10⁻⁷ of a 1.5625 km solution over 43 chords and the 39 exposure
 energies; the convergence is slowest at low energy, where the Δm²₃₁ mode
-oscillates over ~2 km. Independently, the exact solver on 1 km constant
+oscillates over ~2 km. On the `map` grid's energies in between it reaches
+1.5 × 10⁻⁶ (5.4 × 10⁻⁷ at the exposure energies on all chords) (found by the nuSQuIDS contribution,
+[crosschecks.md](crosschecks.md#peanuts-and-nusquids)). Independently, the exact solver on 1 km constant
 shells agrees to 3 × 10⁻⁶. The tests check the matter potential against its
 textbook value, chord lengths, the core-crossing threshold, unitarity, the
 vacuum limit at the horizon, independence of θ₂₃ and δ, the
@@ -84,7 +86,27 @@ the site's 1° × 1° cell (constant density each, Yₑ = 0.494) to the surface
 everywhere along the chord. Solved by NuFast-Earth through the B3 driver's
 `regions:FILE` model (one region per line: outer radius, Yₑ, density
 polynomial), which given PREM's own regions reproduces `prem_full`
-bit for bit.
+bit for bit. Like every continuous model of the engine's night, its
+polynomial regions are cut into 50 km shells (`scan.SPLIT_KM`), so that
+NuFast-Earth's mean density per crossing follows the profile.
+
+### Crust along each chord (`prem_crust1_3d`, engine and calculator)
+
+`snufish.earth3d`: along every night chord, the CRUST1.0 layer of the cell
+each point lies under (the whole 1° × 1° grid,
+`reference/earth/crust1_global.npz`, each cell's surface at the Earth's
+radius), PREM under the local Moho (its lid continued up to it, as in
+`prem_crust1`). The chords are the Sun's directions every 2 minutes over a
+year (2026; low-precision solar coordinates and the Earth rotation angle)
+from the site's latitude and longitude, binned in the 1001 cells of B3's
+cos-nadir grid, whose weights stay W(η). In each cell the crust of its chords
+is averaged at equal distance from the detector (near half) and from the
+entry point (far half), which to first order in the density change is the
+average of P over the chords (checked: ≤ 1.3 × 10⁻⁴ in P₂ₑ); the chord, cut
+into pieces where the density changes by 0.05 g/cm³ or every 50 km, is
+solved by NuFast-Earth's single-trajectory mode through the B3 driver's
+`trajectories:FILE` model (one chord per cos η, pieces in the neutrino's
+order). The chords of each site are cached in `build/data/earth3d`.
 
 ## Night exposure
 

@@ -27,7 +27,7 @@ const XSEC = {
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
 };
-const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
 const ES = { bks: "Radiative corrections (BKS)", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
 // reference/status.yaml, via engine.status: what is the state of the art, what is legacy, what is an approximation

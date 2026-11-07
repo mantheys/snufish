@@ -1,0 +1,5 @@
+# PEANUTS v1.6 (the submodule PEANUTS/, run from its checkout) needs numba and mpmath on top of SNUfish's
+# numpy, scipy and pandas; versions used for contributions/peanuts/*/1.6 (Python 3.10, numpy 2.2.6, scipy 1.15.3,
+# pandas 2.3.3).
+numba==0.61.2
+mpmath==1.3.0

@@ -3,7 +3,7 @@
 // credits).
 import * as engine from "./engine.js";
 import { DATA, loadTable } from "./load.js";
-import { ADN, CONFIG, colours, htmlLegend, layout, math, themeIcon } from "./plots.js";
+import { ADN, CONFIG, alpha, colours, htmlLegend, layout, math, themeIcon } from "./plots.js";
 import { CREDITS, render as renderSources } from "./sources.js";
 
 const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
@@ -47,12 +47,14 @@ const flat = (c, y) => ({ type: "line", xref: "paper", x0: 0, x1: 1, y0: y, y1: 
 function toolsVsInputs() {
   // 6. tools on the same inputs against the spread of competing inputs, on one log scale
   const c = colours(), node = $("plot-f6"), tools = page.sections.tools;
-  const worst = (rows) => (rows?.length ? 100 * Math.max(...rows.map((r) => r.max_abs)) : null);
+  // each tool against the reference on the spec's tool comparison (B2 b16_gs98, B3 four shells): identical inputs
+  const perTool = (rows, label) => (rows || []).filter((r) => r.comparison).sort((a, b) => a.name.localeCompare(b.name))
+    .map((r) => [`${label}: ${r.name} (|ΔP|)`, 100 * r.max_abs, "tools"]);
   const es = Math.max(...["water_es_b8", "scint_es_be7"].map((o) => row(o, "ES radiative corrections") || 0));
   const bars = [
-    ["B2 Sun: solvers (|ΔP|)", worst(tools.B2_sun), "tools"],
-    ["B3 Earth: solvers, shells (|ΔP|)", worst(tools.B3_earth?.filter((r) => r.variant === "prem_prob3")), "tools"], // exact for both
-    ["B4 ES: radiative corr.", es, "tools"],
+    ...perTool(tools.B2_sun, "B2 Sun"),
+    ...perTool(tools.B3_earth, "B3 Earth"),
+    ["B4 ES: BKS vs SNOwGLoBES", es, "tools"],
     ["B1 osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
     ["B2 composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
     ["B4 ⁴⁰Ar model, ⁸B CC", row("argon_cc_b8", "40Ar nuclear model"), "inputs"],
@@ -151,24 +153,29 @@ function argon() {
 }
 
 function earth() {
-  // 3. (B3) the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
+  // 3. (B3) the crust: A_DN with PREM + CRUST1.0, under the detector (radial) and along each chord (3D), over A_DN with
+  // PREM's average crust, per site (computed by adn()); the two are the current Earth models
   const c = colours(), node = $("plot-f3"), sites = Object.keys(page.inputs.sites);
   const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E<sub>vis</sub> > 5 MeV", c.range]];
-  const traces = page.adn ? kinds.map(([kind, name, colour]) => {
-    const y = sites.map((site) => 100 * (page.adn[site][kind].prem_crust1 / page.adn[site][kind].prem_full - 1));
-    return { type: "bar", x: sites, y, name, marker: { color: colour }, text: y.map(pct), textposition: "outside", cliponaxis: false,
-             textfont: { size: 10, color: c.secondary }, hovertemplate: `%{x}: %{text}<extra>${name}</extra>` };
-  }) : [];
-  htmlLegend(node, kinds.map(([, name, colour]) => ({ label: name, colour, fill: true })),
+  const models = [["prem_crust1", "under the detector", 1], ["prem_crust1_3d", "along each chord", 0.45]];
+  const traces = page.adn ? kinds.flatMap(([kind, name, colour]) => models.map(([model, where, opacity]) => {
+    const y = sites.map((site) => 100 * (page.adn[site][kind][model] / page.adn[site][kind].prem_full - 1));
+    return { type: "bar", x: sites, y, name: `${name}, crust ${where}`, offsetgroup: `${kind}-${model}`,
+             marker: { color: alpha(colour, opacity), line: { color: colour, width: 1 } }, text: y.map(pct),
+             textposition: opacity < 1 ? "none" : "outside",
+             cliponaxis: false, textfont: { size: 9, color: c.secondary }, hovertemplate: `%{x}: %{text}<extra>${name}, crust ${where}</extra>` };
+  })) : [];
+  htmlLegend(node, kinds.flatMap(([, name, colour]) => models.map(([, where, opacity]) => ({ label: `${name}, crust ${where}`,
+                                                                                         colour: alpha(colour, opacity), fill: true }))),
              page.adn ? `Annual ${ADN}, ${page.inputs.parameter_sets.sets[page.sections.set]?.label || page.sections.set}, B23 MB22m` : `Computing ${ADN} at the five sites…`);
-  return Plotly.react(node, traces, layout(c, node, "The crust under the detector", "", `${ADN}, local crust over PREM (%)`,
-    { showlegend: false, barmode: "group", bargap: 0.3, xaxis: { minor: { ticks: "" } }, yaxis: { range: [-4, 6] }, shapes: [flat(c, 0)] }), CONFIG);
+  return Plotly.react(node, traces, layout(c, node, "The crust the neutrinos cross", "", `${ADN}, CRUST1.0 over PREM (%)`,
+    { showlegend: false, barmode: "group", bargap: 0.25, bargroupgap: 0.05, xaxis: { minor: { ticks: "" } }, yaxis: { range: [-4, 6] }, shapes: [flat(c, 0)] }), CONFIG);
 }
 
 async function adn() {
   // annual A_DN of 8B (+ hep) per site and Earth model with the calculator's engine and tables: ES in water above
   // 3.49 MeV and CC on 40Ar above 5 MeV, central values, no detector response
-  const d = new engine.Inputs(page.inputs), models = ["prem_crust1", "prem_full", "prem_four"];
+  const d = new engine.Inputs(page.inputs), models = ["prem_crust1", "prem_crust1_3d", "prem_full", "prem_four"];
   const tables = new engine.TableProbabilities(loadTable, d.data.parameter_sets.defaults.sin2_theta13.value);
   const solar = page.sections.solar_model;
   await tables.ensure([`day_${solar}`, ...models.map((m) => `night_${m}`)]);
@@ -244,7 +251,7 @@ const XS_NAMES = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", 
                    ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed",
                    ar40_marley: "SNOwGLoBES MARLEY (p,n)", ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "KLMV", default: "default table" };
 const ES = { bks: "BKS", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
-const EARTH_NAMES = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+const EARTH_NAMES = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 
 function statusTable(d) {
   const status = d.status || {}, name = (category, key, channel) => ({

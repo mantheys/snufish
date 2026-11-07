@@ -13,7 +13,8 @@ const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth"
 const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
                 scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water" };
-const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
+const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)",
+                native: "The tool's own Earth model" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
 const XSEC = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) from (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
                ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "Shell model (Kostensalo 2018)", ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed",
@@ -46,11 +47,8 @@ const pct = (v) => {
 const FLOOR = 1e-4; // per cent: the left end of the log axes
 
 // the overview counts state-of-the-art contributions only: sampled uncertainties and ranges over current models
-// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page, but for
-// B3, which has a single current Earth model and so no range: the shift to PREM's average crust stands in for it
-// (flagged "overview", drawn pale)
+// (export-sections builds them so); approximations and legacy spreads stay on each benchmark's own page
 const stateOfTheArt = (r) => r.kind === "sampled" || r.kind === "model range";
-const inOverview = (r) => stateOfTheArt(r) || r.overview;
 
 function largest(rows, central, keep) {
   let best = null;
@@ -65,12 +63,11 @@ function largest(rows, central, keep) {
 
 function matrix() {
   const obs = page.sections.observables, accent = colours().sampled;
-  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && inOverview(r)]);
+  const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && stateOfTheArt(r)]);
   const cell = (best) => {
     if (!best) return `<td class="num empty">–</td>`;
     const strength = best.value ? Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5)) : 0;
-    const proxy = !["sampled", "model range"].includes(best.kind);
-    return `<td class="num${proxy ? " proxy" : ""}" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}${proxy ? "*" : ""}</td>`;
+    return `<td class="num" style="background:${alpha(accent, 0.08 + 0.55 * strength)}" title="${sup(best.source)} (${best.kind})">${pct(best.value)}</td>`;
   };
   $("matrix").innerHTML = `<table><thead><tr><th>Observable</th><th class="num" title="Rates per kt·yr; day-night asymmetry in %">Central</th>${columns.map(([k, l]) => `<th class="num" title="${l}">${k}</th>`).join("")}</tr></thead><tbody>${
     Object.entries(obs).map(([id, o]) => `<tr><th title="${plain(sup(o.label))}">${SHORT[id]}</th><td class="num">${central(o)}</td>${
@@ -83,7 +80,7 @@ function overviewPlot() {
   const c = colours(), id = $("overview-observable").value, o = page.sections.observables[id], node = $("plot-overview");
   // grouped by step, B1 at the top (Plotly draws the first category at the bottom), the largest first within a step
   const step = (r) => Object.keys(SECTIONS).indexOf(r.section);
-  const rows = o.rows.filter(inOverview)
+  const rows = o.rows.filter(stateOfTheArt)
     .sort((a, b) => step(b) - step(a) || Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
   const traces = Object.keys(SECTIONS).map((s) => {
     const mine = rows.filter((r) => r.section === s);
@@ -91,11 +88,10 @@ function overviewPlot() {
              x: mine.map((r) => Math.max(Math.abs(size(r, o.central)), FLOOR)),
              text: mine.map((r) => `${pct(size(r, o.central))} · ${r.kind}`), textposition: "outside", cliponaxis: false,
              textfont: { size: 11, color: c.secondary }, hovertemplate: "%{y}: %{text}<extra></extra>",
-             marker: { color: mine.map((r) => (stateOfTheArt(r) ? seriesColour(s) : alpha(seriesColour(s), 0.35))),
-                       line: { color: seriesColour(s), width: mine.map((r) => (stateOfTheArt(r) ? 0 : 1.5)) } } };
+             marker: { color: seriesColour(s) } };
   });
   htmlLegend(node, Object.keys(SECTIONS).map((s) => ({ label: SECTIONS[s], colour: seriesColour(s), fill: true })),
-             "State-of-the-art inputs; pale: B3 has a single current Earth model, so the shift to PREM's average crust stands in for its spread.");
+             "State-of-the-art inputs: sampled uncertainties and the ranges over current models.");
   node.style.height = `${Math.max(360, 34 * rows.length + 90)}px`;
   // the labels sit to the right of the bars, on a log axis: about two decades of room beyond the largest bar
   const top = Math.max(FLOOR, ...rows.map((r) => Math.abs(size(r, o.central))));
@@ -265,13 +261,28 @@ function b2Propagation() {
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color, dash: !!t.line.dash, fill: t.mode === "markers" })));
   Plotly.react(node, traces, layout(c, node, `${DISPLAY[comp]}: density and production of each model`, "Neutrino energy (MeV)", `P<sub>ee</sub> − P<sub>ee</sub>(${models[ref].label}) (×10⁻³)`,
     { showlegend: false, hovermode: "closest", xaxis: energyAxis }), CONFIG);
-  $("b2-tools").innerHTML = toolTable(page.sections.tools.B2_sun, "F<sub>i</sub>", "B2 fixes the production radius and energy grid; every solver gets the same n<sub>e</sub>(r).");
+  $("b2-tools").innerHTML = toolTable(page.sections.tools.B2_sun, "F<sub>i</sub>",
+    "B2 fixes the production radius and energy grid; every solver gets the same n<sub>e</sub>(r). NuFast-Earth and PEANUTS both " +
+    "use the adiabatic fractions; PEANUTS's 1.2 × 10⁻⁴ is its hard-coded matter potential (3.6 × 10⁻⁴ high, 1.1 × 10⁻⁴ of it) " +
+    "and its approximate matter angles (1.3 × 10⁻⁵): docs/crosschecks.md.");
 }
 
 function toolTable(rows, what, note) {
+  // one row per tool and variant; the spec's tool comparison (identical inputs for every tool) first
   if (!rows?.length) return `<p class="hint">No tool other than the reference has contributed yet.</p>`;
+  // a tool's many other variants (B2: the other solar models) in one row
+  const merged = [];
+  for (const tool of [...new Set(rows.map((r) => r.tool))]) {
+    const own = rows.filter((r) => r.tool === tool), others = own.filter((r) => !r.comparison);
+    merged.push(...own.filter((r) => r.comparison));
+    if (others.length > 3) merged.push({ ...others[0], variant: `the other ${others.length} variants`, others: true,
+      points: others.reduce((n, r) => n + r.points, 0), max_abs: Math.max(...others.map((r) => r.max_abs)) });
+    else merged.push(...others);
+  }
+  const sorted = merged.sort((a, b) => (b.comparison - a.comparison) || (a.others || 0) - (b.others || 0) || a.variant.localeCompare(b.variant) || a.name.localeCompare(b.name));
+  const label = (r) => (r.others ? r.variant : `${page.inputs.solar_models[r.variant]?.label || EARTH[r.variant] || r.variant}${r.comparison ? " (tool comparison)" : ""}`);
   return `<table><thead><tr><th>Tool</th><th>Variant</th><th class="num">Points</th><th class="num">Largest |Δ${what}| from the SNUfish reference</th></tr></thead><tbody>${
-    rows.map((r) => `<tr><td>${r.tool}</td><td>${page.inputs.solar_models[r.variant]?.label || EARTH[r.variant] || r.variant}</td><td class="num">${r.points.toLocaleString()}</td><td class="num">${r.max_abs.toExponential(1)}</td></tr>`).join("")
+    sorted.map((r) => `<tr><td>${r.name || r.tool}</td><td>${label(r)}</td><td class="num">${r.points.toLocaleString()}</td><td class="num">${r.max_abs.toExponential(1)}</td></tr>`).join("")
   }</tbody></table><p class="hint">${note}</p>`;
 }
 
@@ -293,7 +304,12 @@ function b3() {
   htmlLegend(node, traces.map((t) => ({ label: `${t.name} (${page.inputs.sites[t.name].latitude_deg.toFixed(1)}° N)`, colour: t.line.color })));
   Plotly.react(node, traces, layout(c, node, "⁸B regeneration by site (PREM, ten regions)", "Neutrino energy (MeV)", "P<sub>ee</sub>(night) − P<sub>ee</sub>(day) (%)",
     { showlegend: false, hovermode: "x unified", xaxis: axis }), CONFIG);
-  $("b3-tools").innerHTML = toolTable(page.sections.tools.B3_earth, "P", "P(νᵢ → νₑ) on B3's energy × nadir grids, for the Earth models both tools compute.");
+  $("b3-tools").innerHTML = toolTable(page.sections.tools.B3_earth, "P",
+    "P(νᵢ → νₑ) on B3's energy × nadir grids, for the Earth models each tool computes. Four shells: every solver is exact; " +
+    "what is left is each tool's constants (PEANUTS's matter potential is 1.8 × 10⁻⁵ high: 9 × 10⁻⁶). On PREM's continuous " +
+    "regions NuFast-Earth takes each crossing's mean density; nuSQuIDS integrates the polynomials and agrees within the " +
+    "reference's Magnus step error (1.5 × 10⁻⁶; 10⁻⁸ against a 4× finer step). PEANUTS cannot take PREM's odd powers of r and its own Earth breaks unitarity " +
+    "by 10⁻³, so it has no continuous variant: docs/crosschecks.md.");
 }
 
 // ------------------------------------------------------------------ B4
@@ -320,6 +336,7 @@ function b4() {
              "Solid: state of the art; dotted: legacy.");
   Plotly.react(node, traces, layout(c, node, "νₑ CC on ⁴⁰Ar over MARLEY 2", "Neutrino energy (MeV)", "σ / σ(MARLEY 2, 2009)",
     { showlegend: false, hovermode: "closest", yaxis: { range: [0.3, 2] } }), CONFIG);
+  $("b4-tools").innerHTML = esTable(page.sections.tools.B4_xsec);
   node = $("plot-b4-es");
   const es = page.inputs.es_radiative_ratio;
   const esTraces = [["nue", "νₑ"], ["numu", "ν<sub>μ,τ</sub>"]].map(([f, label], i) => ({ x: es[f].energy, y: es[f].ratio, mode: "lines", name: label,
@@ -328,6 +345,20 @@ function b4() {
   Plotly.react(node, esTraces, layout(c, node, "ES: SNOwGLoBES over tree level", "Neutrino energy (MeV)", "σ(SNOwGLoBES) / σ(tree)",
     { showlegend: false, hovermode: "x unified", xaxis: { type: "log", tickvals: energyAxis.tickvals, ticktext: energyAxis.ticktext },
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
+}
+
+function esTable(rows) {
+  if (!rows?.length) return `<p class="hint">No tool other than the reference has contributed ES with radiative corrections.</p>`;
+  const flavour = { es_nue: "ν<sub>e</sub>", es_numu: "ν<sub>μ</sub>", es_nutau: "ν<sub>τ</sub>" };
+  const signed = (v) => `${v < 0 ? "−" : "+"}${Math.abs(100 * v).toFixed(2)} %`;
+  return `<table><thead><tr><th>Tool</th><th>ES</th><th class="num">Energies</th><th class="num">σ / σ(BKS) − 1</th></tr></thead><tbody>${
+    rows.map((r) => `<tr><td>${r.name || r.tool}</td><td>${flavour[r.quantity] || r.quantity}</td><td class="num">${r.points.toLocaleString()} (from ${r.energy_min} MeV)</td>` +
+                    `<td class="num">${signed(r.min_rel)} to ${signed(r.max_rel_signed)}</td></tr>`).join("")
+  }</tbody></table><p class="hint">Total cross sections with radiative corrections: SNOwGLoBES's tables (Marciano &amp; Parsa) against the reference's ` +
+    `Bahcall–Kamionkowski–Sirlin, point by point. SNOwGLoBES gives ν<sub>μ</sub> and ν<sub>τ</sub> different corrections (their charge radii differ); BKS gives ν<sub>τ</sub> ` +
+    `the ν<sub>μ</sub> values, so the two move in opposite directions and largely cancel for the oscillated solar flux (about 0.1 % on the ⁸B rates). ` +
+    `Tomalak &amp; Hill (arXiv:1907.03379), the most precise calculation (0.2–0.4 %), publishes no cross-section tables, only a Mathematica ` +
+    `notebook: not yet a contribution.</p>`;
 }
 
 // ------------------------------------------------------------------ B5

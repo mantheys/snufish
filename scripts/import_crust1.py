@@ -1,11 +1,14 @@
-"""Extract the CRUST1.0 column under every B3 site: reference/earth/crust1_sites.yaml.
+"""Extract the CRUST1.0 column under every B3 site (reference/earth/crust1_sites.yaml) and the whole grid
+(reference/earth/crust1_global.npz, for the chords of prem_crust1_3d: snufish.earth3d).
 
     curl -LO https://igppweb.ucsd.edu/~gabi/crust1/crust1.0.tar.gz && mkdir crust1 && tar -xzf crust1.0.tar.gz -C crust1
     python scripts/import_crust1.py crust1 crust1.0.tar.gz
 
 CRUST1.0 (Laske, Masters, Ma & Pasyanos 2013) gives eight layers (water, ice, three sediment layers, upper,
 middle and lower crystalline crust) on 1 x 1 degree cells, and the density under the Moho. Each site takes the
-cell its coordinates fall in (cells are centred on half degrees).
+cell its coordinates fall in (cells are centred on half degrees). The global grid keeps the nine boundaries
+(elevation of each layer's top and the Moho, in units of 10 m) and densities (0.01 g/cm^3) as int16, which is
+the precision of the files: the conversion is lossless.
 """
 
 import argparse
@@ -32,6 +35,7 @@ def main():
     parser.add_argument("directory", help="the unpacked crust1.0.tar.gz")
     parser.add_argument("archive", help="crust1.0.tar.gz itself, for its checksum")
     parser.add_argument("--out", default=Path(__file__).resolve().parents[1] / "reference" / "earth" / "crust1_sites.yaml")
+    parser.add_argument("--grid", default=Path(__file__).resolve().parents[1] / "reference" / "earth" / "crust1_global.npz")
     args = parser.parse_args()
     bounds, density = read(args.directory, "bnds"), read(args.directory, "rho")
     with (Path(__file__).resolve().parents[1] / "benchmarks" / "B3_earth" / "spec.yaml").open() as handle:
@@ -59,6 +63,13 @@ def main():
     with Path(args.out).open("w") as handle:
         yaml.safe_dump({**header, "sites": out}, handle, sort_keys=False, allow_unicode=True)
     print(f"wrote {args.out}")
+    for name, values, unit in (("bounds", bounds, 100), ("density", density, 100)):
+        assert np.abs(np.round(values * unit) - values * unit).max() < 1e-6, f"{name} is not on the 0.01 grid"
+    np.savez_compressed(args.grid, bounds_10m=np.round(bounds * 100).astype("<i2"),
+                        density_cg=np.round(density * 100).astype("<i2"), sha256=np.array(digest),
+                        layout=np.array("[latitude row: 89.5 N .. 89.5 S, longitude column: 179.5 W .. 179.5 E, "
+                                        "boundary/layer: " + ", ".join(LAYERS) + ", mantle]"))
+    print(f"wrote {args.grid}")
 
 
 if __name__ == "__main__":

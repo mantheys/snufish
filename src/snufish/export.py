@@ -5,7 +5,8 @@
 writes ``inputs.json`` (see :mod:`snufish.engine`), ``day_<solar model>``
 (F_1, F_2 per flux component on a (sin^2 theta12, Delta m^2_21, E) grid,
 over the component's own energies) and ``night_<Earth model>``
-(P(nu_i -> nu_e) for every site on the same parameter grid). Each table is
+(P(nu_i -> nu_e) for every site on the same parameter grid; the continuous Earth regions cut into
+scan.SPLIT_KM shells, prem_crust1_3d along one chord per nadir: snufish.earth3d). Each table is
 ``<name>.json`` (small arrays, exact, and an index) with ``<name>.bin``
 (large arrays, little-endian float32): read the same way by
 :func:`snufish.engine.read_table` and by the web page. Needs ``snufish build`` (B4 cross sections) and the
@@ -23,13 +24,13 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from . import crust
+from . import crust, earth3d
 from .exposure import cell_weights, orbital_factors, solar_weight
 from .fluxes import components
 from .paths import build_dir, repo_root
 from .reference.radiative import ratio_table
 from .reference.sun import adiabatic_fractions
-from .scan import _with_oscillation, day_fractions, night_grid, night_probabilities, site_latitude
+from .scan import SPLIT_KM, _with_oscillation, day_fractions, night_grid, night_probabilities, site_latitude
 from .solar import COMPONENTS, models, production_weights
 from .spec import load_spec
 
@@ -220,12 +221,14 @@ class ExactProbabilities:
     takes the conventions of the SOLAR analysis (lib/oscillation_backends.py, physics.json): ``nadir_bins``
     uniform bins in cos nadir over [-1, 1] (40 x 4 oversampling: 80 by night), W sampled at the bin centres
     and normalised over them, ``depth_km`` 1.478 and ``latitude_deg`` 44.35. SOLAR's Earth density model
-    (set in its NuFast-Earth binding, not in its repository) is not known: pass the ``earth_model`` as usual."""
+    (set in its NuFast-Earth binding, not in its repository) is not known: pass the ``earth_model`` as usual.
+    ``split_km``: the continuous Earth regions cut into shells of at most this (scan.SPLIT_KM, as the app
+    tables); None: NuFast-Earth's mean density per region crossing."""
 
-    def __init__(self, night_mode="b3", depth_km=None, latitude_deg=None, nadir_bins=160):
+    def __init__(self, night_mode="b3", depth_km=None, latitude_deg=None, nadir_bins=160, split_km=SPLIT_KM):
         if night_mode not in ("b3", "solar"):
             raise ValueError("night_mode is 'b3' or 'solar'")
-        self.night_mode, self.nadir_bins = night_mode, int(nadir_bins)
+        self.night_mode, self.nadir_bins, self.split_km = night_mode, int(nadir_bins), split_km
         self.depth_km = 1.478 if depth_km is None and night_mode == "solar" else depth_km
         self.latitude_deg = 44.35 if latitude_deg is None and night_mode == "solar" else latitude_deg
 
@@ -235,13 +238,13 @@ class ExactProbabilities:
     def night(self, osc, earth_model, site):
         latitude = site_latitude(site) if self.latitude_deg is None else self.latitude_deg
         if self.night_mode == "b3" and self.depth_km is None:
-            return night_probabilities(osc, earth_model, latitude, site)
+            return night_probabilities(osc, earth_model, latitude, site, split_km=self.split_km)
         if self.night_mode == "b3":
-            energies, cosines, P = night_grid(osc, earth_model, site, depth_km=self.depth_km)
+            energies, cosines, P = night_grid(osc, earth_model, site, split_km=self.split_km, depth_km=self.depth_km)
             return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude)))
         half = self.nadir_bins // 2   # bins in cos nadir over [0, 1], by night
         step = 1.0 / half
-        energies, cosines, P = night_grid(osc, earth_model, site, depth_km=self.depth_km,
+        energies, cosines, P = night_grid(osc, earth_model, site, split_km=self.split_km, depth_km=self.depth_km,
                                           cos_grid=(0.5 * step, 1.0 - 0.5 * step, step))
         w = solar_weight(np.arccos(cosines), np.radians(latitude))
         return energies, np.einsum("eci,c->ei", P, w / w.sum())
@@ -317,6 +320,14 @@ def export_app(out, s12=S12_GRID, dm21=DM21_GRID, jobs=None, solar_models=None, 
     _SHARED.update(inputs=inputs, solar_models=solar_models, earth_models=earth_models, sites=sites)
     points = [(a, b) for a in s12_axis for b in dm21_axis]
     workers = jobs or multiprocessing.cpu_count()
+    if earth3d.MODEL in earth_models:  # the chords of every site (independent of the oscillation parameters)
+        start = time.monotonic()
+        with multiprocessing.get_context("fork").Pool(min(workers, len(sites))) as pool:
+            files = dict(zip(sites, pool.map(earth3d.trajectories_file, list(sites))))
+        earth3d.trajectories_file.cache_clear()
+        for site, path in files.items():  # the workers below fork from here
+            earth3d.TRAJECTORY_FILES[site] = path
+        print(f"{earth3d.MODEL}: chords of {len(sites)} sites in {time.monotonic() - start:.0f} s", file=sys.stderr)
     print(f"{len(points)} grid points x ({len(solar_models)} solar models, {len(earth_models)} Earth models) "
           f"on {workers} processes", file=sys.stderr, flush=True)
     start, results = time.monotonic(), []

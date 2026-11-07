@@ -46,8 +46,7 @@
         uncertainties, the spread between competing current models and, for B5, the statistics of 100 kt·yr and the
         published detector uncertainties. Each observable is seen through its detector's published response (Super-K IV,
         DUNE, Borexino Phase-II: the B5 benchmark's).
-        Approximations and legacy models are shown on each benchmark's own page; the one exception is B3, whose single
-        current Earth model leaves no spread: the shift to PREM's average crust stands in for it.</p>
+        Approximations and legacy models are shown on each benchmark's own page.</p>
       <p class="hint" id="reference-note"></p>
     </section>
     <section class="card">
@@ -55,8 +54,8 @@
       <div id="matrix" class="matrix"></div>
       <p class="hint official-caption">Sampled: the 1σ spread from published uncertainties. Model range: the largest
         deviation from the nominal among the competing state-of-the-art alternatives (not a σ); legacy models are
-        plotted and labelled on each step's page but never counted here. *B3: the shift to PREM's average crust and
-        ocean, an approximation standing in for the spread of the crust model. B5: the statistical 1σ of 100 kt·yr
+        plotted and labelled on each step's page but never counted here. B3: the two current crust models, under the
+        detector and along each chord. B5: the statistical 1σ of 100 kt·yr
         (10 kt for 10 years) and the detector's published energy-scale, resolution and normalisation uncertainties
         (Super-K IV's for water; DUNE and Borexino publish none for solar neutrinos).</p>
     </section>
@@ -96,7 +95,8 @@
         labelled so, and kept to reproduce published numbers.</p>
       <p><b>Oscillations inside the Sun.</b> For the measured parameters the propagation out of the Sun is adiabatic:
         a neutrino leaves as a mass eigenstate with probability |V<sub>ei</sub>|² set by the electron density where it
-        was produced. The solvers agree to 3 × 10⁻⁸, so the solar model, not the solver, is what moves a result. Each
+        was produced. NuFast-Earth agrees with the reference to 3 × 10⁻⁸ and PEANUTS to 1.2 × 10⁻⁴ (its hard-coded
+        matter potential), so the solar model, not the solver, is what moves a result. Each
         component is produced in its own region (⁸B at 0.05 R☉, ⁷Be at 0.07, pp at 0.12, hep at 0.14), so each has its
         own P<sub>ee</sub>(E). SNUfish averages over each component's production profile. Solvers that put every
         component at one point, or on ⁸B's profile, shift the result; the shift is largest for hep, produced furthest
@@ -120,7 +120,7 @@
       </section>
       <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-models" class="plot"></div></section>
     </div>
-    <section class="card"><h3 class="plot-title">Solvers on the same inputs</h3><div id="b2-tools"></div></section>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b2-tools"></div></section>
   </section>
 
   <section data-page="B3" hidden>
@@ -128,14 +128,20 @@
       <h2><span class="bench-id">B3</span> Earth · crossing the Earth at night</h2>
       <p>At night the mass eigenstates cross the Earth and partly regenerate ν<sub>e</sub>: the day-night asymmetry.
         B3 compares P(ν<sub>i</sub> → ν<sub>e</sub>) through PREM in three levels of detail (ten regions, four
-        regions, Prob3++'s four shells), averaged over each site's night. On constant shells the solvers agree to
-        10⁻⁸; on PREM's continuous regions NuFast-Earth, which computes the calculator's night, takes each crossing's
-        mean density: against the reference (fourth-order Magnus, converged) the ⁸B A<sub>DN</sub> is off by up to 2 % at
-        10–15 MeV, 0.3 % once averaged over the Super-K spectrum, and almost equally with and without the local crust.
-        The state of the art is PREM with the CRUST1.0 crust under each detector, which moves A<sub>DN</sub> by −2 to
-        +4 % against full PREM; the crustless models are 20–40 % high. It is the only current Earth model, so B3 has
-        no model range yet: the crust where neutrinos enter and the 3D mantle (up to ~8 %) are not yet computed. The
-        bars below are approximations, signed shifts against it.</p>
+        regions, Prob3++'s four shells), averaged over each site's night. On constant shells NuFast-Earth, nuSQuIDS and
+        PEANUTS agree with the reference to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶ (PEANUTS's matter potential is rounded); on
+        PREM's continuous regions nuSQuIDS integrates the
+        polynomials and agrees with the reference to 10⁻⁶, while NuFast-Earth, which computes the calculator's night,
+        takes each crossing's mean density, off by up to 2 % in the ⁸B A<sub>DN</sub> at 10–15 MeV against the reference
+        (fourth-order Magnus, converged). The calculator's night therefore cuts those regions into 50 km shells (within
+        0.05 %); the bar "mean density per region crossing" is what NuFast-Earth's own treatment would shift. The state
+        of the art is PREM with the CRUST1.0 crust, in two competing models: the column under the detector (radial) and
+        the crust along each night chord (3D, near the detector and where the chord enters). Against full PREM they move
+        A<sub>DN</sub> by −2.5 to +3.7 %; against each other by at most 0.2 %, B3's model range: the far side of a chord
+        averages out. The range covers one crust model only: Han et al.'s 3D Earth (LITHO1.0 on the SAW642AN mantle)
+        differs from it by ~0.05 pp, 3–4 % of A<sub>DN</sub>, at LNGS and SURF. A second crust model and a 3D mantle are
+        not included yet. The crustless models are 20–40 % high; the other bars are approximations, signed shifts
+        against the default.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b3-impact" class="plot"></div></section>
     <div class="trio">
@@ -152,7 +158,8 @@
     <section class="hero">
       <h2><span class="bench-id">B4</span> Interaction · cross sections: ν–e scattering, CC and NC</h2>
       <p>Elastic scattering on electrons is known to well under 1 %: radiative corrections (Bahcall, Kamionkowski &amp;
-        Sirlin) and SNOwGLoBES's tables differ by a per mille or less; tree level, an approximation, is 2–4 % high.
+        Sirlin) and SNOwGLoBES's tables differ by a per mille or less on the rates (up to 0.5 % point by point, ν<sub>μ</sub>
+        and ν<sub>τ</sub> in opposite directions); tree level, an approximation, is 2–4 % high.
         ν<sub>e</sub> CC on ⁴⁰Ar is not. MARLEY 2, with each of the three sets of measured Gamow–Teller
         strengths, and the shell model of Suzuki &amp; Honma agree within 11 %; the shell model of Kostensalo, Suhonen
         &amp; Zuber, which quenches the strength (g<sub>A</sub> = 1.00), is 27–35 % lower. That 37 % range is the
@@ -164,6 +171,7 @@
       <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-argon" class="plot"></div></section>
       <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-es" class="plot"></div></section>
     </div>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b4-tools"></div></section>
   </section>
 
   <section data-page="B5" hidden>

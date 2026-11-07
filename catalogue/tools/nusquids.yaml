@@ -1,11 +1,21 @@
 id: nusquids
 name: nuSQuIDS
-description: General neutrino propagation (oscillations, matter, interactions) through arbitrary density profiles.
+description: General neutrino propagation (oscillations, matter, interactions) through user-defined density profiles, solving the density-matrix equation numerically with GSL; exact rotation for constant density without interactions.
 language: C++ (Python bindings)
-license: null
-repository: null
-documentation: null
-reference: null
-maintainers: null
-benchmarks: [B2_sun, B3_earth]
-status: draft
+license: LGPL-3.0
+repository: https://github.com/arguelles/nuSQuIDS
+documentation: README.md and the examples in the repository
+reference: arXiv:2112.13804   # Argüelles, Salvado & Weaver, Comput. Phys. Commun. 277, 108346 (2022)
+maintainers: [Carlos A. Argüelles, Jordi Salvado, Christopher N. Weaver]
+benchmarks: [B3_earth]
+status: verified          # B3 wrapper: contributions/nusquids/scripts (v1.13.3 = 104914d on SQuIDS v1.3.1 = f9e6182, build_nusquids.sh)
+notes: >
+  B3, the three Earth models the spec writes out: prem_prob3 exactly (ConstantDensity per chord segment),
+  prem_four and prem_full with the spec's polynomials along the chord (a Body subclass, GSL rkf45 at relative
+  and absolute error 1e-10, one EvolveState per region crossing). `native` (its own Earth body, PREM every
+  0.005 R_E with an Akima spline) is supported by the wrapper (--variants native) but not contributed yet:
+  about two more hours of GSL on eight cores.
+  G_F = 1.1663787e-5 GeV^-2 (SQuIDS), 8.6e-8 below the spec's. B2 is not contributed: nuSQuIDS has no
+  production-profile or phase averaging, so it would give the pointwise solution from r0 to the surface, not
+  the phase-averaged F_i the spec asks for, and at the cost of a full numerical integration across the Sun
+  (6-19 s per point at 10 MeV, growing as 1/E: about 60 CPU-hours per solar model on the B2 grid).
