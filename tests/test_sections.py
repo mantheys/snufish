@@ -29,6 +29,9 @@ def test_every_budget_source_has_a_step():
     assert _section("oscillation parameters") == "B1"  # the benchmarks are the calculator's steps
     assert _section("solar fluxes") == _section("solar model") == "B2"
     assert _section("total sampled") is None
+    for source in ("statistics (100 kt yr)", "energy scale (±0.48 %)", "energy resolution (±3 %)",
+                   "detector normalisation (±1.1 %)"):  # B5: statistics and the published detector uncertainties
+        assert _section(source) == "B5"
 
 
 def test_split_regions_thin_the_polynomial_regions_only():

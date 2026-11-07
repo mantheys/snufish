@@ -85,6 +85,10 @@ CASES = [
     ("argon NC on 40Ar above E_nu = 10 MeV, annual", dict(detector="argon", channel="nc_ar40", components=["B8", "hep"],
                                                           threshold=10.0, period="annual", site="SURF", exposure=10.0),
      "rate", "nufit60_global", "fluxes"),
+    ("SNO salt response on ES (resolution in kinetic energy), with its uncertainties",
+     dict(detector="heavy_water", channel="es", components=["B8", "hep"], threshold=5.5,
+          resolution_poly=[-0.131, 0.383, 0.03731], resolution_energy="kinetic", energy_scale_error=0.0115,
+          resolution_error=0.034, site="SNOLAB"), "rate", "nufit60_global", "fluxes"),
     ("argon ES 7Be line, smeared, low threshold", dict(detector="argon", components=["Be7", "pep"], threshold=0.3,
                                                       resolution_a=0.1, period="night", site="LNGS"), "rate",
      "nufit60_global", "fluxes"),
@@ -94,6 +98,7 @@ INVALID = [
     (dict(detector="argon", channel="cc_nue_ar40", xsec_model="nope"), "rate", "cross-section model"),
     (dict(components=[]), "rate", "at least one"),
     (dict(period="week"), "rate", "period"),
+    (dict(resolution_energy="visible"), "rate", "resolution energy"),
 ]
 
 

@@ -103,8 +103,10 @@ def validate(contribution, spec=None):
     for name, variant in spec.variants.items():
         if variant.get("required") and name not in set(df["variant"]):
             problems.append(f"required variant '{name}' missing")
+    optional = set(spec.data.get("optional_grids", []))  # B5: part 1, part 2 or both
+    given = set(df["grid"])
     for variant, sub in df.groupby("variant"):
-        missing = set(spec.grids) - set(sub["grid"])
+        missing = (set(spec.grids) - set(sub["grid"])) - (optional - given)
         if missing:
             problems.append(f"[{variant}] grids {sorted(missing)} missing")
     if problems:
@@ -127,6 +129,8 @@ def validate(contribution, spec=None):
     checker = BENCHMARK_CHECKS.get(spec.id)
     if checker:
         problems += checker(df, spec)
+    if spec.id == "B5_rates":
+        problems += _check_b5_response(contribution, spec)
     return problems
 
 
@@ -190,6 +194,56 @@ def _check_b4(df, spec):
             bad = (wide["es_nue"] <= wide[other]) & wide["es_nue"].notna()
             if bad.any():
                 problems.append(f"es_nue <= {other} at {bad.sum()} energies")
+    return problems
+
+
+RESPONSE_COLUMNS = ["detector", "channel", "kind", "true_axis", "true_low", "true_high", "observed_low",
+                    "observed_high", "value"]
+
+
+def load_response(path):
+    """A B5 contribution's own detector response (response.parquet), or None."""
+    path = Path(path) / "response.parquet"
+    return pd.read_parquet(path) if path.exists() else None
+
+
+def _check_b5_response(contribution, spec):
+    """B5 part 2: settings.response is "spec" or "own"; "own" needs response.parquet with an efficiency and a
+    smearing matrix for every detector/channel the contribution gives in observed energy."""
+    df = contribution.data
+    observed = df[df["grid"] == "observed"]
+    if observed.empty:
+        return []
+    mode = (contribution.meta.get("settings") or {}).get("response")
+    if mode not in ("spec", "own"):
+        return ["meta.yaml: settings.response must be 'spec' or 'own' for observed-energy rates (grid observed)"]
+    if mode == "spec":
+        return []
+    table = load_response(contribution.path)
+    if table is None:
+        return ["settings.response is 'own' but response.parquet is missing"]
+    missing = [c for c in RESPONSE_COLUMNS if c not in table.columns]
+    if missing:
+        return [f"response.parquet: missing columns {missing}"]
+    problems = []
+    for case in sorted({q.rsplit("/", 1)[0] for q in observed["quantity"]}):
+        detector, channel = case.split("/")
+        sub = table[(table.detector == detector) & (table.channel == channel)]
+        for kind in ("efficiency", "smearing"):
+            part = sub[sub.kind == kind]
+            if part.empty:
+                problems.append(f"response.parquet: no {kind} for {case}")
+            elif not part["value"].between(0, 1).all():
+                problems.append(f"response.parquet: {kind} of {case} outside [0, 1]")
+        smearing = sub[sub.kind == "smearing"]
+        if not smearing.empty:
+            if set(smearing.true_axis) - {"observed", "neutrino"}:
+                problems.append(f"response.parquet: true_axis of {case} must be 'observed' or 'neutrino'")
+            elif (smearing.true_axis == "neutrino").any() and not channel.startswith("cc_"):
+                problems.append(f"response.parquet: a matrix in neutrino energy applies to CC channels only ({case})")
+            rows = smearing.groupby(["true_low", "true_high"])["value"].sum()
+            if (rows > 1 + 1e-6).any():
+                problems.append(f"response.parquet: smearing rows of {case} sum to more than 1")
     return problems
 
 

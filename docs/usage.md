@@ -41,7 +41,7 @@ pip install -r contributions/peanuts/scripts/requirements.txt    # numba, mpmath
 | `snufish reference <B2_sun\|B3_earth\|B4_xsec>` | recompute the SNUfish reference contribution | — |
 | `snufish scan` | solar observables against Δm²₂₁ and at each parameter set | NuFast-Earth driver |
 | `snufish status` | which inputs are the state of the art, legacy or approximations (`reference/status.yaml`) | — |
-| `snufish budget` | error budgets of the ⁸B rates and A_DN | `build`, NuFast-Earth driver (or `--tables`) |
+| `snufish budget` | error budgets of the ⁸B rates and A<sub>DN</sub> | `build`, NuFast-Earth driver (or `--tables`) |
 | `snufish export-app` | inputs and probability tables of the web page | `build`, NuFast-Earth driver |
 | `snufish export-sections` | `sections.json` of the benchmark pages: what each benchmark contributes to the uncertainty | `export-app`, `build` |
 
@@ -121,7 +121,7 @@ profiles (the range between models with the fluxes fixed), B3 the Earth
 model, B4 the cross sections. B2 also gets the shift of three
 production-region approximations, computed with the exact B2 solver: every
 component on ⁸B's profile, every component at the centre, and one density
-for every component (n_e = 66.7 N_A/cm³, as in NuFast-Earth's examples).
+for every component (n<sub>e</sub> = 66.7 N<sub>A</sub>/cm³, as in NuFast-Earth's examples).
 With them: the curves each page plots and the agreement between tools (B2,
 B3: largest difference from the reference; B5: full-chain rates over
 SNUfish's folding).
@@ -145,8 +145,8 @@ SNUfish's folding).
 
 | `plotipus run …` | Figures | Frames |
 |---|---|---|
-| `b2` | solar model fluxes, densities, production profiles; F_i, daytime P_ee per component, day-night | `B2_*`, `B23_DayNight` |
-| `b3` | P_iₑ against energy and nadir, maps, night averages, tool differences | `B3_*` |
+| `b2` | solar model fluxes, densities, production profiles; F<sub>i</sub>, daytime P<sub>ee</sub> per component, day-night | `B2_*`, `B23_DayNight` |
+| `b3` | P<sub>ie</sub> against energy and nadir, maps, night averages, tool differences | `B3_*` |
 | `b45` | cross sections, rate spectra and totals, full-chain comparison | `B4_Sigma`, `B5_*` |
 | `scan` | observables against Δm²₂₁ | `Scan_*` |
 | `budget` | error budgets and predictions | `Budget*` |
@@ -222,14 +222,14 @@ documented in `src/snufish/engine.py`; the main ones:
 | `es_model`, `xsec_model` | `bks`, `tree`, `snowglobes`; a B4 variant of the channel |
 | `period` | `day`, `night`, `annual` |
 | `night_fraction` | share of the exposure by night (default 0.5): annual = (1 − f) day + f night, and the statistics split the exposure the same way; SOLAR uses 0.507 at SURF |
-| `nu_threshold` | MeV: a cut in true neutrino energy, on top of the observed-energy `threshold` (for tables "above E_ν"); exact inside a flux interval |
+| `nu_threshold` | MeV: a cut in true neutrino energy, on top of the observed-energy `threshold` (for tables "above E<sub>ν</sub>"); exact inside a flux interval |
 | detector response | `threshold`, `resolution_a`, `resolution_b`, `resolution_poly`, `efficiency`, `efficiency_e50`, `efficiency_width`, `efficiency_table`, `smearing_table` |
 | uncertainties | `energy_scale_error`, `resolution_error`, `normalisation_error` (fractions), `exposure` (kt·yr) |
 
 `nc_ar40` (NC on ⁴⁰Ar, all flavours) is SNOwGLoBES's table, an unpublished
 QRPA calculation (`reference/xsec/snowglobes_nc_ar40.yaml`); it has no
 visible-energy model, so its observed axis is the neutrino energy and
-`threshold` is a cut in E_ν.
+`threshold` is a cut in E<sub>ν</sub>.
 
 `snufish.export.ExactProbabilities(night_mode="solar")` takes the night of
 the SOLAR analysis: detector 1.478 km deep, latitude 44.35°, W(η) sampled at
@@ -261,7 +261,7 @@ The steps after the result are the benchmarks, in the same order and under
 the same names as on the benchmark pages ([benchmarks.md](benchmarks.md)):
 
 - **Result**: interaction rate, day-night asymmetry, or the rate over the
-  rate without oscillations (SNO's φ_CC/φ_NC for CC on deuterium); day,
+  rate without oscillations (SNO's φ<sub>CC</sub>/φ<sub>NC</sub> for CC on deuterium); day,
   night or annual; units per kt·yr, t·yr, kg·yr, g·yr, kt·day or
   cpd/100 t.
 - **B1 Oscillation parameters**: a parameter set.
@@ -294,7 +294,7 @@ command list and colour registry (`plotipus run app`); "Share" copies a link tha
 the setup in the URL (imported files are not part of it).
 
 **Accuracy.** Probabilities come from the app tables: 2 × 10⁻⁴ for rates
-and 1 % for A_DN against the exact solvers.
+and 1 % for A<sub>DN</sub> against the exact solvers.
 
 ### Building and deploying the page
 

@@ -10,9 +10,18 @@ import * as engine from "./engine.js";
 export const DAYS = 365.25; // = the B5 spec's seconds per year / 86400
 export const UNITS = { kt: [1, "per kt·yr"], t: [1e-3, "per t·yr"], kg: [1e-6, "per kg·yr"], g: [1e-9, "per g·yr"],  // x per kt yr
                        ktday: [1 / DAYS, "per kt·day"], cpd100t: [0.1 / DAYS, "per 100 t·day"] };
-// Super-K IV, arXiv:2312.12907: resolution eq. 9; threshold table IV; 22.5 kt fiducial (fig. 28); 2970 days live
-// (sec. V A 1); energy scale +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
-export const SK4_RESOLUTION = [-0.05525, 0.3162, 0.04572];
+// The published resolutions of the B5 spec (part 2, inputs.responses), by the value of the page's resolution menu:
+// Super-K IV (arXiv:2312.12907, eq. 9, in total electron energy) and SNO's salt phase (nucl-ex/0502021, eq. A3, in
+// kinetic energy). Super-K IV's other numbers: 22.5 kt fiducial (fig. 28); 2970 days live (sec. V A 1); energy scale
+// +-0.48 % (table II); resolution +-3 % (sec. IV A 3); other rate systematics +-1.1 % (table IV)
+export const RESOLUTIONS = { sk4: "water", sno_salt: "heavy_water" };
+
+export function publishedResolution(inputs, model) {
+  // {resolution_poly, resolution_energy} of a resolution-menu value: a published one, or none (quadrature, import)
+  if (!RESOLUTIONS[model]) return { resolution_poly: [], resolution_energy: "total" };
+  const r = engine.publishedResponse(inputs, RESOLUTIONS[model]);
+  return { resolution_poly: r.resolution_poly, resolution_energy: r.resolution_energy };
+}
 // the experiments' presets (the page adds its opening example, the thumb)
 export const PRESETS = {
   // Borexino Phase-II (arXiv:1707.09279): interaction rates over all recoil energies, in counts per day per 100 t
@@ -27,10 +36,11 @@ export const PRESETS = {
   sno: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 3.5, "res-model": "quadrature",
          "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +((277.3 + 391.4) / DAYS).toFixed(4),
          "unc-scale": 0.41, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], quantity: "rate", period: "annual" },
-  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC
-  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "quadrature",
+  // SNO salt phase (nucl-ex/0502021): the CC rate over the unoscillated one above T_eff = 5.5 MeV, = phi_CC / phi_NC;
+  // resolution eq. A3, energy scale +-1.15 % and resolution +-3.4 % (table V): the B5 spec's response of heavy water
+  sno_salt: { unit: "kt", detector: "heavy_water", channel: "cc_nue_d", site: "SNOLAB", threshold: 5.5, "res-model": "sno_salt",
               "res-a": 0, "res-b": 0, "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: 0.770, years: +(391.4 / DAYS).toFixed(4),
-              "unc-scale": 0, "unc-res": 0, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
+              "unc-scale": 1.15, "unc-res": 3.4, "unc-norm": 0, components: ["B8", "hep"], b8: "sno_nc", quantity: "ratio", period: "annual" },
   // DUNE far detector, public numbers only: 4 x 10 kt fiducial LAr, 5 MeV detected-energy threshold and ~20 % resolution
   // (supernova-burst paper, arXiv:2008.06647); 100 kt yr as in Capozzi, Li, Zhu & Beacom (arXiv:1808.08232)
   dune: { unit: "kt", detector: "argon", channel: "cc_nue_ar40", site: "SURF", threshold: 5.0, "res-model": "quadrature",
@@ -109,12 +119,12 @@ export const CHECKS = [
     id: `juno_${set.slice(-2)}_${t}`, group: "JUNO", label: `⁸B rate, Δm² ${set.endsWith("48") ? "4.8" : "7.5"} × 10⁻⁵, ${t ? `T > ${t} MeV` : "all energies"}`,
     values: { ...JUNO, set, threshold: t }, published: { kind: "rate", unit: "ktday", value },
     source: "JUNO arXiv:2006.11760, table 1 (day + night)", arxiv: "2006.11760", figure: "juno3",
-    note: "JUNO's tree-level cross section with sin²θ_W = 0.23; within 0.6 % of the radiatively corrected one (the default)." })),
+    note: "JUNO's tree-level cross section with sin²θ<sub>W</sub> = 0.23; within 0.6 % of the radiatively corrected one (the default)." })),
   ...[[2, 16, -0.029], [5, 16, -0.034], [3, 5, -0.025], [2, 3, -0.021]].map(([lo, hi, value]) => ({
-    id: `juno_adn_${lo}_${hi}`, group: "JUNO", label: `A_DN, ${lo}–${hi} MeV, Δm² 4.8 × 10⁻⁵`,
+    id: `juno_adn_${lo}_${hi}`, group: "JUNO", label: `A<sub>DN</sub>, ${lo}–${hi} MeV, Δm² 4.8 × 10⁻⁵`,
     values: { ...JUNO, set: "paper_juno_48", threshold: lo, quantity: "adn" }, window: [lo, hi],
     published: { kind: "adn", value }, source: "JUNO arXiv:2006.11760, table 7", arxiv: "2006.11760", figure: "juno7" })),
-  { id: "juno_adn_75", group: "JUNO", label: "A_DN, 2–16 MeV, Δm² 7.5 × 10⁻⁵ (not reproduced)",
+  { id: "juno_adn_75", group: "JUNO", label: "A<sub>DN</sub>, 2–16 MeV, Δm² 7.5 × 10⁻⁵ (not reproduced)",
     values: { ...JUNO, set: "paper_juno_75", threshold: 2, quantity: "adn" }, window: [2, 16],
     published: { kind: "adn", value: -0.016 }, source: "JUNO arXiv:2006.11760, sec. 4.2", arxiv: "2006.11760", figure: "juno7",
     note: "JUNO's own table 1 at this Δm² (1.44 by day, 1.46 by night) gives −1.4 % ± 0.7 % from its rounding, as SNUfish does; the −1.6 % of the text does not follow from it." },
@@ -127,45 +137,45 @@ export const CHECKS = [
     values: { preset: "sk4", set: "paper_sk_61", quantity: "ratio" },
     published: { kind: "ratio", value: 2.314 / 5.25, minus: 0.009, plus: 0.009, measured: true },
     source: "Super-K arXiv:2312.12907 (2.314 × 10⁶) over SNO NC (5.25 × 10⁶)", arxiv: "2312.12907", note: "Super-K's error only; the SNO NC flux adds ±3.8 %." },
-  { id: "sk_adn4", group: "Super-K IV", label: "Expected A_DN, SK-IV, Δm² 6.1 × 10⁻⁵",
+  { id: "sk_adn4", group: "Super-K IV", label: "Expected A<sub>DN</sub>, SK-IV, Δm² 6.1 × 10⁻⁵",
     values: { preset: "sk4", set: "paper_sk_61", quantity: "adn" },
     published: { kind: "adn", value: -0.0238 }, source: "Super-K arXiv:2312.12907, sec. VIII", arxiv: "2312.12907", figure: "sk49",
     note: "Super-K's amplitude fit weights the zenith-angle shape by energy bin; this is the plain rate asymmetry (~2.5 % smaller)." },
   ...[["paper_sk_61", -0.0242], ["paper_sk_75", -0.0172], ["paper_sk_48", -0.0384]].map(([set, value]) => ({
     id: `sk1_${set.slice(-2)}`, group: "Super-K IV",
-    label: `Expected A_DN, SK-I range (T > 4.49 MeV), Δm² ${{ 48: "4.8", 61: "6.1", 75: "7.5" }[set.slice(-2)]} × 10⁻⁵${set.endsWith("48") ? " (not reproduced)" : ""}`,
+    label: `Expected A<sub>DN</sub>, SK-I range (T > 4.49 MeV), Δm² ${{ 48: "4.8", 61: "6.1", 75: "7.5" }[set.slice(-2)]} × 10⁻⁵${set.endsWith("48") ? " (not reproduced)" : ""}`,
     values: { ...SK1, set }, published: { kind: "adn", value }, source: "Super-K arXiv:2312.12907, sec. VIII", arxiv: "2312.12907", figure: "sk52",
     note: set.endsWith("48")
       ? "13.5 % off, while 6.1 and 7.5 × 10⁻⁵ agree to 2.5 %; the exact solvers give the same, θ13 = 0 only −3.48 %. Quoted \"for reference\" at the previously favoured Δm²: perhaps an older calculation."
       : "With Super-K IV's response above 4.49 MeV." })),
 
-  { id: "sno_cc_nc", group: "SNO", label: "φ_CC / φ_NC, salt phase (measured)", values: { preset: "sno_salt" },
+  { id: "sno_cc_nc", group: "SNO", label: "φ<sub>CC</sub> / φ<sub>NC</sub>, salt phase (measured)", values: { preset: "sno_salt" },
     published: { kind: "ratio", value: 0.340, minus: 0.039, plus: 0.037, measured: true }, source: "SNO nucl-ex/0502021", arxiv: "nucl-ex/0502021", figure: "sno10" },
-  { id: "sno_es_nc", group: "SNO", label: "φ_ES / φ_NC, salt phase (measured)", values: SNO_ES,
+  { id: "sno_es_nc", group: "SNO", label: "φ<sub>ES</sub> / φ<sub>NC</sub>, salt phase (measured)", values: SNO_ES,
     published: { kind: "ratio", value: 2.35 / 4.94, minus: 0.06, plus: 0.06, measured: true }, source: "SNO nucl-ex/0502021 (2.35 / 4.94)", arxiv: "nucl-ex/0502021", figure: "sno10" },
 
-  { id: "dune_cc", group: "DUNE", label: "⁸B νe CC events, electron T > 5 MeV, 100 kt·yr (Capozzi et al. 2019)",
+  { id: "dune_cc", group: "DUNE", label: "⁸B νₑ CC events, electron T > 5 MeV, 100 kt·yr (Capozzi et al. 2019)",
     values: { ...CAPOZZI, ...MARLEY }, electron: 0.07, published: { kind: "events", value: 9.9e4 / 0.88 }, ...CAPOZZI_SOURCE,
     note: "The electron alone (gammas undetected), 7 % resolution. The paper counts 9.9 × 10⁴ events outside a 40° cone that holds 88 % of them (both rounded): 1.125 × 10⁵ in all." },
   { id: "dune_es", group: "DUNE", label: "⁸B ES events, T > 5 MeV, 100 kt·yr (Capozzi et al. 2019)",
     values: { ...CAPOZZI, channel: "es", "res-b": 7 }, published: { kind: "events", value: 2.6e4 / 0.81 }, ...CAPOZZI_SOURCE,
     note: "The paper counts 2.6 × 10⁴ events inside a 40° cone that holds 81 % of them (both rounded): 3.2 × 10⁴ in all." },
-  { id: "dune_hep", group: "DUNE", label: "hep νe CC events, electron T > 11 MeV, 100 kt·yr (Capozzi et al. 2019)",
+  { id: "dune_hep", group: "DUNE", label: "hep νₑ CC events, electron T > 11 MeV, 100 kt·yr (Capozzi et al. 2019)",
     values: { ...CAPOZZI, ...MARLEY, components: ["hep"], threshold: 11 }, electron: 0.07, published: { kind: "events", value: 150 },
     ...CAPOZZI_SOURCE, note: "The paper's hep flux is 8.25 × 10³ cm⁻² s⁻¹, B23-GS98's here 7.95 × 10³ (3.8 % fewer events)." },
-  { id: "dune_adn", group: "DUNE", label: "A_DN, νe CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (Capozzi et al. 2019; not reproduced)",
+  { id: "dune_adn", group: "DUNE", label: "A<sub>DN</sub>, νₑ CC, electron T > 6 MeV, Δm² 4.85 × 10⁻⁵ (Capozzi et al. 2019; not reproduced)",
     values: { ...CAPOZZI, ...MARLEY, threshold: 6, quantity: "adn" }, electron: 0.07, published: { kind: "adn", value: (3.04 - 3.29) / 3.165 },
     ...CAPOZZI_SOURCE, note: "From the paper's D = 3.04 × 10⁴ and N = 3.29 × 10⁴ signal events. At DUNE's energies the asymmetry follows the Earth's outer layers: −6.9 % with the ten-region PREM, −8.7 % with the four-region one (no crust); the paper does not describe its Earth model beyond citing its method (ref. 49)." },
-  { id: "dune_hnb", group: "DUNE", label: "⁸B νe CC events, electron T > 5 MeV, 20 kt·yr (Hajjar et al. 2026)",
+  { id: "dune_hnb", group: "DUNE", label: "⁸B νₑ CC events, electron T > 5 MeV, 20 kt·yr (Hajjar et al. 2026)",
     values: { ...DUNE, ...MARLEY, threshold: 5, mass: 20, years: 1 }, electron: 0.07, published: { kind: "events", value: 21722 },
     source: "Hajjar, Nairat & Beacom, arXiv:2606.18347, table I", arxiv: "2606.18347",
     note: "NuFIT 6.0 and the SNO NC ⁸B flux (the paper takes the flux from SNO); the electron alone with 7 % resolution, over the (p,n) strengths MARLEY 2 also uses." },
-  { id: "dune_isw", group: "DUNE", label: "⁸B νe CC events with Eν > 11 MeV, 40 kt in a year (Ioannisian et al. 2017)",
+  { id: "dune_isw", group: "DUNE", label: "⁸B νₑ CC events with E<sub>ν</sub> > 11 MeV, 40 kt in a year (Ioannisian et al. 2017)",
     values: { ...DUNE, set: "paper_dune_isw_75", threshold: 11 - 1.504, "res-b": 0, mass: 40, years: 1 },
     published: { kind: "events", value: 27000 }, source: "Ioannisian, Smirnov & Wyler, arXiv:1702.06097, sec. IV", arxiv: "1702.06097",
-    note: "Eν > 11 MeV as visible energy above 11 − 1.504 MeV, unsmeared. The paper's cross section is an approximation (σ ∝ p_e E_e above 5.8 MeV) and its oscillation parameters are not stated." },
+    note: "E<sub>ν</sub> > 11 MeV as visible energy above 11 − 1.504 MeV, unsmeared. The paper's cross section is an approximation (σ ∝ p<sub>e</sub> E<sub>e</sub> above 5.8 MeV) and its oscillation parameters are not stated." },
   ...[["paper_dune_isw_75", "7.5", 0.04], ["paper_dune_isw_50", "5.0", 0.065]].map(([set, dm2, excess]) => ({
-    id: `dune_isw_adn_${dm2[0]}`, group: "DUNE", label: `A_DN, Eν > 11 MeV, Δm² ${dm2} × 10⁻⁵ (Ioannisian et al. 2017)`,
+    id: `dune_isw_adn_${dm2[0]}`, group: "DUNE", label: `A<sub>DN</sub>, E<sub>ν</sub> > 11 MeV, Δm² ${dm2} × 10⁻⁵ (Ioannisian et al. 2017)`,
     values: { ...DUNE, set, threshold: 11 - 1.504, "res-b": 0, quantity: "adn" }, published: { kind: "adn", value: -excess / (1 + excess / 2) },
     source: "Ioannisian, Smirnov & Wyler, arXiv:1702.06097, sec. IV", arxiv: "1702.06097",
     note: `The paper's "about ${100 * excess} %" night excess N/D − 1, here as (D − N)/mean.` })),
@@ -188,7 +198,7 @@ export function checkSetup(inputs, check) {
   const setup = engine.makeSetup({
     solar_model: v.solar, components: v.components, b8_flux: v.b8, site: v.site, earth_model: v.earth, detector: v.detector,
     channel: v.channel, xsec_model: xsec, es_model: v.es, period: v.period, threshold: number(v.threshold),
-    resolution_a: number(v["res-a"]), resolution_b: number(v["res-b"]) / 100, resolution_poly: v["res-model"] === "sk4" ? SK4_RESOLUTION : [],
+    resolution_a: number(v["res-a"]), resolution_b: number(v["res-b"]) / 100, ...publishedResolution(inputs, v["res-model"]),
     efficiency: number(v.eff, 100) / 100, efficiency_e50: number(v["eff-e50"]), efficiency_width: number(v["eff-width"], 0.5),
     smearing_table: check.electron ? engine.electronSmearing(inputs, v.channel, xsec, check.electron) : null, efficiency_table: efficiency,
     energy_scale_error: number(v["unc-scale"]) / 100, resolution_error: number(v["unc-res"]) / 100,

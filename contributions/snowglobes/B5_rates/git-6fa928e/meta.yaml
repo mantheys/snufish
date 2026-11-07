@@ -2,9 +2,9 @@ tool: snowglobes
 tool_version: git-6fa928e
 tool_commit: 6fa928e
 benchmark: B5_rates
-benchmark_version: 0.3.0
+benchmark_version: 0.4.0
 contributor: SNUfish maintainers (wrapper)
-date: '2026-10-28'
+date: '2026-11-07'
 command: snufish build && python contributions/snowglobes/scripts/run_b5.py --snowglobes
   <checkout>
 settings:

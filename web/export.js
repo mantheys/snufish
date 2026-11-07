@@ -2,7 +2,7 @@
 // colors.json with the page's colours), used by "Download" (zipped with the page's
 // figures and a README) and by "Render with plotipus" (plotipus-worker.js). Loaded on first use.
 import { DISPLAY } from "./engine.js";
-import { binAsymmetry, budgetSizes } from "./plots.js";
+import { binAsymmetry, budgetSizes, tex } from "./plots.js";
 
 const PARQUET = "https://cdn.jsdelivr.net/npm/hyparquet-writer@0.16.11/+esm";
 const ZIP = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm";
@@ -31,15 +31,15 @@ function spectrumColumns(result) {
 function commands(result) {
   const adn = result.quantity === "adn", column = adn ? "Asymmetry" : result.setup.period.replace(/^./, (x) => x.toUpperCase());
   const spectrum = `line --no_error --datafile AppSpectrum -x Energy -y ${column} --hue Component --plot_type step --logx `
-    + (adn ? "--select Component -s total --labely 'A_DN (%)' "  // rates: the components alone, as on the page
+    + (adn ? "--select Component -s total --labely '$A_{DN}$ (%)' "  // rates: the components alone, as on the page
            : `--select Component -s ${result.setup.components.map((c) => DISPLAY[c]).join(" ")} --logy --labely 'Interactions / (kt yr) per bin' `)
-    + `--labelx '${result.spectra.observable}' --output_suffix spectrum`;
+    + `--labelx '${tex(result.spectra.observable)}' --output_suffix spectrum`;
   const size = adn ? "Uncertainty (%)" : "Relative uncertainty (%)";
   const official = result.official ? [officialCommand(result.official)] : [];
   return [
     spectrum,
     `cat --no_error --datafile AppBudget -x Source -y Size --hue Kind --kind bar --orient h --labely '${size}' --output_suffix budget`,
-    `hist --datafile AppSamples -x Value --labelx '${{ adn: "A_DN", ratio: "Rate / unoscillated rate" }[result.quantity] || "Rate"} (${result.unit})' --output_suffix samples`,
+    `hist --datafile AppSamples -x Value --labelx '${{ adn: "$A_{DN}$", ratio: "Rate / unoscillated rate" }[result.quantity] || "Rate"} (${result.unit})' --output_suffix samples`,
     ...official,
   ];
 }
@@ -51,7 +51,7 @@ function officialCommand(f) {
   const horizontal = f.horizontal !== undefined ? ` --horizontal ${f.horizontal}` : "";
   const dodge = typeof f.columns.X[0] === "string" ? " --dodge 0.12" : ""; // labelled x: points side by side
   return `line --datafile AppOfficial -x X -y Y --hue Series --plot_type line${points}${horizontal}${dodge} --legend_order data `
-    + `--labelx ${quote(f.xLabel)} --labely ${quote(f.yLabel)} --title ${quote(f.title.split(":")[0] + ", recomputed")} --output_suffix official`;
+    + `--labelx ${quote(tex(f.xLabel))} --labely ${quote(tex(f.yLabel))} --title ${quote(tex(f.title.split(":")[0]) + ", recomputed")} --output_suffix official`;
 }
 
 // plotipus colour registry: the same palette slots as the page (style.css), so a component keeps its colour

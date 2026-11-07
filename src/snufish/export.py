@@ -39,8 +39,9 @@ B8_MEASURED = {"flux": 5.25e6, "error": 0.0381, "source": "SNO NC, as applied in
 # Below its table nu_e-40Ar CC is zero: the 40K* threshold.
 XSEC_THRESHOLDS = {"cc_nue_ar40": 1.504, "cc_nue_d": 1.442, "nc_d": 2.224}
 # Visible energy of a CC interaction, E_nu - Q (the electron plus the de-excitation gammas, no losses):
-# Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV.
-VISIBLE_OFFSET = {"cc_nue_ar40": 1.504, "cc_nue_o16": 15.42, "cc_nue_d": 1.442}  # d: d(nu_e, e-)pp threshold
+# Q = the reaction threshold, 40Ar -> 40K* 1.504 MeV, 16O -> 16F 15.42 MeV, d(nu_e, e-)pp 1.442 MeV; the B5
+# spec's (part 2, response.visible_offset_MeV).
+VISIBLE_OFFSET = dict(load_spec("B5_rates")["response"]["visible_offset_MeV"])
 # NC on 40Ar has no visible-energy model (its de-excitation gammas are not modelled): its observed axis is the
 # neutrino energy itself (offset 0), so a threshold there is a cut in E_nu (engine.NEUTRINO_AXIS).
 VISIBLE_OFFSET["nc_ar40"] = 0.0
@@ -49,16 +50,8 @@ VISIBLE_FIXED = {"nc_d": 6.25}
 # Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
 XSEC_INCOMPLETE = {"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]}
 MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"
-# Liquid-scintillator targets of the web page (ES only), with the electron densities their experiments quote.
+# Targets of the web page beyond the B5 spec's detectors, with the electron densities their experiments quote.
 APP_DETECTORS = {
-    "scintillator_pc": {
-        "description": "pseudocumene + PPO (Borexino): (3.307 +- 0.003) x 10^31 electrons per 100 t, arXiv:1707.09279",
-        "targets": {"electron": 3.307e32}, "channels": {"es": "electron"}},
-    "heavy_water": {
-        "description": "D2O (SNO, 99.92 % isotopic purity, arXiv:1109.0763), M = 20.03 g/mol: per kt "
-                       "2 x 10^9 / 20.03 x N_A = 6.014 x 10^31 deuterons and 3.007 x 10^32 electrons",
-        "targets": {"electron": 3.007e32, "deuteron": 6.014e31},
-        "channels": {"es": "electron", "cc_nue_d": "deuteron", "nc_d": "deuteron"}},
     "scintillator_lab": {
         "description": "linear alkylbenzene (JUNO): 3.38 x 10^32 electrons per kt, arXiv:2006.11760",
         "targets": {"electron": 3.38e32}, "channels": {"es": "electron"}},
@@ -146,7 +139,10 @@ def collect_inputs():
     xsec["nc_ar40"] = {"default": {"energy": nc_ar40["energy_MeV"],
                                    "sigma": np.clip(nc_ar40["sigma_cm2"], 0.0, None).tolist()}}
     detectors = {**b5["detectors"], **APP_DETECTORS}
+    # NC channels have no B4 benchmark: the page adds them to the spec's detectors
     detectors["argon"] = {**detectors["argon"], "channels": {**detectors["argon"]["channels"], "nc_ar40": "ar40"}}
+    detectors["heavy_water"] = {**detectors["heavy_water"],
+                                "channels": {**detectors["heavy_water"]["channels"], "nc_d": "deuteron"}}
     ratio = {}
     for flavour in ("nue", "numu"):
         rows = {r.Tool: r for r in sigma[(sigma.Channel == f"es_{flavour}") & (sigma.Variant == "default")].itertuples()}
@@ -178,6 +174,7 @@ def collect_inputs():
         "parameter_sets": _yaml("reference/oscillation/parameter_sets.yaml"),
         "measurements": _yaml("reference/measurements/solar.yaml"),
         "efficiency_curves": efficiency_curves(),
+        "responses": b5["response"]["detectors"],  # B5 part 2: the published response of each detector
         "status": status_table(),
     }
 

@@ -9,7 +9,9 @@ on the app tables, each source assigned to the benchmark it comes from
 (``SECTION_OF``), the benchmarks being the calculator's steps: B1 the
 oscillation parameters, B2 the Sun (the solar fluxes, and the density and
 production profiles), B3 the Earth model, B4 the cross sections, B5 the
-statistics of a reference exposure (``EXPOSURE``). B2 adds the
+statistics of a reference exposure (``EXPOSURE``) and the published detector
+uncertainties of each observable's detector (its response from the B5 spec,
+part 2: ``RESPONSE``). B2 adds the
 approximations some solvers make about where neutrinos are produced
 (``TREATMENTS``): signed shifts of the observable, computed with the exact
 B2 solver (the tables hold each component's own profile only). B3 adds the
@@ -39,25 +41,27 @@ from .solar import COMPONENTS, electron_density, production_weights, table
 from .spec import load_spec, pmns
 
 SET, SOLAR_MODEL = "juno_2025", "b23_mb22m"  # state of the art (reference/status.yaml)
-N_DRAWS, SEED = 300, 1
+N_DRAWS, SEED = 1000, 1  # a sampled sigma to about 2 % (1/sqrt(2n))
 EXPOSURE = 100.0  # kt yr: B5's statistics, e.g. 10 kt for 10 years
+# Each observable is seen through its detector's published response (B5 spec, part 2): threshold, resolution,
+# efficiency and detector uncertainties of Super-K IV (water), DUNE (argon) and Borexino Phase-II (scintillator).
 OBSERVABLES = {
-    "water_es_b8": dict(label="8B + hep ES in water, T > 3.49 MeV, Kamioka", quantity="rate",
-                        setup=dict(detector="water", channel="es", components=("B8", "hep"), threshold=3.49,
-                                   site="Kamioka", period="annual")),
-    "argon_cc_b8": dict(label="8B CC on 40Ar, visible energy > 5 MeV, SURF", quantity="rate",
-                        setup=dict(detector="argon", channel="cc_nue_ar40", components=("B8",), threshold=5.0,
-                                   site="SURF", xsec_model=MARLEY_DEFAULT, period="annual")),
-    "argon_cc_hep": dict(label="hep CC on 40Ar, SURF", quantity="rate",
+    "water_es_b8": dict(label="8B + hep ES in water, Super-K IV response (T > 3.49 MeV), Kamioka", quantity="rate",
+                        setup=dict(detector="water", channel="es", components=("B8", "hep"), site="Kamioka",
+                                   period="annual")),
+    "argon_cc_b8": dict(label="8B CC on 40Ar, DUNE response (visible energy > 5 MeV, 20 %), SURF", quantity="rate",
+                        setup=dict(detector="argon", channel="cc_nue_ar40", components=("B8",), site="SURF",
+                                   xsec_model=MARLEY_DEFAULT, period="annual")),
+    "argon_cc_hep": dict(label="hep CC on 40Ar, DUNE response, SURF", quantity="rate",
                          setup=dict(detector="argon", channel="cc_nue_ar40", components=("hep",), site="SURF",
                                     xsec_model=MARLEY_DEFAULT, period="annual")),
-    "scint_es_be7": dict(label="7Be ES in scintillator, all recoils, LNGS", quantity="rate",
+    "scint_es_be7": dict(label="7Be ES in scintillator, Borexino Phase-II response (T > 0.05 MeV), LNGS", quantity="rate",
                          setup=dict(detector="scintillator_pc", channel="es", components=("Be7",), site="LNGS",
                                     period="annual")),
-    "water_es_adn": dict(label="8B + hep ES day-night asymmetry, T > 3.49 MeV, Kamioka", quantity="adn",
-                         setup=dict(detector="water", channel="es", components=("B8", "hep"), threshold=3.49,
-                                    site="Kamioka")),
+    "water_es_adn": dict(label="8B + hep ES day-night asymmetry, Super-K IV response, Kamioka", quantity="adn",
+                         setup=dict(detector="water", channel="es", components=("B8", "hep"), site="Kamioka")),
 }
+RESPONSE = True  # False: a perfect detector (the threshold of the response only)
 SECTION_OF = {"oscillation parameters": "B1", "solar model": "B2", "Earth model": "B3",
               "40Ar nuclear model": "B4", "cross-section model": "B4", "ES radiative corrections": "B4"}
 # NuFast-Earth's examples set one solar density for every component: rhoYe = 100 x 2/3 g/cm^3
@@ -120,7 +124,7 @@ def _section(source):
         return "B2"
     if source.startswith("measured B(GT)"):
         return "B4"
-    if source.startswith("statistics"):
+    if source.startswith(("statistics", "energy scale", "energy resolution", "detector normalisation")):
         return "B5"
     return SECTION_OF.get(source)
 
@@ -132,7 +136,10 @@ def impacts(inputs, tables, params):
     osc = engine.oscillation(params)
     models = list(inputs["solar_models"])
     for name, o in OBSERVABLES.items():
-        setup = engine.Setup(solar_model=SOLAR_MODEL, exposure=EXPOSURE, **o["setup"])
+        response = engine.published_response(inputs, o["setup"]["detector"])
+        if not RESPONSE:
+            response = dict(threshold=response.get("threshold", 0.0))
+        setup = engine.Setup(solar_model=SOLAR_MODEL, exposure=EXPOSURE, **response, **o["setup"])
         q, night = o["quantity"], engine.needs_night(o["quantity"], setup.period)
         found, _ = engine.budget(inputs, tables, setup, params, q, N_DRAWS, SEED, solar_range="fluxes")
         central = found[0]["Central"]
@@ -233,6 +240,37 @@ def _has_driver():
     return True
 
 
+def observed(solar_model="b16_gs98"):
+    """B5 part 2 (build/data/B5_Observed, the B5 benchmark's inputs): per detector and channel, the observed spectrum
+    of every component through the published response, in 0.25 MeV bins, the rates above the preset threshold with
+    and without the response, and the interactions before it."""
+    path = build_dir() / "B5_Observed.parquet"
+    if not path.exists():
+        return {}
+    frame = pd.read_parquet(path)
+    frame = frame[frame.SolarModel == solar_model]
+    responses = load_spec("B5_rates")["response"]["detectors"]
+    out = []
+    for (detector, channel), group in frame.groupby(["Detector", "Channel"], sort=False):
+        first = group.iloc[0]
+        low = np.asarray(first.EnergyLow)
+        edges = np.round(np.arange(0.0, 20.0001, 0.25), 6)
+        index = np.clip(np.searchsorted(edges, low + 1e-9, side="right") - 1, 0, len(edges) - 2)
+        spectra, totals = {}, {}
+        for r in group.itertuples():
+            if r.Interactions <= 0:
+                continue  # a component that does not reach this detector (e.g. pp in CC): no spectrum, no row
+            content = np.asarray(r.Rate) * (np.asarray(r.EnergyHigh) - low)
+            # 4 significant digits: the plot needs no more, and sections.json stays small
+            spectra[r.Component] = [float(f"{v:.4g}") for v in np.bincount(index, weights=content,
+                                                                             minlength=len(edges) - 1) / 0.25]
+            totals[r.Component] = dict(interactions=r.Interactions, true_above=r.TrueAboveThreshold,
+                                       above=r.AboveThreshold)
+        out.append(dict(detector=detector, channel=channel, preset=first.Preset, threshold=first.Threshold,
+                        source=responses[detector]["source"], edges=edges.tolist(), spectra=spectra, totals=totals))
+    return dict(solar_model=solar_model, cases=out)
+
+
 def _contribution(tool, benchmark):
     paths = sorted((contributions_dir() / tool / benchmark).glob("*/data.parquet"))
     return pd.read_parquet(paths[-1]) if paths else None
@@ -313,8 +351,8 @@ def export_sections(tables_dir):
     data = dict(set=SET, solar_model=SOLAR_MODEL, draws=N_DRAWS, single_density=SINGLE_DENSITY,
                 observables=impacts(inputs, tables, params), solar_profiles=sun_profiles(inputs),
                 survival=survival_curves(inputs, osc), regeneration=regeneration(inputs, tables, osc),
-                tools=tool_agreement())
+                tools=tool_agreement(), observed=observed())
     path = tables_dir / "sections.json"
     with path.open("w") as handle:
-        json.dump(_clean(data), handle, allow_nan=False)
+        json.dump(_clean(data), handle, allow_nan=False, separators=(",", ":"))  # compact: the page downloads it
     return path
