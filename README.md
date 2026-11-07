@@ -1,5 +1,9 @@
 # SNUfish
 
+[![ci](https://github.com/mantheys/snufish/actions/workflows/ci.yml/badge.svg)](https://github.com/mantheys/snufish/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](pyproject.toml)
+[![Calculator](https://img.shields.io/badge/calculator-online-2ea44f)](https://mantheys.github.io/snufish/)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/mantheys)
 
 **Calculator: [mantheys.github.io/snufish](https://mantheys.github.io/snufish/)** ·
