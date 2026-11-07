@@ -41,12 +41,17 @@ SNUfish reports as model ranges.
    1.00 is 27–35 % lower, and with the free g<sub>A</sub> it agrees. The three
    measured strength sets differ by 11 % among themselves. A cross-section
    measurement at a stopped-pion source would settle it.
-5. **Folding: the detector step adds no input yet.** On the same fluxes and
-   cross sections, SNOwGLoBES's full chain agrees with SNUfish's folding to
-   0.4 % for ⁸B and hep (ES, CC on ⁴⁰Ar); below 2 MeV (⁷Be, pep, ¹³N) it is
-   16–21 % lower, and its ⁷Be and pep rates depend on how a line is written
-   into its flux table (−52 % to +55 %). The detector response is not yet
-   benchmarked.
+5. **Folding agrees; the detector response is the input.** On the same
+   fluxes and cross sections, SNOwGLoBES's full chain agrees with SNUfish's
+   folding to 0.4 % for ⁸B and hep (ES, CC on ⁴⁰Ar); below 2 MeV (⁷Be, pep,
+   ¹³N) it is 16–21 % lower, and its ⁷Be and pep rates depend on how a line
+   is written into its flux table (−52 % to +55 %): GLoBES evaluates flux × σ
+   once per 0.4975 MeV sampling bin, at its midpoint (an emulation reproduces
+   it to 10⁻⁵; [crosschecks.md](crosschecks.md#snowglobes-below-2-mev)). The
+   published responses benchmarked in B5 move rates above threshold by much
+   more: Super-K IV's efficiency keeps 52 % of the ⁸B ES interactions above
+   3.49 MeV; SNO's and DUNE's resolutions take 3.6 % and 4.4 % off the CC rate
+   above 5.5 and 5 MeV.
 6. **The tools agree; the inputs do not.** NuFast-Earth and the SNUfish
    reference agree to 10⁻⁸, the two radiative-correction calculations of
    ν–e scattering to 0.1 %. Every spread that matters comes from physics

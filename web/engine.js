@@ -166,8 +166,9 @@ export const DEFAULT_SETUP = {
   detector: "water", channel: "es", xsec_model: "default", es_model: "bks", period: "day",
   // detector response in observed energy (ES: electron kinetic energy T; CC: visible energy E_nu - Q)
   threshold: 0.0, resolution_a: 0.0, resolution_b: 0.0, efficiency: 1.0, efficiency_e50: 0.0, efficiency_width: 0.5,
-  // Super-K style resolution [c0, c1, c2]: sigma = c0 + c1 sqrt(E) + c2 E, E the total electron energy for ES
-  resolution_poly: [], energy_scale: 1.0, resolution_scale: 1.0,
+  // published resolution [c0, c1, c2]: sigma = c0 + c1 sqrt(E) + c2 E, E for ES the total electron energy
+  // (resolution_energy "total", Super-K) or the kinetic one ("kinetic", SNO)
+  resolution_poly: [], resolution_energy: "total", energy_scale: 1.0, resolution_scale: 1.0,
   // detector uncertainties (fractions, 1 sigma), sampled in the budget: energy scale, sigma, rate normalisation
   energy_scale_error: 0.0, resolution_error: 0.0, normalisation_error: 0.0,
   // imported response, {id, x, y, matrix, true_axis}: an efficiency curve (x energies, y efficiencies) in place of
@@ -178,6 +179,23 @@ export const DEFAULT_SETUP = {
 };
 
 export function makeSetup(changes = {}) { return { ...DEFAULT_SETUP, ...changes }; }
+
+export function publishedResponse(inputs, detector) {
+  // the B5 spec's published response of a detector (part 2) as setup fields, as engine.published_response; {} if none
+  const r = (inputs.data.responses || {})[detector];
+  if (!r) return {};
+  const res = r.resolution, eff = r.efficiency, unc = r.uncertainties || {};
+  const out = { threshold: r.threshold_MeV, resolution_a: 0, resolution_b: 0, resolution_poly: [], resolution_energy: "total",
+                efficiency: 1, efficiency_e50: 0, efficiency_table: null, energy_scale_error: unc.energy_scale || 0,
+                resolution_error: unc.resolution || 0, normalisation_error: unc.normalisation || 0 };
+  if (res.form === "poly") Object.assign(out, { resolution_poly: res.coefficients, resolution_energy: res.energy });
+  else Object.assign(out, { resolution_a: res.a, resolution_b: res.b });
+  if (eff.curve) {
+    const c = inputs.data.efficiency_curves[eff.curve];
+    out.efficiency_table = { id: `curve:${eff.curve}`, x: c.x, y: c.y, name: c.label, curve: eff.curve };
+  } else out.efficiency = eff.plateau;
+  return out;
+}
 
 export const OBSERVED_MIN = 0.01, OBSERVED_MAX = 25.0; // MeV; a first bin [0, 0.01] collects everything below
 const PER_DECADE = 16, FINE = 4;                        // display bins per decade, fine bins per display bin
@@ -208,6 +226,7 @@ export function check(inputs, setup, quantity = "rate") {
   within("the efficiency turn-on (MeV)", setup.efficiency_e50, 0, OBSERVED_MAX);
   within("the turn-on width (MeV)", setup.efficiency_width, 1e-3, 10);
   if (![0, 3].includes(setup.resolution_poly.length)) throw new Error("resolution_poly takes three coefficients (c0, c1, c2)");
+  allowed("resolution energy", setup.resolution_energy, ["total", "kinetic"]);
   within("the energy scale", setup.energy_scale, 0.5, 1.5);
   within("the resolution scale", setup.resolution_scale, 0, 3);
   within("the energy-scale uncertainty", setup.energy_scale_error, 0, 0.2);
@@ -367,18 +386,19 @@ export function electronSmearing(inputs, channel, xsecModel, b, step = 0.1, top 
 }
 
 export function resolution(inputs, setup, energy) {
-  // sigma (MeV) at an observed energy: sqrt((a sqrt(E))^2 + (b E)^2), or Super-K's c0 + c1 sqrt(E) + c2 E in
-  // total electron energy (ES); times resolution_scale
+  // sigma (MeV) at a true (unsmeared) observed energy: sqrt((a sqrt(E))^2 + (b E)^2), or c0 + c1 sqrt(E) + c2 E in
+  // total electron energy for ES (Super-K; resolution_energy "kinetic": in T, as SNO); times resolution_scale
   let sigma;
   if (setup.resolution_poly.length) {
-    const [c0, c1, c2] = setup.resolution_poly, total = energy + (setup.channel === "es" ? inputs.data.constants.m_e_MeV : 0);
+    const [c0, c1, c2] = setup.resolution_poly;
+    const total = energy + (setup.channel === "es" && setup.resolution_energy === "total" ? inputs.data.constants.m_e_MeV : 0);
     sigma = Math.max(c0 + c1 * Math.sqrt(total) + c2 * total, 0);
   } else sigma = Math.hypot(setup.resolution_a * Math.sqrt(energy), setup.resolution_b * energy);
   return setup.resolution_scale * sigma;
 }
 
 const responseKey = (setup) => [setup.channel, setup.efficiency_table?.id, setup.smearing_table?.id, setup.threshold, setup.resolution_a, setup.resolution_b, setup.resolution_poly.join(","),
-  setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
+  setup.resolution_energy, setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width].join("|");
 
 function importedRows(inputs, setup, edges) {
   // fine rows from an imported matrix: each fine bin takes the row of the imported true bin holding its centre

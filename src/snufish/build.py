@@ -116,14 +116,15 @@ def _build_b4(contributions, spec):
 
 
 def _build_b5(contributions, spec):
-    """Full-chain tool totals next to SNUfish's folding of the same inputs
-    with that tool's B4 cross sections (same solar model)."""
+    """Part 1: full-chain tool totals next to SNUfish's folding of the same inputs
+    with that tool's B4 cross sections (same solar model). Part 2: observed rates
+    next to SNUfish's folding through the same response (B5_ObservedChain)."""
     totals_path = build_dir() / "B5_Totals.parquet"
     folded = pd.read_parquet(totals_path) if totals_path.exists() else None
     rows = []
     for contribution in contributions:
         meta = contribution.meta
-        for _, r in contribution.data.iterrows():
+        for _, r in contribution.data[contribution.data["grid"] == "totals"].iterrows():
             detector, channel, component = r.quantity.split("/")
             variant = spec.variants[r.variant]
             model = variant["solar_model"] or spec.data.get("native_solar_model", {}).get(meta["tool"])
@@ -139,7 +140,191 @@ def _build_b5(contributions, spec):
                     row.update(Folded=m.Total if r.threshold == 0 else m.Above5, Coverage=m.Coverage)
             row["Ratio"] = row["Rate"] / row["Folded"] if row["Folded"] else np.nan
             rows.append(row)
-    return {"B5_Chain": pd.DataFrame(rows)}
+    frames = {"B5_Chain": pd.DataFrame(rows)}
+    observed = _observed_chain(contributions, spec)
+    if not observed.empty:
+        frames["B5_ObservedChain"] = observed
+    return frames
+
+
+# ---------------------------------------------------------------- B5 part 2: the detector response
+
+class AverageProbabilities:
+    """The day fractions of B5 part 1 as an engine provider: F_i of the B2 reference averaged over each
+    component's production profile (B2_Average), interpolated linearly in energy. No night."""
+
+    def __init__(self, averages):
+        self.rows = {(r.Variant, r.Component): r for r in averages.itertuples()}
+
+    def day(self, osc, solar_model, component, energies):
+        r = self.rows[(solar_model, component)]
+        return np.stack([np.interp(energies, r.Energy, getattr(r, f"F{i}")) for i in (1, 2, 3)], axis=-1)
+
+    def night(self, osc, earth_model, site):
+        raise NotImplementedError("B5 part 2 is daytime")
+
+
+_INPUTS = {}
+
+
+def _engine_inputs():
+    """The engine's inputs (export.collect_inputs), built once per process."""
+    from . import engine
+    from .export import collect_inputs
+
+    if "inputs" not in _INPUTS:
+        _INPUTS["inputs"] = engine.Inputs(collect_inputs())
+    return _INPUTS["inputs"]
+
+
+def response_cases(spec):
+    """[(detector, channel)] of B5 part 2: every channel of every detector with a published response."""
+    return [(d, c) for d in spec["response"]["detectors"] for c in spec["detectors"][d]["channels"]]
+
+
+def _xsec_model(spec, channel):
+    """The engine's (es_model, xsec_model) for the cross section B5 part 2 names for ``channel``."""
+    entry = spec["response"]["cross_sections"][channel]
+    if channel == "es":
+        return {"es_bks": "bks", "default": "tree"}[entry["variant"]], "default"
+    return "bks", entry.get("variant", "default")
+
+
+def observed_setup(spec, inputs, solar_model, detector, channel, response=None):
+    """engine.Setup of B5 part 2: every flux component, the spec's cross section, and the published response of the
+    detector without its threshold (or ``response``: Setup fields of a contribution's own response)."""
+    from . import engine
+
+    es_model, xsec_model = _xsec_model(spec, channel)
+    fields = engine.published_response(inputs, detector) if response is None else dict(response)
+    fields.update(threshold=0.0, energy_scale_error=0.0, resolution_error=0.0, normalisation_error=0.0)
+    return engine.Setup(solar_model=solar_model, components=tuple(spec["fluxes"]), detector=detector, channel=channel,
+                        es_model=es_model, xsec_model=xsec_model, **fields)
+
+
+def observed_spectra(spec, inputs, probabilities, setup):
+    """{component and "all": interactions per kt yr in each bin of the observed grid}, daytime."""
+    from . import engine
+
+    edges = spec.axis("threshold", "observed")
+    osc = load_spec("B2_sun")["oscillation"]
+    rates = engine.observed_rates(inputs, probabilities, setup, osc, night=False, edges=edges)
+    out = {c: np.asarray(r["day"]) for c, r in rates.items()}
+    out["all"] = sum(out.values())
+    return edges, out
+
+
+def above(content):
+    """Rate above each edge of the observed grid (bins whose low edge is at or above it): len(content) + 1 values."""
+    return np.concatenate([np.cumsum(content[::-1])[::-1], [0.0]])
+
+
+def combine_observed(out_dir=None, echo=print, solar_models=None):
+    """B5 part 2: SNUfish's observed spectra through each detector's published response (B5_Observed): per solar
+    model, detector, channel and component, the spectrum on the observed grid, the rate above every grid value, above
+    the preset threshold, and the interactions before the response."""
+    from .solar import models
+
+    out_dir = Path(out_dir) if out_dir else build_dir()
+    sun_path = out_dir / "B2_Average.parquet"
+    if not sun_path.exists():
+        return None
+    spec = load_spec("B5_rates")
+    averages = pd.read_parquet(sun_path)
+    probabilities = AverageProbabilities(averages[averages.Tool == "snufish-reference"])
+    inputs = _engine_inputs()
+    rows = []
+    for solar_model in solar_models or list(models()):
+        for detector, channel in response_cases(spec):
+            info = spec["response"]["detectors"][detector]
+            setup = observed_setup(spec, inputs, solar_model, detector, channel)
+            perfect = setup.replace(resolution_a=0.0, resolution_b=0.0, resolution_poly=(), efficiency=1.0,
+                                    efficiency_table=None)
+            edges, spectra = observed_spectra(spec, inputs, probabilities, setup)
+            _, true = observed_spectra(spec, inputs, probabilities, perfect)
+            k = int(np.argmin(np.abs(edges - info["threshold_MeV"])))
+            for component, content in spectra.items():
+                cumulative = above(content)
+                rows.append(dict(SolarModel=solar_model, Detector=detector, Channel=channel, Preset=info["preset"],
+                                 Component=component, Threshold=info["threshold_MeV"],
+                                 Interactions=float(true[component].sum()), Observed=float(content.sum()),
+                                 AboveThreshold=float(cumulative[k]),
+                                 TrueAboveThreshold=float(above(true[component])[k]),
+                                 EnergyLow=edges[:-1], EnergyHigh=edges[1:], Energy=0.5 * (edges[1:] + edges[:-1]),
+                                 Rate=content / np.diff(edges), Above=cumulative))
+    frame = pd.DataFrame(rows)
+    _write_frame(frame, out_dir / "B5_Observed.parquet")
+    echo(f"wrote   {out_dir / 'B5_Observed'}.parquet ({len(frame)} rows)")
+    return frame
+
+
+def response_tables(table, detector, channel):
+    """Setup fields of a contribution's own response (response.parquet rows of one detector and channel)."""
+    from .engine import Table
+
+    sub = table[(table.detector == detector) & (table.channel == channel)]
+    eff = sub[sub.kind == "efficiency"].sort_values("observed_low")
+    x = [v for lo, hi in zip(eff.observed_low, eff.observed_high) for v in (lo, hi - 1e-6)]
+    y = [v for v in eff.value for _ in (0, 1)]
+    smear = sub[sub.kind == "smearing"]
+    true_edges = np.unique(np.concatenate([smear.true_low, smear.true_high]))
+    obs_edges = np.unique(np.concatenate([smear.observed_low, smear.observed_high]))
+    matrix = np.zeros((len(true_edges) - 1, len(obs_edges) - 1))
+    for r in smear.itertuples():
+        matrix[np.searchsorted(true_edges, r.true_low), np.searchsorted(obs_edges, r.observed_low)] += r.value
+    tag = f"{detector}:{channel}:{len(sub)}:{float(sub.value.sum()):.12g}"
+    return dict(efficiency_table=Table(f"own-eff:{tag}", tuple(x), tuple(y)),
+                smearing_table=Table(f"own-smear:{tag}", tuple(true_edges), tuple(obs_edges), tuple(map(tuple, matrix)),
+                                     smear.true_axis.iloc[0]),
+                resolution_a=0.0, resolution_b=0.0, resolution_poly=(), efficiency=1.0, efficiency_e50=0.0)
+
+
+def _observed_chain(contributions, spec):
+    """Contributions' observed rates (grid observed) next to SNUfish's folding of the same solar model through the
+    same response: the spec's, or the contribution's own (response.parquet)."""
+    from .contribution import load_response
+
+    path = build_dir() / "B5_Observed.parquet"
+    reference = pd.read_parquet(path) if path.exists() else None
+    rows = []
+    for contribution in contributions:
+        data = contribution.data[contribution.data["grid"] == "observed"]
+        if data.empty:
+            continue
+        meta = contribution.meta
+        mode = meta["settings"]["response"]
+        own = load_response(contribution.path) if mode == "own" else None
+        for (variant, quantity), sub in data.groupby(["variant", "quantity"]):
+            detector, channel, component = quantity.split("/")
+            model = spec.variants[variant]["solar_model"]
+            if model is None:
+                continue
+            if own is None:
+                if reference is None:
+                    continue
+                match = reference[(reference.SolarModel == model) & (reference.Detector == detector)
+                                  & (reference.Channel == channel) & (reference.Component == component)]
+                if match.empty:
+                    continue
+                folded = np.asarray(match.iloc[0].Above)
+            else:
+                averages = pd.read_parquet(build_dir() / "B2_Average.parquet")
+                inputs = _engine_inputs()
+                setup = observed_setup(spec, inputs, model, detector, channel, response_tables(own, detector, channel))
+                _, spectra = observed_spectra(spec, inputs, AverageProbabilities(
+                    averages[averages.Tool == "snufish-reference"]), setup)
+                folded = above(spectra[component])
+            sub = sub.sort_values("threshold")
+            threshold, value = sub.threshold.to_numpy(), sub.value.to_numpy()
+            preset = spec["response"]["detectors"].get(detector, {}).get("threshold_MeV", 0.0)
+            k = int(np.argmin(np.abs(threshold - preset)))
+            ratio = np.divide(value, folded, out=np.full_like(value, np.nan), where=folded > 0)
+            rows.append(dict(Tool=meta["tool"], Version=str(meta["tool_version"]), Variant=variant, SolarModel=model,
+                             Response=mode, Detector=detector, Channel=channel, Component=component,
+                             Threshold=threshold, Rate=value, Folded=folded, Ratio=ratio, PresetThreshold=preset,
+                             RateAbove=float(value[k]), FoldedAbove=float(folded[k]),
+                             RatioAbove=float(value[k] / folded[k]) if folded[k] > 0 else np.nan))
+    return pd.DataFrame(rows)
 
 
 BUILDERS = {"B2_sun": _build_b2, "B3_earth": _build_b3, "B4_xsec": _build_b4, "B5_rates": _build_b5}

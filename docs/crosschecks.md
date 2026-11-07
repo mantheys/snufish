@@ -118,6 +118,46 @@ CallioLab, site dependent) is not modelled: SNUfish's Earth models are radial (P
   5 MeV; at the E_ν ≳ 9 MeV a 5 MeV DUNE threshold sees, the MARLEY calculations differ by 13 % (6.1–6.9 × 10⁻⁴² cm²
   at 10 MeV).
 
+## SNOwGLoBES below 2 MeV
+
+On the same fluxes, oscillations and cross-section tables, SNOwGLoBES's full chain (B5 part 1) agrees with
+SNUfish's folding to 0.4 % for ⁸B and hep, but is 16 % low for pep and ⁷Be, 21 % low for ¹³N and 2 % low for ¹⁵O
+and ¹⁷F; written as single points of its flux table, ⁷Be comes out +55 % and pep −52 %. The cause is GLoBES's rate
+integral, not SNOwGLoBES's physics.
+
+**What GLoBES computes.** In GLoBES 3.2.18 (`glb_set_rates`, `source/glb_rate_engine.c`) the rate of sampling bin
+j is flux(E_j) × σ(E_j) × ΔE, with E_j the bin's midpoint (`glb_sbin_center`) and, in SNOwGLoBES's
+`glb/preamble.glb`, 200 bins of ΔE = 0.4975 MeV from 0.5 MeV: one evaluation per half MeV. The flux is
+interpolated linearly in E between the points of the flux file (`glb_get_flux`, `source/glb_fluxes.c`) and σ
+linearly in log₁₀E (`glb_get_xsec`). Doing exactly this in Python (`globes_rate` in
+`contributions/snowglobes/scripts/run_b5.py`) on the flux files the wrapper writes and with SNOwGLoBES's own
+cross-section tables reproduces the contribution to 10⁻⁵ for water ES, every component, both ways of writing the
+lines (`tests/test_snowglobes_sampling.py`); for argon it is off by a constant −0.20 % (ES) and +0.20 % (CC), the
+target counts (SNOwGLoBES takes pure ⁴⁰Ar, N_A/40 per gram).
+
+**Where the deficits come from.**
+
+| Component | Ratio | Mechanism |
+|---|---|---|
+| ⁷Be (862 keV) | 0.838 | the wrapper spreads the line flat over the sampling bin holding it, [0.5, 0.9975] MeV, so GLoBES sees its whole flux, but at the bin midpoint, 0.749 MeV: σ_ES × P there is 0.842 of its value at 862 keV. (The 384 keV line is below 0.5 MeV, outside both SNOwGLoBES's sampling and its σ tables, so missing from both sides.) |
+| pep (1.442 MeV) | 0.843 | the same, in [0.9975, 1.495] MeV, evaluated at 1.246 MeV: 0.848 |
+| ¹³N | 0.792 | the spectrum (endpoint 1.199 MeV) gets one evaluation, at 0.749 MeV, for [0.5, 0.9975] MeV; the part above 0.9975 MeV is lost, as that bin's midpoint, 1.246 MeV, is past the endpoint |
+| ¹⁵O, ¹⁷F | 0.98 | midpoint rule on 0.5 MeV bins; the part above 1.495 MeV is lost (endpoints 1.73, 1.74 MeV) |
+| ⁸B, hep | 1.000 | smooth over 0.5 MeV: the midpoint rule is exact to 10⁻⁴ |
+
+**The line variant.** Written as one point of the 0.2 MeV flux table (`b16_gs98_point_lines`), a line is a
+triangle 0.4 MeV wide after GLoBES's interpolation, and the sampling point catches it at some height: the 862 keV
+line sits on the 0.8 MeV point, read at 0.749 MeV with weight 0.744 and multiplied by ΔE/0.2 MeV = 2.4875, so 1.85
+times its flux at 0.842 of its cross section: +55 %. The pep line on the 1.4 MeV point is read at 1.246 MeV with
+weight 0.231: 0.575 × 0.848, −52 %. The same probe moved over energy gives anywhere from 0 to 2.5 times the line.
+
+**Consequences.** Above ~3 MeV the full chain is right to 0.4 %; below 2 MeV a SNOwGLoBES rate is set by where
+the spectrum falls with respect to its sampling points. The emulation shows what a finer configuration would do:
+with 2000 sampling points and the 0.2 MeV flux table, ¹⁵O and ¹⁷F come within 0.4 %, ¹³N still 7 % low (the flux
+table itself is too coarse for its spectrum); with a 0.02 MeV table too, all within 0.2 %. For lines, no flux-table
+writing is right at the default sampling unless the line's weight carries σ(E_line)/σ(E_j), which needs the cross
+section the tool is meant to supply. This is an emulation, not a SNOwGLoBES run with a finer `preamble.glb`.
+
 ## ⁴⁰Ar: independent calculations
 
 Folded over the ⁸B spectrum (Winter et al.), no threshold, 10⁻⁴² cm²:

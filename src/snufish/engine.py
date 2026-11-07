@@ -192,6 +192,29 @@ def electron_smearing(inputs, channel, xsec_model, b, step=0.1, top=25.0):
     return Table(f"electron:{channel}:{xsec_model}:{b:g}", tuple(edges), tuple(edges), tuple(map(tuple, matrix)), "neutrino")
 
 
+def published_response(inputs, detector):
+    """The B5 spec's published response of ``detector`` (part 2) as Setup fields: threshold, resolution,
+    efficiency and detector uncertainties. {} if the detector has none."""
+    r = inputs.data.get("responses", {}).get(detector)
+    if not r:
+        return {}
+    res, eff, unc = r["resolution"], r["efficiency"], r.get("uncertainties", {})
+    out = dict(threshold=r["threshold_MeV"], resolution_a=0.0, resolution_b=0.0, resolution_poly=(),
+               resolution_energy="total", efficiency=1.0, efficiency_e50=0.0, efficiency_table=None,
+               energy_scale_error=unc.get("energy_scale", 0.0), resolution_error=unc.get("resolution", 0.0),
+               normalisation_error=unc.get("normalisation", 0.0))
+    if res["form"] == "poly":
+        out.update(resolution_poly=tuple(res["coefficients"]), resolution_energy=res["energy"])
+    else:
+        out.update(resolution_a=res["a"], resolution_b=res["b"])
+    if "curve" in eff:
+        c = inputs["efficiency_curves"][eff["curve"]]
+        out["efficiency_table"] = Table(f"curve:{eff['curve']}", tuple(c["x"]), tuple(c["y"]))
+    else:
+        out["efficiency"] = eff["plateau"]
+    return out
+
+
 @dataclass(frozen=True)
 class Setup:
     """Everything but the oscillation parameters."""
@@ -218,6 +241,7 @@ class Setup:
     efficiency_width: float = 0.5   # MeV, width of the logistic turn-on
     resolution_poly: tuple = ()     # (c0, c1, c2): sigma = c0 + c1 sqrt(E) + c2 E in place of a, b, with E the
                                     # total electron energy for ES (T + m_e), as Super-K publishes it
+    resolution_energy: str = "total"  # E of resolution_poly for ES: "total" (T + m_e, Super-K) or "kinetic" (T, SNO)
     energy_scale: float = 1.0       # observed energy = scale x true (for the energy-scale uncertainty)
     resolution_scale: float = 1.0   # sigma multiplied by this (for the resolution uncertainty)
     efficiency_table: Table = None  # imported efficiency curve, in place of efficiency and its turn-on
@@ -277,6 +301,7 @@ def check(inputs, setup, quantity="rate"):
     within("the turn-on width (MeV)", setup.efficiency_width, 1e-3, 10.0)
     if len(setup.resolution_poly) not in (0, 3):
         raise ValueError("resolution_poly takes three coefficients (c0, c1, c2)")
+    allowed("resolution energy", setup.resolution_energy, ["total", "kinetic"])
     within("the energy scale", setup.energy_scale, 0.5, 1.5)
     within("the resolution scale", setup.resolution_scale, 0.0, 3.0)
     within("the energy-scale uncertainty", setup.energy_scale_error, 0.0, 0.2)
@@ -361,11 +386,17 @@ def _targets(inputs, setup):
     return detector["targets"][detector["channels"][setup.channel]]
 
 
+def _edges_key(edges):
+    edges = np.asarray(edges, dtype=float)
+    return (len(edges), float(edges[1]), float(edges[-1]), float(edges.sum()))
+
+
 def _kernels(inputs, setup, component, edges):
     """Cached, oscillation-independent pieces of one component: ES: per neutrino
     energy, the cross section into each recoil bin [E, bins] for nu_e and nu_x;
     CC: the cross section sigma(E)."""
-    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold)
+    key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold,
+           _edges_key(edges))
     cache = inputs.__dict__.setdefault("_kernels", {})
     if key not in cache:
         kind, energy, weight = inputs.components[component]
@@ -410,12 +441,14 @@ def bks_ratio(inputs, flavour, energy, edges):
 
 
 def resolution(inputs, setup, energy):
-    """sigma (MeV) at observed energies: sqrt((a sqrt(E))^2 + (b E)^2), or Super-K's
-    c0 + c1 sqrt(E) + c2 E in total electron energy (ES); times resolution_scale."""
+    """sigma (MeV) at true (unsmeared) observed energies: sqrt((a sqrt(E))^2 + (b E)^2), or
+    c0 + c1 sqrt(E) + c2 E in total electron energy for ES (Super-K; ``resolution_energy``
+    "kinetic": in T, as SNO); times resolution_scale."""
     energy = np.asarray(energy, dtype=float)
     if setup.resolution_poly:
         c0, c1, c2 = setup.resolution_poly
-        total = energy + (inputs["constants"]["m_e_MeV"] if setup.channel == "es" else 0.0)
+        total = energy + (inputs["constants"]["m_e_MeV"]
+                          if setup.channel == "es" and setup.resolution_energy == "total" else 0.0)
         sigma = np.maximum(c0 + c1 * np.sqrt(total) + c2 * total, 0.0)
     else:
         sigma = np.hypot(setup.resolution_a * np.sqrt(energy), setup.resolution_b * energy)
@@ -424,6 +457,7 @@ def resolution(inputs, setup, energy):
 
 def _response_key(setup):
     return (setup.channel, setup.threshold, setup.resolution_a, setup.resolution_b, tuple(setup.resolution_poly),
+            setup.resolution_energy,
             setup.energy_scale, setup.resolution_scale, setup.efficiency, setup.efficiency_e50, setup.efficiency_width,
             setup.efficiency_table and setup.efficiency_table.id, setup.smearing_table and setup.smearing_table.id)
 
@@ -451,7 +485,7 @@ def _imported_matrix(inputs, setup, edges):
 def _response(inputs, setup, edges):
     """(matrix [true bin, observed bin], acceptance per observed bin): energy scale,
     Gaussian resolution, efficiency and threshold. Identity and ones for a perfect detector."""
-    key = _response_key(setup)
+    key = _response_key(setup) + (_edges_key(edges),)
     cache = inputs.__dict__.setdefault("_responses", {})
     if key not in cache:
         centres = 0.5 * (edges[1:] + edges[:-1])
@@ -553,12 +587,12 @@ def _cumulative_linear(energy, density, x):
     return whole + 0.5 * (density[j] + at_x) * (x - energy[j])
 
 
-def observed_rates(inputs, probabilities, setup, osc, night=True):
+def observed_rates(inputs, probabilities, setup, osc, night=True, edges=None):
     """{component: {"day", "night"}}: interactions per kton-year in each fine
-    bin of observed energy (``observed_edges``), after the detector response.
-    The reference path: ``component_totals`` and ``component_spectra`` give the
-    same numbers faster."""
-    edges, _ = observed_edges(setup.threshold)
+    bin of observed energy (``observed_edges``, or the given ``edges``: true and
+    observed bins alike), after the detector response. The reference path:
+    ``component_totals`` and ``component_spectra`` give the same numbers faster."""
+    edges = observed_edges(setup.threshold)[0] if edges is None else np.asarray(edges, dtype=float)
     matrix, acceptance = _response(inputs, setup, edges)
     seconds, targets = inputs["seconds_per_year"], _targets(inputs, setup)
     g_day, g_night = orbital(inputs, setup)
