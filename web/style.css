@@ -252,7 +252,7 @@ body[data-tab="discrepancies"] .bench, body[data-tab="discrepancies"] .tabs { ma
 .status-table { overflow-x: auto; }
 .status-table table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .status-table th, .status-table td { text-align: left; vertical-align: top; padding: 5px 8px; border-top: 1px solid var(--border); }
-.status-table td:nth-child(2) { white-space: nowrap; }
+.status-table td:nth-child(3) { white-space: nowrap; }
 .matrix td.inputs { min-width: 12em; font-size: 0.8rem; }
 .matrix td.inputs .input { display: block; margin: 1px 0; }
 .matrix th.group { text-align: center; border-bottom: 3px solid; color: var(--text-primary); }

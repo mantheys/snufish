@@ -1,5 +1,10 @@
 name: ci
-on: [push, pull_request]
+# Pull requests are checked once (pull_request); a push runs CI only on main, after a merge, where it
+# rebuilds the tables, re-runs the tests on the merged code and deploys.
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
   lint:

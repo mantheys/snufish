@@ -751,7 +751,7 @@ export function draws(inputs, setup, params, n, seed) {
 }
 
 export function budget(inputs, probabilities, setup, params, quantity = "rate",
-                       { n = 400, seed = 1, ranges = ["xsec_model", "es_model", "earth_model", "solar_model"],
+                       { n = 400, seed = 1, ranges = ["solar_model", "earth_model", "xsec_model", "es_model"],
                          solarRange = "full", given = null, legacy = false } = {}) {
   // {rows, samples}: rows {Source, Kind, Central, Sigma, Relative, Low, High}; `given` = {osc, flux, statNoise?}.
   // Model ranges run over the state-of-the-art models; `legacy` adds a "legacy spread" row per choice over every
@@ -776,18 +776,21 @@ export function budget(inputs, probabilities, setup, params, quantity = "rate",
   if (d.flux && !(quantity !== "rate" && comps.length === 1)) // one flux cancels in a ratio
     sampled(fluxLabel(setup), d.flux.map((m) => quantityValue(quantity, setup.period, ...combine(nominal, comps, m))));
   const queue = d.noise ? [...d.noise] : null, next = () => (queue ? queue.shift() : d.rng.normals(total.length));
+  // rows in the order of the calculator's steps (B1 oscillation parameters, B2 fluxes, B4 nuclear strengths, B5
+  // statistics and detector), then the total; the model ranges likewise (B2 solar model, B3 Earth, B4)
+  const add = (source, sigma) => {
+    const z = next(); // one Gaussian draw per source: its row and its share of the total
+    sampled(source, z.map((x) => central + sigma * x));
+    total = total.map((t, i) => t + sigma * z[i]);
+  };
+  for (const [source, sigma] of levelSigmas(inputs, probabilities, setup, params, quantity, central, night)) add(source, sigma);
   const stat = statisticalSigma(quantity, setup.period, day0, night0, setup.exposure, ref0);
   if (stat !== null) {
     sampled(`statistics (${+setup.exposure.toPrecision(6)} kt yr)`, next().map((z) => central + stat * z));
     const z = next();
     total = total.map((t, i) => t + stat * z[i]);
   }
-  for (const [source, sigma] of [...detectorSigmas(inputs, probabilities, setup, params, quantity, central, night),
-                                 ...levelSigmas(inputs, probabilities, setup, params, quantity, central, night)]) {
-    const z = next(); // one Gaussian draw per source: its row and its share of the total
-    sampled(source, z.map((x) => central + sigma * x));
-    total = total.map((t, i) => t + sigma * z[i]);
-  }
+  for (const [source, sigma] of detectorSigmas(inputs, probabilities, setup, params, quantity, central, night)) add(source, sigma);
   sampled("total sampled", total);
   for (const [scope, kind] of [["current", "model range"], ["all", "legacy spread"]].slice(0, legacy ? 2 : 1)) {
     for (const choice of ranges) {

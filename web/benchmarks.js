@@ -63,7 +63,8 @@ function largest(rows, central, keep) {
 function matrix() {
   const obs = page.sections.observables, accent = colours().sampled;
   const columns = Object.keys(SECTIONS).map((s) => [s, SECTIONS[s], (r) => r.section === s && stateOfTheArt(r)]);
-  const heads = { B1: "B1", B2: "B2", B3: "B3", B4: "B4" };
+  const heads = { B1: "B1", B2: "B2", B3: "B3", B4: "B4", B5: "B5" };
+  columns.push(["B5", "B5 Detector: the folding adds no input of its own", () => false]);
   const cell = (best) => {
     if (!best) return `<td class="num empty">–</td>`;
     const strength = Math.max(0, Math.min(1, (Math.log10(Math.abs(best.value)) + 2) / 3.5));
@@ -78,7 +79,10 @@ const central = (o) => (o.quantity === "adn" ? `${(100 * o.central).toFixed(2)} 
 
 function overviewPlot() {
   const c = colours(), id = $("overview-observable").value, o = page.sections.observables[id], node = $("plot-overview");
-  const rows = o.rows.filter(stateOfTheArt).sort((a, b) => Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
+  // grouped by step, B1 at the top (Plotly draws the first category at the bottom), the largest first within a step
+  const step = (r) => Object.keys(SECTIONS).indexOf(r.section);
+  const rows = o.rows.filter(stateOfTheArt)
+    .sort((a, b) => step(b) - step(a) || Math.abs(size(a, o.central)) - Math.abs(size(b, o.central)));
   const traces = Object.keys(SECTIONS).map((s) => {
     const mine = rows.filter((r) => r.section === s);
     return { type: "bar", orientation: "h", name: SECTIONS[s], y: mine.map((r) => sup(r.source)),
@@ -103,7 +107,10 @@ const seriesColour = (section) => getComputedStyle(document.documentElement).get
 function impactPlot(node, section) {
   // per observable: one bar per source of this step, the oscillation parameters in grey for scale
   const c = colours(), obs = page.sections.observables, ids = Object.keys(obs).reverse();
-  const sources = [...new Set(Object.values(obs).flatMap((o) => o.rows.filter((r) => r.section === section).map((r) => r.source)))];
+  const rank = { sampled: 0, "model range": 1, approximation: 2 }; // inputs first, then the approximations
+  const rows = Object.values(obs).flatMap((o) => o.rows.filter((r) => r.section === section));
+  const sources = [...new Set(rows.map((r) => r.source))]
+    .sort((a, b) => rank[rows.find((r) => r.source === a).kind] - rank[rows.find((r) => r.source === b).kind]); // stable
   const colourOf = palette();
   const trace = (source, colour, opacity = 1) => {
     const x = [], text = [];
@@ -123,7 +130,7 @@ function impactPlot(node, section) {
   htmlLegend(node, traces.map((t, i) => ({ label: i >= scale.length ? `${t.name} <span class="kind">(${kindOf(sources[i - scale.length])})</span>` : "B1 oscillation parameters (sampled, for scale)",
                                            colour: t.marker.color, fill: true })));
   node.style.height = `${Math.max(380, ids.length * (traces.length * 14 + 18) + 80)}px`;
-  return Plotly.react(node, traces, layout(c, node, `Effect of ${SECTIONS[section]} on the reference observables`,
+  return Plotly.react(node, [...traces].reverse(), layout(c, node, `Effect of ${SECTIONS[section]} on the reference observables`,
     "Relative to the central value (%), log scale", "",
     { showlegend: false, barmode: "group", bargap: 0.25, margin: { l: 20, r: 70, t: 24, b: 48 },
       xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(200)], exponentformat: "power" } }), CONFIG);

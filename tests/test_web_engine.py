@@ -140,7 +140,8 @@ def test_web_engine_matches_python(tmp_path):
         params = engine.parameters(inputs, set_name)
         n, seed = 12, 7
         rng, osc_draws, flux_draws = engine._draws(inputs, setup, params, n, seed)
-        # the Gaussian draws budget() takes next: statistics (two), then one per detector uncertainty
+        # the Gaussian draws budget() takes next: the measured strengths (one), statistics (two), then one per
+        # detector uncertainty
         extra = (2 if setup.exposure else 0) + (setup.energy_scale_error > 0) + (setup.resolution_error > 0) \
             + (setup.normalisation_error > 0 and quantity == "rate") \
             + (setup.smearing_table is not None and setup.resolution_error > 0) * -1 \

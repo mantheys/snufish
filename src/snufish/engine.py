@@ -803,7 +803,7 @@ def flux_label(setup):
 
 
 def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
-           ranges=("xsec_model", "es_model", "earth_model", "solar_model"), solar_range="full", legacy=False):
+           ranges=("solar_model", "earth_model", "xsec_model", "es_model"), solar_range="full", legacy=False):
     """(rows, samples) of the error budget of one quantity ("rate" in
     ``setup.period``, or "adn"). Rows: dict(Source, Kind, Central, Sigma,
     Relative, Low, High); samples: {source: array}. ``solar_range``
@@ -846,13 +846,18 @@ def budget(inputs, probabilities, setup, params, quantity="rate", n=400, seed=1,
         sampled(flux_label(setup), [quantity_value(quantity, setup.period, *combine(nominal, comps, m),
                                                    night_fraction=setup.night_fraction)
                                     for m in flux_draws])
+    # rows in the order of the calculator's steps (B1 oscillation parameters, B2 fluxes, B4 nuclear strengths,
+    # B5 statistics and detector), then the total; the model ranges likewise (B2 solar model, B3 Earth, B4)
+    for source, sigma in level_sigmas(inputs, probabilities, setup, params, quantity, central, night):
+        z = rng.standard_normal(n)  # one Gaussian draw per source: its row and its share of the total
+        sampled(source, central + sigma * z)
+        total = total + sigma * z
     stat = statistical_sigma(quantity, setup.period, day0, night0, setup.exposure, ref0, setup.night_fraction)
     if stat is not None:
         sampled(f"statistics ({setup.exposure:g} kt yr)", central + stat * rng.standard_normal(n))
         total = total + stat * rng.standard_normal(n)
-    for source, sigma in (detector_sigmas(inputs, probabilities, setup, params, quantity, central, night)
-                          + level_sigmas(inputs, probabilities, setup, params, quantity, central, night)):
-        z = rng.standard_normal(n)  # one Gaussian draw per source: its row and its share of the total
+    for source, sigma in detector_sigmas(inputs, probabilities, setup, params, quantity, central, night):
+        z = rng.standard_normal(n)
         sampled(source, central + sigma * z)
         total = total + sigma * z
     sampled("total sampled", total)

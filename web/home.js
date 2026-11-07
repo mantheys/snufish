@@ -80,7 +80,8 @@ function outdated() {
   }
   const m = d.solar_models;
   if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 ⁸B flux, B16 GS98", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy"]);
-  const colour = { legacy: css("--series-7"), approximation: c.muted };
+    bars.sort((a, b) => a[0].slice(0, 2).localeCompare(b[0].slice(0, 2))); // B2, B3, B4: the calculator's order
+const colour = { legacy: css("--series-7"), approximation: c.muted };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[2]]) },
                   text: bars.map((b) => pct(b[1])), textposition: "outside", cliponaxis: false, textfont: { size: 11, color: c.secondary },
                   hovertemplate: "%{y}: %{text}<extra></extra>" };
@@ -93,8 +94,8 @@ function outdated() {
 }
 
 function composition() {
-  // 3. the three state-of-the-art solar models, flux by flux, over B23 MB22m with its published 1 sigma
-  const c = colours(), node = $("plot-f3"), models = page.inputs.solar_models, status = page.inputs.status?.solar_model || {};
+  // 4. (B2) the three state-of-the-art solar models, flux by flux, over B23 MB22m with its published 1 sigma
+  const c = colours(), node = $("plot-f4"), models = page.inputs.solar_models, status = page.inputs.status?.solar_model || {};
   const ref = "b23_mb22m", current = Object.keys(models).filter((k) => status[k]?.status === "current");
   const colourOf = [series(1), series(2), series(3)];
   const traces = current.map((k, i) => ({
@@ -115,9 +116,9 @@ const PUBLISHED_AR40 = [
 ];
 
 function argon() {
-  // 4. the state-of-the-art 40Ar cross sections folded over the 8B spectrum, over MARLEY 2 (p,n); the shell model of
+  // 6. (B4) the state-of-the-art 40Ar cross sections folded over the 8B spectrum, over MARLEY 2 (p,n); the shell model of
   // Suzuki & Honma, which publishes one folded value only, and Kostensalo's with the free g_A, from the papers
-  const c = colours(), node = $("plot-f4"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status?.xsec_model?.cc_nue_ar40 || {};
+  const c = colours(), node = $("plot-f6"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status?.xsec_model?.cc_nue_ar40 || {};
   const b8 = d.components.B8, folded = (n) => {
     let t = 0;
     for (let i = 1; i < b8.energy.length; i++) {
@@ -145,7 +146,7 @@ function argon() {
 }
 
 function earth() {
-  // 5. the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
+  // 5. (B3) the local crust: A_DN with PREM + CRUST1.0 over A_DN with PREM's average crust, per site (computed by adn())
   const c = colours(), node = $("plot-f5"), sites = Object.keys(page.inputs.sites);
   const kinds = [["water", "⁸B ES in water, T > 3.49 MeV", c.sampled], ["argon", "⁸B CC on ⁴⁰Ar, E_vis > 5 MeV", c.range]];
   const traces = page.adn ? kinds.map(([kind, name, colour]) => {
@@ -196,8 +197,8 @@ async function adn() {
 }
 
 function oscillations() {
-  // 6. Delta m^2_21 and sin^2 theta_12 of the state-of-the-art parameter sets, with their 1 sigma
-  const c = colours(), node = $("plot-f6"), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
+  // 3. (B1) Delta m^2_21 and sin^2 theta_12 of the state-of-the-art parameter sets, with their 1 sigma
+  const c = colours(), node = $("plot-f3"), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
   const shown = Object.keys(sets).filter((k) => status[k]?.status === "current");
   const colourOf = { reactor: series(1), global: series(2), solar: series(3) }, symbol = { reactor: "square", global: "diamond", solar: "circle" };
   const seen = new Set();
@@ -217,12 +218,13 @@ function oscillations() {
     { showlegend: false, hovermode: "closest" }), CONFIG);
 }
 
-const FIGURES = [toolsVsInputs, outdated, composition, argon, earth, oscillations];
+const FIGURES = [toolsVsInputs, outdated, oscillations, composition, earth, argon]; // the findings, B1 to B4 after the first two
 
 // ------------------------------------------------------------------ About: the status of every input
 
 const CATEGORIES = { parameter_set: "Oscillation parameters", solar_model: "Solar model", earth_model: "Earth model",
-                     es_model: "ν–e elastic scattering", xsec_model: "CC and NC cross sections" };
+                     es_model: "ν–e elastic scattering", xsec_model: "CC and NC cross sections" }; // B1 to B4
+const STEP_OF = { parameter_set: "B1", solar_model: "B2", earth_model: "B3", es_model: "B4", xsec_model: "B4" };
 const BADGE = { current: "state of the art", legacy: "legacy", approximation: "approximation" };
 const CHANNELS = { cc_nue_ar40: "⁴⁰Ar", cc_nue_o16: "¹⁶O", cc_nue_d: "d CC", nc_d: "d NC", nc_ar40: "⁴⁰Ar NC" };
 const XS_NAMES = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
@@ -241,11 +243,11 @@ function statusTable(d) {
     const tables = category === "xsec_model" ? Object.entries(status[category] || {}) : [[null, status[category] || {}]];
     for (const [channel, table] of tables)
       for (const [key, s] of Object.entries(table))
-        rows.push(`<tr><td>${title}</td><td>${name(category, key, channel)}</td><td><span class="badge ${s.status}">${BADGE[s.status]}</span></td>
+        rows.push(`<tr><td><span class="bench-id">${STEP_OF[category]}</span></td><td>${title}</td><td>${name(category, key, channel)}</td><td><span class="badge ${s.status}">${BADGE[s.status]}</span></td>
           <td>${s.summary}${s.superseded_by ? ` <i>Instead: ${name(category, s.superseded_by, channel)}.</i>` : ""}</td></tr>`);
   }
   $("status-table").innerHTML = rows.length
-    ? `<table><thead><tr><th>Choice</th><th>Input</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";
+    ? `<table><thead><tr><th>Step</th><th>Choice</th><th>Input</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : "";
 }
 
 // ------------------------------------------------------------------ tabs, theme
