@@ -1,7 +1,12 @@
-# SNUfish benchmark B5: solar neutrino interaction rates per detector,
-# channel and flux component, before detector response.
+# SNUfish benchmark B5: the detector. Two parts with one spec.
 #
-# SNUfish computes the rates for every B4 contribution (one set per tool and
+# Part 1, interaction rates per detector, channel and flux component in true
+# neutrino energy, before detector response (grid `totals`).
+# Part 2, the detector response: observed spectra and rates above threshold
+# in observed energy, with a published response per detector (`response`,
+# grid `observed`).
+#
+# Part 1. SNUfish computes the rates for every B4 contribution (one set per tool and
 # model) as
 #   dR/dE = N_targets * Phi_c * s_c(E) * sum_alpha P_{e alpha}(E) sigma_alpha(E),
 # with P_{e alpha} = sum_i F_i |U_{alpha i}|^2 from the B2 reference
@@ -12,9 +17,9 @@
 # Status: DRAFT.
 
 id: B5_rates
-version: 0.3.0
+version: 0.4.0   # part 2 (detector response, grid `observed`) is optional: part-1 contributions stay valid
 status: draft
-title: Solar neutrino interaction rates
+title: "Detector: interaction rates and the detector response"
 
 # Spectral shapes and lines (shared by every solar model); the flux of each
 # component comes from the B2 solar model (benchmarks/B2_sun/models.yaml).
@@ -60,6 +65,14 @@ detectors:
     description: H2O, M = 18.015 g/mol, 99.757% 16O
     targets: {electron: 3.34285e+32, o16: 3.33472e+31}
     channels: {es: electron, cc_nue_o16: o16}
+  heavy_water:
+    description: "D2O (SNO, 99.92 % isotopic purity, arXiv:1109.0763), M = 20.03 g/mol: per kt 2 x 10^9 / 20.03 x N_A deuterons, 10 electrons per molecule"
+    targets: {electron: 3.007e+32, deuteron: 6.014e+31}
+    channels: {es: electron, cc_nue_d: deuteron}
+  scintillator_pc:
+    description: "pseudocumene + PPO (Borexino): (3.307 +- 0.003) x 10^31 electrons per 100 t, arXiv:1707.09279"
+    targets: {electron: 3.307e+32}
+    channels: {es: electron}
 
 # `es` sums the three ES channels weighted with P_{e alpha}; CC channels use P_ee.
 # Below `threshold_MeV` the cross section is zero by kinematics (missing
@@ -69,6 +82,7 @@ channels:
   es: {flavours: {nue: es_nue, numu: es_numu, nutau: es_nutau}, threshold_MeV: 0.0}
   cc_nue_ar40: {flavours: {nue: cc_nue_ar40}, threshold_MeV: 1.504}   # M(40K) - M(40Ar), atomic masses
   cc_nue_o16:  {flavours: {nue: cc_nue_o16}, threshold_MeV: 15.4}     # 16F ground state
+  cc_nue_d:    {flavours: {nue: cc_nue_d}, threshold_MeV: 1.442}      # d(nu_e, e-)pp
 
 # Spectra (rate per MeV of neutrino energy) in two binnings; totals use `linear`.
 spectrum_bins:
@@ -81,7 +95,8 @@ thresholds_MeV: [0.0, 5.0]
 # Open questions:
 # - The 8B shape table is truncated at 15.2 MeV (true endpoint ~16.5 MeV):
 #   take the full Winter et al. tail before using rates above 15 MeV.
-# - Observed spectra need detector response (the D library): smearing and efficiency.
+# - Part 2: the CC visible energy is E_nu - Q (no recoil, binding or quenching
+#   losses); for d(nu_e, e-)pp the electron shares E_nu - Q with the two protons.
 
 # --- Contributions: full-chain rates from tools that fold fluxes themselves ---
 # Each tool runs the same inputs (B2 solar-model fluxes and shapes, B2 reference daytime
@@ -92,8 +107,12 @@ thresholds_MeV: [0.0, 5.0]
 native_solar_model: {snowglobes: bs05_op}
 
 grids:
-  totals:
-    threshold: {start: 0.0, stop: 5.0, step: 5.0, unit: MeV}   # all energies; true E_nu > 5 MeV
+  totals:      # part 1
+    threshold: {start: 0.0, stop: 5.0, step: 5.0, unit: MeV}     # true E_nu: all energies and E_nu > 5 MeV
+  observed:    # part 2
+    threshold: {start: 0.0, stop: 20.0, step: 0.01, unit: MeV}   # observed energy: rate above each value
+# A contribution may give part 1, part 2 or both; each variant it gives has every grid it gives.
+optional_grids: [totals, observed]
 
 variants:
   b16_gs98: {required: true, solar_model: b16_gs98, description: SNUfish inputs for B16-GS98.}
@@ -138,14 +157,101 @@ quantities:
   water/cc_nue_o16/O15: water, cc_nue_o16, O15
   water/cc_nue_o16/F17: water, cc_nue_o16, F17
   water/cc_nue_o16/all: water, cc_nue_o16, all
+  heavy_water/es/pp: heavy_water, es, pp
+  heavy_water/es/pep: heavy_water, es, pep
+  heavy_water/es/hep: heavy_water, es, hep
+  heavy_water/es/Be7: heavy_water, es, Be7
+  heavy_water/es/B8: heavy_water, es, B8
+  heavy_water/es/N13: heavy_water, es, N13
+  heavy_water/es/O15: heavy_water, es, O15
+  heavy_water/es/F17: heavy_water, es, F17
+  heavy_water/es/all: heavy_water, es, all
+  heavy_water/cc_nue_d/pp: heavy_water, cc_nue_d, pp
+  heavy_water/cc_nue_d/pep: heavy_water, cc_nue_d, pep
+  heavy_water/cc_nue_d/hep: heavy_water, cc_nue_d, hep
+  heavy_water/cc_nue_d/Be7: heavy_water, cc_nue_d, Be7
+  heavy_water/cc_nue_d/B8: heavy_water, cc_nue_d, B8
+  heavy_water/cc_nue_d/N13: heavy_water, cc_nue_d, N13
+  heavy_water/cc_nue_d/O15: heavy_water, cc_nue_d, O15
+  heavy_water/cc_nue_d/F17: heavy_water, cc_nue_d, F17
+  heavy_water/cc_nue_d/all: heavy_water, cc_nue_d, all
+  scintillator_pc/es/pp: scintillator_pc, es, pp
+  scintillator_pc/es/pep: scintillator_pc, es, pep
+  scintillator_pc/es/hep: scintillator_pc, es, hep
+  scintillator_pc/es/Be7: scintillator_pc, es, Be7
+  scintillator_pc/es/B8: scintillator_pc, es, B8
+  scintillator_pc/es/N13: scintillator_pc, es, N13
+  scintillator_pc/es/O15: scintillator_pc, es, O15
+  scintillator_pc/es/F17: scintillator_pc, es, F17
+  scintillator_pc/es/all: scintillator_pc, es, all
 all_quantities_required: false
 
 columns:
   grid:      string, a key of `grids`
   variant:   string, a key of `variants`
   quantity:  string, detector/channel/component
-  threshold: float, MeV of true neutrino energy
-  value:     float, interactions per kton-year
+  threshold: "float, MeV: true neutrino energy (grid totals) or observed energy (grid observed)"
+  value:     "float, interactions per kton-year (above the threshold)"
 
 checks:
   range: [0.0, 1.0e+9]
+
+# --- Part 2: the detector response ---------------------------------------------
+# Each detector has one published response, as its experiment states it
+# (sources: docs/sources.md#detector-responses). It turns the interactions of
+# part 1 into a spectrum in observed energy, the same for every channel of the
+# detector: ES, the electron's kinetic energy T; CC, the visible energy
+# E_nu - Q (electron and de-excitation, no losses; Q in `visible_offset_MeV`).
+#   observed spectrum(E') = sum over true E of  rate(E) R(E -> E') eps(E'),
+# R a Gaussian of width `resolution` at the true energy (truncated at 0, the
+# rest in the first bin), eps the efficiency in observed energy. The threshold
+# is not part of the spectrum: the rates "above threshold" are the spectrum
+# summed above it. Daytime, B2 reference oscillations, as in part 1.
+response:
+  visible_offset_MeV: {cc_nue_ar40: 1.504, cc_nue_o16: 15.42, cc_nue_d: 1.442}
+  # Cross sections of SNUfish's folding (contributions state theirs in meta.yaml settings.cross_sections):
+  cross_sections:
+    es: {tool: snufish-reference, variant: es_bks}      # BKS 1995 radiative corrections, differential in T
+    cc_nue_ar40: {tool: marley, variant: ar40_marley2_bhattacharya2009}
+    cc_nue_o16: {tool: snowglobes, variant: default}
+    cc_nue_d: {table: reference/xsec/nakamura2002.yaml}  # Nakamura et al. 2002 down to threshold
+  # resolution: sigma(E) in MeV at the true energy E,
+  #   quadrature: sqrt((a sqrt(E))^2 + (b E)^2);  poly: c0 + c1 sqrt(E) + c2 E,
+  #   E the electron's total energy (`energy: total`, ES: T + m_e) or the observed energy itself (`kinetic`).
+  # efficiency: a constant `plateau`, or a published `curve` (reference/detectors/efficiency_curves.yaml,
+  #   zero below its first edge). uncertainties: 1 sigma, fractions (scale, sigma, rate), as published.
+  detectors:
+    water:
+      preset: Super-K IV
+      source: "arXiv:2312.12907: resolution eq. 9; threshold, live time and systematics table IV; efficiency fig. 28"
+      threshold_MeV: 3.49
+      resolution: {form: poly, coefficients: [-0.05525, 0.3162, 0.04572], energy: total}
+      efficiency: {curve: sk4_final}
+      uncertainties: {energy_scale: 0.0048, resolution: 0.03, normalisation: 0.011}
+    heavy_water:
+      preset: SNO salt phase
+      source: "nucl-ex/0502021: resolution eq. A3 (true electron kinetic energy), threshold T_eff = 5.5 MeV (sec. IX), systematics table V"
+      threshold_MeV: 5.5
+      resolution: {form: poly, coefficients: [-0.131, 0.383, 0.03731], energy: kinetic}
+      efficiency: {plateau: 1.0}   # no curve published for CC electrons (selection-efficiency systematic -0.1/+0.2 %, table XXXIV)
+      uncertainties: {energy_scale: 0.0115, resolution: 0.034}
+    scintillator_pc:
+      preset: Borexino Phase-II
+      source: "arXiv:1707.09279, sec. II: ~50 keV resolution at 1 MeV, trigger threshold ~50 keV (N_p > 20), cuts remove ~0.1 % of good events"
+      threshold_MeV: 0.05
+      resolution: {form: quadrature, a: 0.05, b: 0.0}   # 50 keV at 1 MeV, scaled with sqrt(E) (photostatistics: ~500 p.e./MeV)
+      efficiency: {plateau: 0.999}
+    argon:
+      preset: DUNE far detector
+      source: "arXiv:2008.06647: \"realistic energy resolution is closest to the 20 % level\" (sec. 6); step efficiency at a 5 MeV detected-energy threshold (fig. 15)"
+      threshold_MeV: 5.0
+      resolution: {form: quadrature, a: 0.0, b: 0.20}
+      efficiency: {plateau: 1.0}
+  # How a contribution states its response (meta.yaml settings.response):
+  #   "spec": the responses above; SNUfish compares point by point with its folding.
+  #   "own": the tool's own detector model, given next to data.parquet as response.parquet, one row per
+  #     bin: detector, channel, kind ("efficiency" or "smearing"), true_axis ("observed": the true value of
+  #     the observed energy, or "neutrino": E_nu, CC only), true_low, true_high (MeV; NaN for efficiency),
+  #     observed_low, observed_high (MeV), value (efficiency 0-1, or P(observed bin | true bin)). SNUfish
+  #     folds the same inputs through that response, so the comparison tests the chain, and shows the
+  #     tool's response against the spec's.
