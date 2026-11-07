@@ -1,6 +1,6 @@
 // SNUfish page: controls, computation (engine.js on the tables in data/) and display.
 import * as engine from "./engine.js";
-import { budgetPlot, distributionPlot, officialPlot, spectrumPlot } from "./plots.js";
+import { budgetPlot, distributionPlot, officialPlot, spectrumPlot, themeIcon } from "./plots.js";
 import { forStep, render as renderSources } from "./sources.js";
 import { CHECK_BASE, CHECKS, DAYS, NOMINAL_XSEC, PAPER_SETS, PRESETS as EXPERIMENTS, RESULTS, SK4_RESOLUTION, UNITS,
          reproduced } from "./checks.js";
@@ -655,7 +655,7 @@ function setupTheme() {
   const apply = () => {
     if (mode === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", mode);
-    $("theme").textContent = `Theme: ${mode}`;
+    themeIcon($("theme"), mode);
     render();
   };
   $("theme").addEventListener("click", () => {

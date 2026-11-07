@@ -17,7 +17,7 @@
   </div>
   <div class="actions">
     <a class="button ghost-link" href="rates.html">Calculator</a>
-    <button id="theme" class="ghost" type="button" aria-label="Switch colour theme">Theme: system</button>
+    <button id="theme" class="ghost icon" type="button" aria-label="Colour theme"></button>
   </div>
 </header>
 
@@ -43,8 +43,9 @@
         (the cross sections) and <b>B5 Detector</b> (the folding into a rate). Each step has its own spread: published uncertainties, a choice between models, or an
         approximation that some tools make. The table attributes every source of the calculator's error budget to the
         step it comes from, for five reference observables, counting state-of-the-art inputs only: published
-        uncertainties and the spread between competing current models. Approximations and legacy models are shown on
-        each benchmark's own page, never counted here.</p>
+        uncertainties, the spread between competing current models and, for B5, the statistics of 100 kt·yr.
+        Approximations and legacy models are shown on each benchmark's own page; the one exception is B3, whose single
+        current Earth model leaves no spread: the shift to PREM's average crust stands in for it.</p>
       <p class="hint" id="reference-note"></p>
     </section>
     <section class="card">
@@ -52,7 +53,9 @@
       <div id="matrix" class="matrix"></div>
       <p class="hint official-caption">Sampled: the 1σ spread from published uncertainties. Model range: the largest
         deviation from the nominal among the competing state-of-the-art alternatives (not a σ); legacy models are
-        plotted and labelled on each step's page but never counted here. B5 adds no input of its own.</p>
+        plotted and labelled on each step's page but never counted here. *B3: the shift to PREM's average crust and
+        ocean, an approximation standing in for the spread of the crust model. B5: the statistical 1σ of 100 kt·yr
+        (10 kt for 10 years); the detector response is the calculator's own input.</p>
     </section>
     <section class="card">
       <label class="inline">Observable <select id="overview-observable"></select></label>
@@ -162,7 +165,8 @@
       <h2><span class="bench-id">B5</span> Detector · interaction rates</h2>
       <p>B5 folds the B2 fluxes and oscillations and the B4 cross sections into interactions per kiloton-year, the
         input of every detector. So far it stops before the detector response (the calculator's B5 step adds a
-        generic one): it adds no input of its own, so no uncertainty in the table, and what it tests is the folding. Tools that compute the whole
+        generic one): it adds no physics input of its own, and what it tests is the folding. Its entry in the overview
+        is the statistics of a reference exposure, 100 kt·yr. Tools that compute the whole
         chain (SNOwGLoBES) are compared with SNUfish's folding of exactly the same fluxes and cross sections.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
@@ -185,12 +189,17 @@
           own oscillation parameters are kept: they are the scenario its number answers (an asymmetry at a stated
           Δm²).</li>
       </ul>
-      <p>For measurements the pull says how far each prediction lies from the measured value. Day-night asymmetries
+      <p>For measurements, the first table gives the pull: how far each prediction lies from the measured value, in
+        its error. Day-night asymmetries
         are in the papers' convention, (D − N)/mean. See also
         <a href="https://github.com/mantheys/snufish/blob/main/docs/crosschecks.md">docs/crosschecks.md</a>.</p>
     </section>
     <p id="discrepancy-status" class="status"></p>
-    <section class="card"><h3 class="plot-title"></h3><div id="plot-discrepancies" class="plot"></div></section>
+    <section class="card">
+      <h3 class="plot-title">Measurements: pulls of the predictions</h3>
+      <div id="pull-scale" class="scale"></div>
+      <div id="pull-table" class="matrix"></div>
+    </section>
     <section class="card">
       <label class="inline">Order <select id="discrepancy-order">
         <option value="size">Largest reproduction difference first</option>

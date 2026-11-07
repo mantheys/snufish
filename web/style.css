@@ -160,6 +160,7 @@ button {
   border: 1px solid var(--accent); background: var(--accent); color: #fff;
 }
 button.ghost { background: transparent; color: var(--text-primary); border-color: var(--border); }
+button.ghost.icon { display: inline-flex; align-items: center; justify-content: center; padding: 6px; line-height: 0; }
 button:disabled { opacity: 0.5; cursor: default; }
 .footnote { max-width: 70em; }
 
@@ -228,6 +229,7 @@ a.button.ghost-link { background: transparent; color: var(--text-primary); borde
 .matrix { overflow-x: auto; }
 .matrix td.num { color: var(--text-primary); white-space: nowrap; }
 .matrix td.empty { color: var(--text-muted); text-align: center; }
+.matrix td.proxy { font-style: italic; }
 .matrix th { white-space: nowrap; }
 label.inline { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; }
 label.inline select { width: auto; margin-top: 0; }
@@ -236,7 +238,7 @@ label.inline select { width: auto; margin-top: 0; }
 .matrix td.template { min-width: 15em; }
 .matrix td.template a.source { display: block; margin-top: 2px; font-size: 0.76rem; color: var(--accent); }
 .matrix td.num .unit { display: block; color: var(--text-muted); font-size: 0.74rem; white-space: normal; }
-/* the discrepancy table (13 columns) needs more than the 1100 px of the other tabs */
+/* the discrepancy table (9 columns) needs more than the 1100 px of the other tabs */
 body[data-tab="discrepancies"] .bench, body[data-tab="discrepancies"] .tabs { max-width: 1480px; }
 .matrix td.template a { color: var(--text-primary); text-decoration: none; }
 .matrix td.template a:hover { text-decoration: underline; }

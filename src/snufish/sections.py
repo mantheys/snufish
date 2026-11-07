@@ -8,10 +8,15 @@ For a few reference observables (``OBSERVABLES``), the engine's error budget
 on the app tables, each source assigned to the benchmark it comes from
 (``SECTION_OF``), the benchmarks being the calculator's steps: B1 the
 oscillation parameters, B2 the Sun (the solar fluxes, and the density and
-production profiles), B3 the Earth model, B4 the cross sections. B2 adds the
+production profiles), B3 the Earth model, B4 the cross sections, B5 the
+statistics of a reference exposure (``EXPOSURE``). B2 adds the
 approximations some solvers make about where neutrinos are produced
 (``TREATMENTS``): signed shifts of the observable, computed with the exact
-B2 solver (the tables hold each component's own profile only). With them,
+B2 solver (the tables hold each component's own profile only). B3 adds the
+Earth models that approximate the state of the art (reference/status.yaml),
+as signed shifts from it: with a single current Earth model, B3 has no
+model range, and the overview shows the shift to PREM's average crust
+(``CRUST_PROXY``, flagged ``overview``) in its place. With them,
 per benchmark, the curves its pages plot (solar profiles, P_ee per
 component, regeneration per Earth model) and the agreement between tools.
 """
@@ -32,6 +37,7 @@ from .spec import load_spec, pmns
 
 SET, SOLAR_MODEL = "juno_2025", "b23_mb22m"  # state of the art (reference/status.yaml)
 N_DRAWS, SEED = 300, 1
+EXPOSURE = 100.0  # kt yr: B5's statistics, e.g. 10 kt for 10 years
 OBSERVABLES = {
     "water_es_b8": dict(label="8B + hep ES in water, T > 3.49 MeV, Kamioka", quantity="rate",
                         setup=dict(detector="water", channel="es", components=("B8", "hep"), threshold=3.49,
@@ -56,6 +62,12 @@ SINGLE_DENSITY = 100 * 2 / 3
 TREATMENTS = {"B8": "every component on the 8B production profile",
               "centre": "every component produced at the centre",
               "single": f"one density for every component, n_e = {SINGLE_DENSITY:.1f} N_A/cm³ (NuFast-Earth's examples)"}
+# no competing current Earth model, so no B3 range: the overview shows the shift to PREM's average crust, the
+# standard reference Earth, in its place (the crust under the site is what moves A_DN; status.yaml)
+CRUST_PROXY = "prem_full"
+EARTH_LABELS = {"prem_full": "PREM's average crust and ocean (prem_full)",
+                "prem_four": "no crust, PREM's four main regions (prem_four)",
+                "prem_prob3": "four shells of constant density (prem_prob3)"}
 ENERGIES = np.geomspace(0.1, 20.0, 120)
 RADII = np.round(np.arange(0.0, 0.4001, 0.0025), 6)
 
@@ -87,6 +99,8 @@ def _section(source):
         return "B2"
     if source.startswith("measured B(GT)"):
         return "B4"
+    if source.startswith("statistics"):
+        return "B5"
     return SECTION_OF.get(source)
 
 
@@ -97,7 +111,7 @@ def impacts(inputs, tables, params):
     osc = engine.oscillation(params)
     models = list(inputs["solar_models"])
     for name, o in OBSERVABLES.items():
-        setup = engine.Setup(solar_model=SOLAR_MODEL, **o["setup"])
+        setup = engine.Setup(solar_model=SOLAR_MODEL, exposure=EXPOSURE, **o["setup"])
         q, night = o["quantity"], engine.needs_night(o["quantity"], setup.period)
         found, _ = engine.budget(inputs, tables, setup, params, q, N_DRAWS, SEED, solar_range="fluxes")
         central = found[0]["Central"]
@@ -128,6 +142,17 @@ def impacts(inputs, tables, params):
         for treatment, label in TREATMENTS.items():
             rows.append(dict(section="B2", source=label, kind="approximation",
                              shift=value(ProductionTreatment(treatment, tables)) - own))
+        # B3: the Earth models that approximate the state of the art, as shifts from it
+        if night:
+            for m in inputs["earth_models"]:
+                kind = engine.status(inputs, "earth_model", m)["status"]
+                if kind == "current":
+                    continue
+                row = dict(section="B3", source=EARTH_LABELS.get(m, m), kind=kind,
+                           shift=value(tables, setup.replace(earth_model=m)) - central)
+                if m == CRUST_PROXY:
+                    row["overview"] = True
+                rows.append(row)
         out[name] = dict(label=o["label"], quantity=q, central=central, rows=rows)
     return out
 
