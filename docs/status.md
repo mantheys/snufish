@@ -26,11 +26,25 @@ an issue.
 | PEANUTS | B2 (every solar model) and B3 `prem_prob3`. Not `prem_four`, `prem_full`: its Earth models are even polynomials in r and PREM's have odd powers. Not `native`: on non-constant shells its analytical evolutor is first order and breaks unitarity by up to 10⁻³. Its hard-coded matter potential is 3.6 × 10⁻⁴ (Sun) and 1.8 × 10⁻⁵ (Earth) above the specs' constants ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)) |
 | nuSQuIDS | B3 `prem_prob3`, `prem_four`, `prem_full`; `native` (its own spline PREM) is in the wrapper but not yet run. No B2: no production-profile or phase averaging (a pointwise numerical solution from r₀, about 60 CPU-hours per solar model on the B2 grid) |
 | SNUfish reference | repository URL in its catalogue entry; no DOI yet: the release files (CITATION.cff, .zenodo.json, docs/release.md) are prepared, no version is tagged or archived |
-| Full-chain rate tools other than SNOwGLoBES | none yet |
+| Full-chain rate tools other than SNOwGLoBES | none yet: B5 is the only benchmark with a single tool besides SNUfish (see the follow-ups below) |
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E<sub>ν</sub> only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
 | Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %), but no tables are published: [arXiv:1907.03379](https://arxiv.org/abs/1907.03379) v2 ships a Mathematica notebook (the formulas of its app. K, example values at ω = 0.3 GeV only). A contribution needs Mathematica or a port of the notebook. BKS and Marciano & Parsa bound it at the solar precision |
 | 3D Earth | Two current Earth models make B3's range: `prem_crust1` (the CRUST1.0 column of each site above PREM, radial) and `prem_crust1_3d` (the CRUST1.0 crust along every night chord, solved chord by chord with NuFast-Earth's single-trajectory mode); they differ by ≤ 0.17 % of A<sub>DN</sub>. Missing: a 3D mantle (Han et al. use SAW642AN) and a second crust model (LITHO1.0): Han et al.'s 3D shifts differ from SNUfish's by ~0.05 pp (3–4 % of A<sub>DN</sub>) at LNGS and SURF ([crosschecks.md](crosschecks.md#crust-along-each-chord-3d)), more than the current range |
+
+### Follow-ups of the tool comparison
+
+The goal is at least two tools besides the SNUfish reference on every
+benchmark. B2 and B3 have it (NuFast-Earth and PEANUTS; NuFast-Earth,
+PEANUTS and nuSQuIDS); what is left from the PEANUTS and nuSQuIDS
+contributions ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)):
+
+| Item | Where | Notes |
+|---|---|---|
+| **Finer Magnus step for the B3 reference** | `reference/earth.py` `CONVERGED_STEP_KM` | 6.25 km leaves P<sub>iₑ</sub> within 1.5 × 10⁻⁶ on `prem_four` and `prem_full`, not the 4 × 10⁻⁷ once quoted; 1.5625 km agrees with nuSQuIDS to 10⁻⁸. About 4× the reference's time, and it rewrites the reference B3 contribution and the B5 night built on it (`snufish reference B3_earth`, then `snufish build`). No product moves by more than 10⁻⁴ of the regeneration. |
+| **nuSQuIDS `native`** | `contributions/nusquids/scripts` | Its own Earth (PREM every 0.005 R<sub>⊕</sub>, Akima spline) is in the wrapper: `python run_b3.py --variants prem_prob3 prem_four prem_full native`, about two more hours of GSL on 8 cores (the other variants come from the `out/` cache). |
+| **A second full-chain tool for B5** | B5 spec | SNOwGLoBES is the only one, so B5 does not yet meet the two-tool goal. Any rate code that folds the B2 fluxes and B4 cross sections into interactions per kt·yr can contribute (part 1), or with its own detector response (part 2). |
+| **Tomalak & Hill ES cross section (B4)** | B4 spec | No tables are published, only a Mathematica notebook ([arXiv:1907.03379](https://arxiv.org/abs/1907.03379) v2). Evaluating it on the B4 grid with Mathematica (or the free Wolfram Engine), or porting its app. K total cross section, would give B4's ES a third radiative-correction calculation and the most precise one (0.2–0.4 %). Asking the authors for tables is the cheaper route. |
 
 ### Physics scope
 
