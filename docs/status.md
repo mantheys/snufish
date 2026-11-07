@@ -15,7 +15,7 @@ an issue.
 | **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
 | **Observed spectra in B5** | B5 spec | B5 rates are in true neutrino energy before detector response; observed spectra wait for D. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
-| **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T_min) for detector thresholds is not a benchmark quantity (the engine computes it). |
+| **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T<sub>min</sub>) for detector thresholds is not a benchmark quantity (the engine computes it). |
 | **Spectral-shape variants** | B2 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
 | **Solar-model flux correlations in B5** | B2 spec | The B23 correlation matrices are used by `snufish budget` and the engine, not by the B5 build. |
 
@@ -27,7 +27,7 @@ an issue.
 | PEANUTS | catalogue entry only (draft, fields `null`); no contribution, although its data directory supplies the B16 and BS05 tables |
 | SNUfish reference | repository URL in its catalogue entry; no DOI yet: the release files (CITATION.cff, .zenodo.json, docs/release.md) are prepared, no version is tagged or archived |
 | Full-chain rate tools other than SNOwGLoBES | none yet |
-| Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E_ν only); no NC on ¹⁶O |
+| Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar only from SNOwGLoBES's table (unpublished QRPA, labelled an approximation, no visible-energy model: cut in E<sub>ν</sub> only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
 | Tomalak & Hill ES cross section | the most precise ν–e calculation (0.2–0.4 %); BKS and Marciano & Parsa bound it at the solar precision |
 | 3D Earth | `prem_crust1` puts the CRUST1.0 column of each site above PREM's Moho, but stays radial. Next: per night direction (the Sun's position over a year at the site's latitude and longitude), the chord's entry point and its CRUST1.0 column, solved with NuFast-Earth's single-trajectory mode, and a 3D mantle model; then a second current Earth model, and an Earth range. Until then the Earth range is empty (one state-of-the-art model) |
@@ -47,18 +47,18 @@ an issue.
   The share is not derived from the site's latitude, and the calculator
   always uses halves.
 - **Earth–Sun distance optional, as day and night averages only.** By
-  default fluxes are at 1 AU (the convention of published A_DN);
+  default fluxes are at 1 AU (the convention of published A<sub>DN</sub>);
   `Setup(orbit=True)` scales day and night rates by the site's mean
   (1 AU/R)² ([crosschecks.md](crosschecks.md#earthsun-distance)). Not
-  modelled: deeper nights near perihelion (< 0.2 % of A_DN), time-resolved
+  modelled: deeper nights near perihelion (< 0.2 % of A<sub>DN</sub>), time-resolved
   seasonal spectra, and the 3D Earth (radial PREM variants only).
 - **B3's Earth models end in PREM's 3 km of ocean.** The engine and the
   calculator default to `prem_crust1` (the CRUST1.0 column of each site
   above PREM's Moho, [crosschecks.md](crosschecks.md#local-crust)), but the
   B3 benchmark has no crust variant: its detector sits in the ocean, which
-  shifts A_DN by −2.4 % to +3.8 % against the local crust at the five sites.
+  shifts A<sub>DN</sub> by −2.4 % to +3.8 % against the local crust at the five sites.
 - **Detector at the surface.** B3 sets the detector depth to 0.
-- **CC visible energy is E_ν − Q** with no neutron, binding or quenching
+- **CC visible energy is E<sub>ν</sub> − Q** with no neutron, binding or quenching
   losses; NC on deuterium deposits 6.25 MeV (capture on ²H in pure D₂O),
   so SNO's salt phase (capture on ³⁵Cl) is not modelled for NC.
 - **Radial path out of the Sun.** Irrelevant while propagation is
@@ -68,12 +68,12 @@ an issue.
 
 | Approximation | Size | Where |
 |---|---|---|
-| Adiabatic F_i in B2 | O(10⁻⁶) for the B2 parameters | `reference/sun.py` |
-| App tables instead of exact solvers | 2 × 10⁻⁴ (rates), 1 % (A_DN) | `engine.TableProbabilities` |
-| NuFast-Earth's mean density per region crossing (the engine's night for `prem_four`, `prem_full`, `prem_crust1`) | ⁸B A_DN −0.2 to −1.9 % (`prem_crust1`, `prem_full`), +0.6 to +1.3 % (`prem_four`) against the B3 reference ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density)) | `scan.night_grid` |
-| θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A_DN over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
+| Adiabatic F<sub>i</sub> in B2 | O(10⁻⁶) for the B2 parameters | `reference/sun.py` |
+| App tables instead of exact solvers | 2 × 10⁻⁴ (rates), 1 % (A<sub>DN</sub>) | `engine.TableProbabilities` |
+| NuFast-Earth's mean density per region crossing (the engine's night for `prem_four`, `prem_full`, `prem_crust1`) | ⁸B A<sub>DN</sub> −0.2 to −1.9 % (`prem_crust1`, `prem_full`), +0.6 to +1.3 % (`prem_four`) against the B3 reference ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density)) | `scan.night_grid` |
+| θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A<sub>DN</sub> over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
 | ⁸B shape truncated at 15.2 MeV (true endpoint ~16.5 MeV) | ~10⁻⁴ of the flux; matters above 15 MeV (⁸B background to hep) | `reference/ssm/shapes/` |
-| B16 and BS05 density beyond 0.5 R_☉ | exponential tail fit, residual ≤ 0.0033 in log₁₀ n_e | `models.yaml` `tail` |
+| B16 and BS05 density beyond 0.5 R<sub>☉</sub> | exponential tail fit, residual ≤ 0.0033 in log₁₀ n<sub>e</sub> | `models.yaml` `tail` |
 | Cross sections below the B4 grid (0.02 MeV) | < 0.01 % of any rate | B5 spec |
 | NaN in a cross-section table counted as zero | a lower bound; `Coverage` reports the covered fraction | build, engine |
 | BKS QED end-point divergence clipped | last ~10⁻³ of the recoil range | `reference/radiative.py` |
@@ -87,17 +87,17 @@ an issue.
 - DUNE solar rate tables (thesis ch. 3, paper app. A;
   [dune-solar-tables.md](dune-solar-tables.md)): SNOwGLoBES-style tables are reproduced with
   `ar40_marley1_allowed` (MARLEY v1.2.1's cross section), `nu_threshold`, `nc_ar40` and
-  `night_fraction`; the thesis's T_e > 8 and 10 MeV CC values (+16 %, −28 %)
+  `night_fraction`; the thesis's T<sub>e</sub> > 8 and 10 MeV CC values (+16 %, −28 %)
   are not reproduced. The paper's appendix A (CC 482, ES 141, NC 18.8) came
-  from a rate spectrum folded as a flux (P_ee applied twice); the paper's
+  from a rate spectrum folded as a flux (P<sub>ee</sub> applied twice); the paper's
   rates now come from `scripts/dune_phase1_rates.py`
   ([dune-solar-tables.md](dune-solar-tables.md#phase-i-paper)).
 - SOLAR's Earth density model: set in its NuFast-Earth Python binding, which
   is outside its repository; `night_mode="solar"` matches its depth, latitude
   and nadir PDF but not necessarily its Earth.
-- SOLAR's Sun: P_ee from production at one density, ρY_e = 90 g/cm³
+- SOLAR's Sun: P<sub>ee</sub> from production at one density, ρY<sub>e</sub> = 90 g/cm³
   (`rhoYe_sun`, "Prob3++ match"), against the ⁸B production profile here:
-  −0.6 % on the CC rate above E_ν = 5 MeV at Δm²₂₁ = 6 × 10⁻⁵. Not an option
+  −0.6 % on the CC rate above E<sub>ν</sub> = 5 MeV at Δm²₂₁ = 6 × 10⁻⁵. Not an option
   in the engine.
 
 - Jiangmen latitude 22.12°: the JUNO paper gives 22° N; the hundredths are
@@ -111,20 +111,20 @@ an issue.
 
 From [crosschecks.md](crosschecks.md):
 
-- Super-K's expected A_DN for the SK-I range at Δm²₂₁ = 4.8 × 10⁻⁵ eV²:
+- Super-K's expected A<sub>DN</sub> for the SK-I range at Δm²₂₁ = 4.8 × 10⁻⁵ eV²:
   −3.84 % published, −3.32 % here (13.5 % off) while 6.1 and
   7.5 × 10⁻⁵ eV² agree to 2.5 %; Super-K's own 2014 paper expects −3.3 %
   there, as SNUfish does.
-- Capozzi, Li, Zhu & Beacom's DUNE CC A_DN at 4.85 × 10⁻⁵ eV²: −7.90 %
+- Capozzi, Li, Zhu & Beacom's DUNE CC A<sub>DN</sub> at 4.85 × 10⁻⁵ eV²: −7.90 %
   published, −6.87 % here; the ten- and four-region PREM bracket it.
-- JUNO's −1.6 % expected A_DN at 7.5 × 10⁻⁵ eV² in its text, against
+- JUNO's −1.6 % expected A<sub>DN</sub> at 7.5 × 10⁻⁵ eV² in its text, against
   −1.4 % from its own table 1 and −1.38 % here.
 
 ## Open questions before freezing the specs
 
 - **B3**: extend the energy grid down to 0.1 MeV for pp and ⁷Be (Earth
   effects are tiny there)? Add `prem_crust1` per site as a variant?
-- **B4**: add σ(E; T > T_min) for the detectors' ES thresholds?
+- **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
 - **B5**: take the full Winter et al. ⁸B tail before using rates above
   15 MeV; night and annual quantities in contributions; observed spectra
   once D exists.

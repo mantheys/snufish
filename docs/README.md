@@ -25,8 +25,8 @@ Conventions used throughout:
 - Energies in MeV; fluxes in cm⁻² s⁻¹ at the Earth; cross sections in cm²
   per target; rates in interactions per kiloton-year (Julian year,
   3.15576 × 10⁷ s) unless a unit is given.
-- Day-night asymmetry A_DN = 2(N − D)/(N + D) (positive when the night rate
-  is higher). Super-K and JUNO quote (D − N)/((D + N)/2) = −A_DN; numbers
+- Day-night asymmetry A<sub>DN</sub> = 2(N − D)/(N + D) (positive when the night rate
+  is higher). Super-K and JUNO quote (D − N)/((D + N)/2) = −A<sub>DN</sub>; numbers
   compared with them are given in their convention.
 - Normal ordering, neutrinos only.
 - Flux components: pp, pep, hep, Be7 (⁷Be), B8 (⁸B), N13, O15, F17.

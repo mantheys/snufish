@@ -20,8 +20,28 @@ export function alpha(hex, a) {
 
 const FONT = '"DejaVu Sans", Verdana, Geneva, sans-serif';
 
+// Symbols with a subscript, as HTML: Plotly titles, hover labels and the HTML legends render <sub>. A <select> option
+// cannot, so plain() spells them out there; tex() writes them for plotipus (matplotlib mathtext).
+export const ADN = "A<sub>DN</sub>";
+// math(): the symbols that text from the data files (status.yaml, sections.json) writes plainly, as HTML subscripts
+const SYMBOLS = /(^|[^\w])(A_DN|P_ee|E_vis|T_eff|E_nu|E_ν|g_A|n_e|N_A|θ_W|φ_CC|φ_NC|φ_ES|m_Z|p_e|E_e|E_level|T_e)(?![\w])/g;
+export const math = (s) => String(s ?? "").replace(SYMBOLS, (m, pre, sym) => {
+  const [base, index] = sym.split("_");
+  return `${pre}${base}<sub>${index === "nu" ? "ν" : index}</sub>`;
+});
+const SUBSCRIPT = { a: "ₐ", e: "ₑ", h: "ₕ", i: "ᵢ", j: "ⱼ", k: "ₖ", l: "ₗ", m: "ₘ", n: "ₙ", o: "ₒ", p: "ₚ", r: "ᵣ", s: "ₛ", t: "ₜ",
+                    u: "ᵤ", v: "ᵥ", x: "ₓ", 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉" };
+export const plain = (s) => String(s ?? "").replace(/^A<sub>DN<\/sub>/, "Day-night asymmetry").replace(/A<sub>DN<\/sub>/g, "day-night asymmetry")
+  .replace(/<sub>(.*?)<\/sub>/g, (m, x) => ([...x].every((ch) => SUBSCRIPT[ch]) ? [...x].map((ch) => SUBSCRIPT[ch]).join("")
+    : /^[α-ω]$/.test(x) ? x : `(${x})`))
+  .replace(/<sup>(.*?)<\/sup>/g, "^$1").replace(/<[^>]+>/g, "");
+const TEX = { "ν": "\\nu", "μ": "\\mu", "τ": "\\tau" };
+const texIndex = (x) => [...x].map((ch) => TEX[ch] || ch).join("");
+export const tex = (s) => String(s ?? "").replace(/<sub>(.*?)<\/sub><sup>(.*?)<\/sup>/g, (m, a, b) => `$_{${texIndex(a)}}^{${b}}$`)
+  .replace(/<sub>(.*?)<\/sub>/g, (m, a) => `$_{${texIndex(a)}}$`).replace(/<sup>(.*?)<\/sup>/g, (m, b) => `$^{${b}}$`);
+
 export function layout(c, node, title, xTitle, yTitle, extra = {}) {
-  node.previousElementSibling.textContent = title; // the card's heading: Plotly's toolbar would cover a title in the plot
+  node.previousElementSibling.innerHTML = title; // the card's heading: Plotly's toolbar would cover a title in the plot
   const axis = { showline: true, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
                  tickwidth: 1, tickcolor: c.axis, minor: { ticks: "inside", ticklen: 3, tickcolor: c.axis, showgrid: false },
                  showgrid: false, zeroline: false, tickfont: { color: c.secondary, size: 12 },
@@ -83,7 +103,7 @@ export function htmlLegend(node, items, key = "") {
   const swatch = ({ colour, dash, fill }) => (fill ? `<i style="background:${colour}"></i>`
     : `<svg width="22" height="8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" stroke="${colour}" stroke-width="2.4"${dash ? ' stroke-dasharray="5 3"' : ""}/></svg>`);
   legend.innerHTML = (key ? `<span class="key">${key}</span>` : "")
-    + items.map((x) => `<span${x.title ? ` title="${x.title}"` : ""}>${swatch(x)}${x.label}</span>`).join("");
+    + items.map((x) => `<span${x.title ? ` title="${x.title}"` : ""}>${swatch(x)}<span class="t">${x.label}</span></span>`).join("");
   return swatch;
 }
 
@@ -108,10 +128,10 @@ export function spectrumPlot(node, result) {
     const high = a.map((v, b) => (Number.isFinite(v) ? 100 * percentile(draws.map((x) => x[b]), 84) : null));
     traces.push(...bandTraces(c, edges, low, high));
     traces.push({ ...stairs(edges, a), mode: "lines", name: "central",
-                  line: { color: c.text, width: 2 }, hovertemplate: "%{y:.3f} %<extra>A_DN</extra>" });
+                  line: { color: c.text, width: 2 }, hovertemplate: `%{y:.3f} %<extra>${ADN}</extra>` });
     htmlLegend(node, traces.filter((t) => t.showlegend !== false).map((t) => (t.fill
       ? { label: t.name, colour: t.fillcolor, fill: true } : { label: t.name, colour: t.line.color })));
-    return Plotly.react(node, traces, layout(c, node, "Day-night asymmetry per energy bin", spectra.observable, "A_DN (%)",
+    return Plotly.react(node, traces, layout(c, node, "Day-night asymmetry per energy bin", spectra.observable, `${ADN} (%)`,
       { showlegend: false, xaxis: energyAxis(edges, spectra.day, 1e-9 * Math.max(...spectra.day), node.clientWidth < 420), hovermode: "x unified",
         shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 0, y1: 0, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
   }
@@ -189,8 +209,8 @@ export function distributionPlot(node, result, measured) {
   const trace = { type: "bar", x: counts.map((_, i) => start + (i + 0.5) * width), y: counts, width: width * 0.92,
                   marker: { color: alpha(c.sampled, 0.8) }, name: `${values.length} draws`,
                   hovertemplate: `%{x:.4g} ${unit}: %{y} draws<extra></extra>` };
-  const name = { adn: "A_DN", ratio: "Rate ÷ unoscillated" }[quantity] || "Rate";
-  return Plotly.react(node, [trace], layout(c, node, quantity === "adn" ? "Sampled A_DN and model ranges" : "Sampled rates and model ranges", `${name} (${unit})`, "Draws",
+  const name = { adn: ADN, ratio: "Rate ÷ unoscillated" }[quantity] || "Rate";
+  return Plotly.react(node, [trace], layout(c, node, quantity === "adn" ? `Sampled ${ADN} and model ranges` : "Sampled rates and model ranges", `${name} (${unit})`, "Draws",
     { shapes, annotations, showlegend: false, bargap: 0, margin: { l: 50, r: 16, t: 24, b: 48 },
       xaxis: { range: [lo - pad, hi + pad], exponentformat: "power" }, yaxis: { range: [0, top * (1.25 + 0.2 * ranges.length)] } }), CONFIG);
 }

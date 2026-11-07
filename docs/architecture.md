@@ -69,8 +69,8 @@ contribution against its spec:
   table);
 - physics checks: B2 and B3 unitarity (F₁ + F₂ + F₃ = 1,
   P₁ₑ + P₂ₑ + P₃ₑ = 1 to 10⁻⁶), the B3 vacuum limit at the horizon
-  (P_iₑ = |U_eᵢ|² at cos η = 0, to 10⁻⁶), and for B4
-  σ(νₑe) > σ(ν_μe), σ(ν_τe) wherever given.
+  (P<sub>ie</sub> = |U<sub>ei</sub>|² at cos η = 0, to 10⁻⁶), and for B4
+  σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e) wherever given.
 
 ## Build
 
@@ -81,7 +81,7 @@ cells, in `build/data/` (never committed). It also derives:
 
 - `B2_Fluxes`, `B2_Profiles`, `B2_Production`: flux ratios to the reference solar model, electron density and
   production profiles;
-- `B23_DayNight`: day and night P_ee and A_DN from every B2 × B3 pair
+- `B23_DayNight`: day and night P<sub>ee</sub> and A<sub>DN</sub> from every B2 × B3 pair
   (tool, solar model, Earth model, site, component);
 - `B5_Spectrum`, `B5_Totals`: SNUfish's folding of every B4 cross-section
   model with every B2 solar model and the B2 reference oscillations;
@@ -110,7 +110,7 @@ The methods are in [methods.md](methods.md).
 
 ## Engine
 
-`snufish.engine` computes observed spectra, totals, A_DN, flux ratios and
+`snufish.engine` computes observed spectra, totals, A<sub>DN</sub>, flux ratios and
 error budgets from two things:
 
 - an **inputs dict** (fluxes, spectral shapes, cross-section tables,

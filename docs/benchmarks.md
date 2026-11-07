@@ -21,9 +21,9 @@ their `version`.
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
-Δm²₂₁ = 7.49 × 10⁻⁵ eV², Δm²₃₁ = 2.534 × 10⁻³ eV²); G_F = 1.1663788 ×
+Δm²₂₁ = 7.49 × 10⁻⁵ eV², Δm²₃₁ = 2.534 × 10⁻³ eV²); G<sub>F</sub> = 1.1663788 ×
 10⁻⁵ GeV⁻² (PDG 2024), ħc = 197.3269804 MeV fm (CODATA 2018),
-N_A = 6.02214076 × 10²³ mol⁻¹. The matter potential is V = √2 G_F N_e.
+N<sub>A</sub> = 6.02214076 × 10²³ mol⁻¹. The matter potential is V = √2 G<sub>F</sub> N<sub>e</sub>.
 
 ---
 
@@ -66,53 +66,53 @@ A registry of ten standard solar models in one format, written by
 | `b23_mb22p` | B23 / SF-III | MB22 (photospheric) | yes | yes |
 
 Per model: the flux of each of the eight components, its fractional error
-and (B23) correlation matrix, the table of r/R_☉, log₁₀ n_e (N_A cm⁻³) and
-the production density of each component per unit r/R_☉, the source file
+and (B23) correlation matrix, the table of r/R<sub>☉</sub>, log₁₀ n<sub>e</sub> (N<sub>A</sub> cm⁻³) and
+the production density of each component per unit r/R<sub>☉</sub>, the source file
 and its SHA-256.
 
 Conventions fixed by the spec:
 
-- Beyond a table's last radius (B16 and BS05 stop at 0.5 R_☉),
-  log₁₀ n_e = intercept + slope · r, fitted to the table for r > 0.4
+- Beyond a table's last radius (B16 and BS05 stop at 0.5 R<sub>☉</sub>),
+  log₁₀ n<sub>e</sub> = intercept + slope · r, fitted to the table for r > 0.4
   (`tail` in `models.yaml`, with its maximum residual). Below the first
-  radius, n_e and the production densities are constant.
+  radius, n<sub>e</sub> and the production densities are constant.
 - Checks, run by `snufish validate` (the solar models have no contributions: they run on
   the registry): fluxes positive, flux errors positive, correlation
   matrices symmetric with unit diagonal and positive semi-definite; each
   production profile integrates to 1 (to 10⁻⁶) and is never negative;
-  n_e falls monotonically beyond r = 0.05; a fitted tail joins its table
-  (to 0.01 in log₁₀ n_e).
+  n<sub>e</sub> falls monotonically beyond r = 0.05; a fitted tail joins its table
+  (to 0.01 in log₁₀ n<sub>e</sub>).
 - Spectral shapes are shared by all models (B5).
 
 **Products** (`snufish build`): `B2_Fluxes` (flux, ratio to `b16_gs98`,
-error), `B2_Profiles` (log n_e against radius), `B2_Production`
+error), `B2_Profiles` (log n<sub>e</sub> against radius), `B2_Production`
 (production densities).
 
 ### Part 2: MSW propagation
 
 Each contribution gives the mass-eigenstate fractions that leave the Sun,
 
-  F_i(E, r₀) = P(νₑ produced at radius r₀ → νᵢ at the solar surface),
+  F<sub>i</sub>(E, r₀) = P(νₑ produced at radius r₀ → νᵢ at the solar surface),
 
 phase-averaged: the Sun–Earth distance averages all phases, so mass
-eigenstates arrive incoherently. The exact pointwise F_i carries O(1/γ)
+eigenstates arrive incoherently. The exact pointwise F<sub>i</sub> carries O(1/γ)
 terms (γ ~ 10³, the adiabaticity at the MSW resonance) that oscillate with
 the phase accumulated across the Sun and vanish over any energy
-resolution; for these parameters F_i equals the adiabatic |V_eᵢ(r₀)|² to
+resolution; for these parameters F<sub>i</sub> equals the adiabatic |V<sub>ei</sub>(r₀)|² to
 O(10⁻⁶).
 
 | Setting | Value |
 |---|---|
 | Quantities | `F1`, `F2`, `F3` |
-| Grid `map` | E = 0.1–20 MeV, step 0.1 (200 points); r₀/R_☉ = 0–0.3, step 0.005 (61 points; 99 % of every flux is below 0.27) |
-| Sun | R_☉ = 695,700 km (IAU 2015); radial path from r₀ to the surface |
-| Variants | `b16_gs98` (required: the tool comparison), every other solar model of part 1, and `exponential` (Bahcall's n_e = 245 exp(−10.54 r/R_☉) N_A cm⁻³, with the B16-GS98 production profiles) |
+| Grid `map` | E = 0.1–20 MeV, step 0.1 (200 points); r₀/R<sub>☉</sub> = 0–0.3, step 0.005 (61 points; 99 % of every flux is below 0.27) |
+| Sun | R<sub>☉</sub> = 695,700 km (IAU 2015); radial path from r₀ to the surface |
+| Variants | `b16_gs98` (required: the tool comparison), every other solar model of part 1, and `exponential` (Bahcall's n<sub>e</sub> = 245 exp(−10.54 r/R<sub>☉</sub>) N<sub>A</sub> cm⁻³, with the B16-GS98 production profiles) |
 | Columns | `grid, variant, quantity, energy, radius, value` |
 | Checks | values in [0, 1]; F₁ + F₂ + F₃ = 1 to 10⁻⁶ |
 
-**Products**: `B2_Energy` (F_i against energy in radius bins) and
-`B2_Average` (F_i averaged over each component's production profile, and
-the daytime P_ee = Σᵢ F_i |U_eᵢ|²). Plots of both parts: `plotipus run b2`.
+**Products**: `B2_Energy` (F<sub>i</sub> against energy in radius bins) and
+`B2_Average` (F<sub>i</sub> averaged over each component's production profile, and
+the daytime P<sub>ee</sub> = Σᵢ F<sub>i</sub> |U<sub>ei</sub>|²). Plots of both parts: `plotipus run b2`.
 
 ---
 
@@ -121,7 +121,7 @@ the daytime P_ee = Σᵢ F_i |U_eᵢ|²). Plots of both parts: `plotipus run b2`
 Each contribution gives P(νᵢ → νₑ) for a pure mass eigenstate νᵢ arriving
 at the Earth and crossing it along the chord set by the nadir angle η.
 Solar physics enters only through B2, so B3 compares Earth propagation
-codes alone. P_iₑ depends only on the νₑ row of U (θ₁₂, θ₁₃): θ₂₃ and δ
+codes alone. P<sub>ie</sub> depends only on the νₑ row of U (θ₁₂, θ₁₃): θ₂₃ and δ
 must not change it.
 
 | Setting | Value |
@@ -129,9 +129,9 @@ must not change it.
 | Quantities | `P1e`, `P2e`, `P3e` |
 | Grid `map` | E = 1–20 MeV, step 0.1 (191); cos η = 0–1, step 0.01 (101): energy structure point by point |
 | Grid `exposure` | E = 1–20 MeV, step 0.5 (39); cos η = 0–1, step 0.001 (1001): fine enough for night averages (the night-weighted regeneration converges to ~10⁻³; the `map` step is off by up to ~15 %) |
-| Earth | R_⊕ = 6371 km, detector at the surface |
+| Earth | R<sub>⊕</sub> = 6371 km, detector at the surface |
 | Columns | `grid, variant, quantity, energy, cos_nadir, value` |
-| Checks | values in [0, 1]; P₁ₑ + P₂ₑ + P₃ₑ = 1 to 10⁻⁶; P_iₑ = |U_eᵢ|² at cos η = 0 to 10⁻⁶ |
+| Checks | values in [0, 1]; P₁ₑ + P₂ₑ + P₃ₑ = 1 to 10⁻⁶; P<sub>ie</sub> = |U<sub>ei</sub>|² at cos η = 0 to 10⁻⁶ |
 
 Earth models, written out in the spec so that every tool solves the same
 problem (copied from NuFast-Earth `src/Earth.cpp` @ 327586d):
@@ -158,10 +158,10 @@ The `snufish-reference` contribution solves `prem_prob3` exactly and
 `prem_four`, `prem_full` with a converged Magnus integration
 ([methods.md](methods.md#earth-crossing-b3-reference)).
 
-**Products**: `B3_Energy` (P_iₑ and the regeneration P_iₑ − |U_eᵢ|²
+**Products**: `B3_Energy` (P<sub>ie</sub> and the regeneration P<sub>ie</sub> − |U<sub>ei</sub>|²
 against energy at selected nadir angles), `B3_Nadir` (against cos η in
 energy bins), `B3_Map` (the full maps), `B3_Night` (night averages per
-site). With B2: `B23_DayNight` (P_ee day and night and A_DN per tool,
+site). With B2: `B23_DayNight` (P<sub>ee</sub> day and night and A<sub>DN</sub> per tool,
 solar model, Earth model, site and component). Plots: `plotipus run b3`
 (B2 × B3 figures are in the `b2` list).
 
@@ -175,8 +175,8 @@ a fixed energy grid. B5 folds every contributed model into rates.
 | Channel | Reaction | Target |
 |---|---|---|
 | `es_nue` | νₑ + e⁻ → νₑ + e⁻, all recoil energies | electron |
-| `es_numu` | ν_μ + e⁻ → ν_μ + e⁻ | electron |
-| `es_nutau` | ν_τ + e⁻ → ν_τ + e⁻ | electron |
+| `es_numu` | ν<sub>μ</sub> + e⁻ → ν<sub>μ</sub> + e⁻ | electron |
+| `es_nutau` | ν<sub>τ</sub> + e⁻ → ν<sub>τ</sub> + e⁻ | electron |
 | `cc_nue_ar40` | νₑ + ⁴⁰Ar → e⁻ + ⁴⁰K* | ⁴⁰Ar nucleus |
 | `cc_nue_o16` | νₑ + ¹⁶O → e⁻ + ¹⁶F | ¹⁶O nucleus |
 | `cc_nue_c13` | νₑ + ¹³C → e⁻ + ¹³N | ¹³C nucleus |
@@ -185,16 +185,16 @@ a fixed energy grid. B5 folds every contributed model into rates.
 | Setting | Value |
 |---|---|
 | Grid `map` | E = 0.02–20 MeV, step 0.02 (1000 points; fine enough for pp, endpoint 0.42 MeV) |
-| Constants | m_e = 0.51099895 MeV; sin²θ_W = 0.23857 (PDG 2024, MS-bar at Q² → 0, for the tree-level reference) |
+| Constants | m<sub>e</sub> = 0.51099895 MeV; sin²θ<sub>W</sub> = 0.23857 (PDG 2024, MS-bar at Q² → 0, for the tree-level reference) |
 | Columns | `grid, variant, quantity, energy, value` (cm² per target; NaN outside a tool's table) |
-| Checks | values in [0, 10⁻³⁰], NaN allowed, never negative; σ(νₑe) > σ(ν_μe), σ(ν_τe) |
+| Checks | values in [0, 10⁻³⁰], NaN allowed, never negative; σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e) |
 
 A tool contributes only the channels it has. Variants:
 
 | Variant | Channel | Model |
 |---|---|---|
 | `default` (required) | all | the tool's own choice per channel |
-| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν_μ,τ against its tree level) |
+| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν<sub>μ,τ</sub> against its tree level) |
 | `ar40_klmv` | ⁴⁰Ar | KLMV (Kolbe, Langanke, Martínez-Pinedo, Vogel), SNOwGLoBES table |
 | `ar40_marley` | ⁴⁰Ar | MARLEY, allowed approximation, B(GT) from ⁴⁰Ar(p,n) (Bhattacharya 2009); SNOwGLoBES table, zero below 5 MeV |
 | `ar40_marley1` | ⁴⁰Ar | MARLEY, B(GT) from ⁴⁰Ti β decay; SNOwGLoBES table, zero below 5 MeV |
@@ -220,10 +220,10 @@ Interaction rates per detector, channel and flux component before
 detector response (the response itself, the rest of this step, is planned). SNUfish computes them itself for every B4 model and
 every B2 solar model,
 
-  dR/dE = N_targets Φ_c s_c(E) Σ_α P_eα(E) σ_α(E),
-  P_eα = Σᵢ F_i |U_αᵢ|²,
+  dR/dE = N<sub>targets</sub> Φ<sub>c</sub> s<sub>c</sub>(E) Σ<sub>α</sub> P<sub>eα</sub>(E) σ<sub>α</sub>(E),
+  P<sub>eα</sub> = Σᵢ F<sub>i</sub> |U<sub>αi</sub>|²,
 
-with F_i from the B2 reference (daytime, averaged over the component's
+with F<sub>i</sub> from the B2 reference (daytime, averaged over the component's
 production profile). Contributions to B5 are full-chain rates from tools
 that fold fluxes themselves, compared with SNUfish's folding of the same
 inputs.
@@ -233,9 +233,9 @@ inputs.
 | Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes)); normalisations from the B2 solar model |
 | Exposure | 1 kton-year, Julian year (3.15576 × 10⁷ s) |
 | Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`) |
-| Channels | `es` sums the three ES channels weighted with P_eα; CC uses P_ee. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
+| Channels | `es` sums the three ES channels weighted with P<sub>eα</sub>; CC uses P<sub>ee</sub>. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
 | Spectra | `linear` (0–20 MeV, 0.1 MeV) and `log` (0.05–20 MeV, 40 per decade) binnings, per MeV of neutrino energy |
-| Totals | all energies and E_ν > 5 MeV |
+| Totals | all energies and E<sub>ν</sub> > 5 MeV |
 
 Contributions (grid `totals`, threshold 0 and 5 MeV, quantities
 `<detector>/<channel>/<component>` including `all`; interactions per
@@ -251,19 +251,19 @@ kton-year):
 **Products**: `B5_Spectrum`, `B5_Totals` (SNUfish's folding: solar model ×
 tool × cross-section model × detector × channel × component, with the
 fraction of the spectrum the cross-section table covers), `B5_DayNight`
-(the same totals by day, by night and over the year, with A_DN, per site
+(the same totals by day, by night and over the year, with A<sub>DN</sub>, per site
 and Earth model) and `B5_Chain` (tool totals, SNUfish's folding of the
 same inputs, their ratio). Plots: `plotipus run b45`.
 
 Night and annual totals are SNUfish's folding only (contributions stay
-daytime): P_ee(night) = P_ee(day) + Σᵢ F_i R_i, with the B3 night excess
-R_i = ⟨P_iₑ⟩_night − |U_eᵢ|² of the site from the `snufish-reference` B3
+daytime): P<sub>ee</sub>(night) = P<sub>ee</sub>(day) + Σᵢ F<sub>i</sub> R<sub>i</sub>, with the B3 night excess
+R<sub>i</sub> = ⟨P<sub>ie</sub>⟩<sub>night</sub> − |U<sub>ei</sub>|² of the site from the `snufish-reference` B3
 contribution (`night.earth_models` in the spec), interpolated on the B3
 exposure grid and zero below it (1 MeV; pp and ⁷Be have no night effect
-there). The rest of the flux is split between ν_μ and ν_τ as by day (their
+there). The rest of the flux is split between ν<sub>μ</sub> and ν<sub>τ</sub> as by day (their
 ES cross sections are equal). Annual = (day + night)/2, equal exposures,
 fluxes at 1 AU. On constant shells the folding agrees with the engine's
-(exact solvers, own kernels) to 10⁻⁶ in A_DN; on the continuous models the
+(exact solvers, own kernels) to 10⁻⁶ in A<sub>DN</sub>; on the continuous models the
 engine's NuFast-Earth night differs by its mean-density approximation
 ([crosschecks.md](crosschecks.md#nufast-earth-on-continuous-density); `tests/test_b5_night.py`).
 
@@ -271,8 +271,8 @@ engine's NuFast-Earth night differs by its mean-density approximation
 
 ## Combining benchmarks
 
-- **B2 × B3 → day-night.** P_ee(day) = Σᵢ F_i |U_eᵢ|²,
-  P_ee(night) = Σᵢ F_i ⟨P_iₑ⟩_night, A_DN = 2(N − D)/(N + D); written by
+- **B2 × B3 → day-night.** P<sub>ee</sub>(day) = Σᵢ F<sub>i</sub> |U<sub>ei</sub>|²,
+  P<sub>ee</sub>(night) = Σᵢ F<sub>i</sub> ⟨P<sub>ie</sub>⟩<sub>night</sub>, A<sub>DN</sub> = 2(N − D)/(N + D); written by
   `snufish build` as `B23_DayNight`.
 - **B2 × B4 → B5.** Every B4 model folded with every B2 solar model and its
   B2 oscillations.
