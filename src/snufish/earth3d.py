@@ -16,7 +16,7 @@ within each cell, the azimuths and so the cells of CRUST1.0 the chords cross.
 Each cos-nadir cell is solved once, with the crust of its chords averaged at equal distance from the detector
 (near half) and from the entry point (far half): P(nu_i -> nu_e) is linear in a small change of density (first
 order in the matter potential over the oscillation frequency), so the average of P over the cell's chords is P
-along the average chord, to second order (:func:`check_average`). The chord is cut into pieces of near-constant
+along the average chord, to second order (``scripts/earth3d_literature.py --part average``). The chord is cut into pieces of near-constant
 density (:func:`pieces`) and solved with NuFast-Earth's single-trajectory mode (the B3 driver's
 ``trajectories:`` model), validated against the B3 reference propagator (tests/test_earth3d.py).
 """
@@ -109,7 +109,7 @@ def sun_directions(step_minutes=STEP_MINUTES, start=YEAR_START):
     ``step_minutes`` over one year from ``start`` (days from J2000). Low-precision solar coordinates of the
     Astronomical Almanac (0.01 deg) and the Earth rotation angle for Greenwich (UT1 = UT)."""
     t = start + np.arange(0.0, 365.25, step_minutes / 1440.0)
-    mean_anomaly = np.radians(357.5291 + 0.98560028 * (t - 0.0))
+    mean_anomaly = np.radians(357.5291 + 0.98560028 * t)
     mean_longitude = np.radians(280.4665 + 0.98564736 * t)
     longitude = mean_longitude + np.radians(1.915 * np.sin(mean_anomaly) + 0.020 * np.sin(2 * mean_anomaly))
     obliquity = np.radians(23.439 - 4e-7 * t)
@@ -267,7 +267,7 @@ def trajectories_file(site, max_km=PIECE_KM, tolerance=PIECE_TOLERANCE):
 
 def direction_chords(site, cos_lo, cos_hi, limit=None, at=None, **kwargs):
     """The single chords (not averaged) of the night directions with cos nadir in [cos_lo, cos_hi), turned to
-    cos nadir ``at`` if given (same azimuth): for checking the average. [(cos nadir, lengths, rho x Ye)]."""
+    cos nadir ``at`` if given (same azimuth): for checking the average (scripts/earth3d_literature.py). [(cos nadir, lengths, rho x Ye)]."""
     radius = _radius()
     s, c = night_directions(site, **kwargs)
     sel = np.flatnonzero((c >= cos_lo) & (c < cos_hi))[:limit]
