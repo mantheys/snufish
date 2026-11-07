@@ -14,12 +14,17 @@ recommended configuration is HF-CRPA + Bhattacharya et al. 2009. Variants:
 - ar40_marley2_bhattacharya1998: HF-CRPA + Bhattacharya et al. 1998, 40Ti beta decay
 - ar40_marley1_bhattacharya2009: MARLEY's v1 reaction file (allowed approximation
   over all levels, no HF-CRPA), run by MARLEY 2: what SNOwGLoBES tabulates as
-  xs_nue_Ar40_marley.dat above 5 MeV, but down to threshold
+  xs_nue_Ar40_marley.dat above 5 MeV, but down to threshold; with MARLEY 2's default
+  nucleon and nuclear form factors
+- ar40_marley1_allowed:          the same file in the allowed approximation (form_factors
+  "allowed"): MARLEY v1.2.1's cross section, the one of DUNE's MARLEY samples and of
+  SOLAR's neutrino_cc_final.txt (2.8-7.6 % above the form-factor one at 6-14 MeV)
 
-and, in bgt_levels.parquet next to data.parquet, the default variant's cross
-section with one measured level's B(GT) raised by its 1 sigma, for every level
-with a measured uncertainty: sigma is linear in each B(GT), so these give the
-measured-B(GT) uncertainty of any rate exactly (independent levels).
+and, in bgt_levels.parquet next to data.parquet, the cross section of the default
+variant and of ar40_marley1_allowed with one measured level's B(GT) raised by its
+1 sigma, for every level with a measured uncertainty: sigma is linear in each
+B(GT), so these give the measured-B(GT) uncertainty of any rate exactly
+(independent levels), and each level's share of the cross section.
 """
 
 import argparse
@@ -43,9 +48,15 @@ CONFIGS = {  # variant: reaction files (MARLEY's data/react names, found on its 
     "ar40_marley2_liu1998": ["ve40ArCC_HF-CRPA.react", "ve40ArCC_Liu1998-Discrete.react"],
     "ar40_marley2_bhattacharya1998": ["ve40ArCC_HF-CRPA.react", "ve40ArCC_Bhattacharya1998-Discrete.react"],
     "ar40_marley1_bhattacharya2009": ["v1/ve40ArCC_Bhattacharya2009.react"],
+    "ar40_marley1_allowed": ["v1/ve40ArCC_Bhattacharya2009.react"],
 }
+OPTIONS = {"ar40_marley1_allowed": {"form_factors": "allowed"}}  # MARLEY config keys beyond the reactions
 DEFAULT = "ar40_marley2_bhattacharya2009"
 DISCRETE = "ve40ArCC_Bhattacharya2009-Discrete.react"
+LEVELS = {  # variant: (reaction file with measured B(GT) uncertainties, the other reaction files)
+    DEFAULT: (DISCRETE, ["ve40ArCC_HF-CRPA.react"]),
+    "ar40_marley1_allowed": ("v1/ve40ArCC_Bhattacharya2009.react", []),
+}
 LEVEL = re.compile(r"^\s*([0-9.]+)\s+([0-9.eE+-]+)\s+([01])\s+([0-9.eE+-]+)\s*$")  # Ex, B, type, sigma(B)
 
 
@@ -56,11 +67,11 @@ def executable(checkout):
     raise SystemExit(f"no marley executable in {checkout} (build it first: make IGNORE_ROOT=1 IGNORE_HEPMC3=1)")
 
 
-def xsec(marley, checkout, reactions, work, energies):
+def xsec(marley, checkout, reactions, work, energies, options=None):
     """sigma(E) in cm^2 per 40Ar atom at the B4 energies, from `marley xsec`."""
     kemax = float(energies[-1])
     steps = int(round(kemax / (energies[1] - energies[0]))) + 1  # KE grid 0, step, ..., kemax
-    config = {"reactions": reactions, "target": {"nuclides": [1000180400], "atom_fractions": [1.0]},
+    config = {"reactions": reactions, **(options or {}), "target": {"nuclides": [1000180400], "atom_fractions": [1.0]},
               "source": {"type": "mono", "neutrino": "ve", "energy": 10.0},
               "xsec": {"KEmin": 0.0, "KEmax": kemax, "steps": steps, "pdg": 12}}
     run = len(list(work.glob("config_*.js"))) + 1
@@ -91,20 +102,21 @@ def main():
         work = Path(tmp)
         for variant, reactions in CONFIGS.items():
             print(f"marley xsec: {variant}")
-            tables[variant] = xsec(marley, checkout, reactions, work, energies)
+            tables[variant] = xsec(marley, checkout, reactions, work, energies, OPTIONS.get(variant))
         levels = []
-        lines = (checkout / "data" / "react" / DISCRETE).read_text().splitlines()
-        measured = [k for k, line in enumerate(lines) if LEVEL.match(line)]
-        for n, k in enumerate(measured, 1):
-            ex, b, kind, err = LEVEL.match(lines[k]).groups()
-            shifted = list(lines)
-            shifted[k] = f"{ex} {float(b) + float(err):.6g} {kind} {err}"
-            path = work / f"shifted_{n}.react"
-            path.write_text("\n".join(shifted) + "\n")
-            print(f"marley xsec: B(GT) of the {ex} MeV level + 1 sigma ({b} + {err})")
-            sigma = xsec(marley, checkout, ["ve40ArCC_HF-CRPA.react", str(path)], work, energies)
-            levels.append(dict(Level=float(ex), Kind="Fermi" if kind == "0" else "GT", Strength=float(b),
-                               Error=float(err), Energy=energies, Sigma=sigma))
+        for variant, (react, others) in LEVELS.items():
+            lines = (checkout / "data" / "react" / react).read_text().splitlines()
+            measured = [k for k, line in enumerate(lines) if LEVEL.match(line)]
+            for n, k in enumerate(measured, 1):
+                ex, b, kind, err = LEVEL.match(lines[k]).groups()
+                shifted = list(lines)
+                shifted[k] = f"{ex} {float(b) + float(err):.6g} {kind} {err}"
+                path = work / f"shifted_{variant}_{n}.react"
+                path.write_text("\n".join(shifted) + "\n")
+                print(f"marley xsec: {variant}, B(GT) of the {ex} MeV level + 1 sigma ({b} + {err})")
+                sigma = xsec(marley, checkout, others + [str(path)], work, energies, OPTIONS.get(variant))
+                levels.append(dict(Variant=variant, Level=float(ex), Kind="Fermi" if kind == "0" else "GT",
+                                   Strength=float(b), Error=float(err), Energy=energies, Sigma=sigma))
     for variant, sigma in tables.items():
         records += [("map", variant, "cc_nue_ar40", e, s) for e, s in zip(energies, sigma)]
     records += [("map", "default", "cc_nue_ar40", e, s) for e, s in zip(energies, tables[DEFAULT])]
@@ -122,10 +134,12 @@ def main():
         "command": "python contributions/marley/scripts/run_b4.py --marley <built MARLEY checkout>",
         "settings": {
             "reactions": {v: r for v, r in CONFIGS.items()},
+            "options": OPTIONS,
             "xsec": "marley xsec, KE 0 to 20 MeV on the B4 step, 1e-42 cm^2/atom converted to cm^2",
             "default": DEFAULT,
-            "bgt_levels": f"bgt_levels.parquet: the default variant with each measured level of {DISCRETE} "
-                          "raised by its 1 sigma (one row per level)",
+            "bgt_levels": "bgt_levels.parquet: a variant with each measured level of its reaction file raised by "
+                          "its 1 sigma (one row per variant and level): "
+                          + ", ".join(f"{v} ({r})" for v, (r, _) in LEVELS.items()),
         },
         "license": "CC-BY-4.0",
         "notes": "MARLEY 2.0.0: HF-CRPA for the continuum, measured B(GT) for bound levels (see its reaction "

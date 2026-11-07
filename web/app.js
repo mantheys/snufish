@@ -20,6 +20,7 @@ const XSEC = {
   ar40_marley2_bhattacharya1998: "MARLEY 2: HF-CRPA + B(GT) from ⁴⁰Ti decay (Bhattacharya 1998)",
   ar40_ksz2018: "Shell model, Kostensalo, Suhonen & Zuber 2018 (g_A = 1.00)",
   ar40_marley1_bhattacharya2009: "MARLEY v1 model, B(GT) from (p,n) (run by MARLEY 2)",
+  ar40_marley1_allowed: "MARLEY v1 model, allowed approximation (MARLEY v1.2.1, DUNE's samples)",
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
@@ -33,14 +34,18 @@ const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const THUMB_GRAMS = 20; // a thumb, as water: an order of magnitude
 const PRESETS = {
   // the opening example: a thumb held up to the Sun, every solar neutrino, ES on its electrons, a perfect detector
-  thumb: { detector: "water", channel: "es", site: "Kamioka", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
+  thumb: { detector: "water", channel: "es", site: "SURF", threshold: 0, "res-model": "quadrature", "res-a": 0, "res-b": 0,
            "eff-model": "parametric", eff: 100, "eff-e50": 0, mass: "", years: "", "unc-scale": 0, "unc-res": 0, "unc-norm": 0,
            components: ORDER, quantity: "rate", period: "annual", unit: "g" },
   ...EXPERIMENTS,
 };
+// the thumb's other steps: state-of-the-art inputs, the oscillation parameters from solar data alone (the Sun's own
+// neutrinos), and the real Earth–Sun distance
+const THUMB_INPUTS = { set: "solar_global_2024", solar: "b23_mb22m", earth: "prem_crust1", b8: "model", es: "bks", orbit: true };
 const PRESET_NOTES = {
-  thumb: `A thumb, as ${THUMB_GRAMS} g of water: every solar flux component, elastic scattering on its electrons, `
-       + "no threshold and a perfect detector, averaged over day and night. Change any setting to start from it.",
+  thumb: `A thumb, as ${THUMB_GRAMS} g of water at SURF (the Homestake mine, where solar neutrinos were first detected): `
+       + "every solar flux component, elastic scattering on its electrons, no threshold and a perfect detector, averaged over "
+       + "day and night at the real Earth–Sun distance. Change any setting to start from it.",
   custom: "",
   borexino: "Borexino Phase-II as published (arXiv:1707.09279): pseudocumene with 3.307 × 10³¹ electrons per 100 t, its "
           + "71.3 t fiducial mass over 1291.51 days, ~50 keV resolution at 1 MeV, and rates over all recoil energies. Choose pp, ⁷Be "
@@ -183,7 +188,7 @@ function buildControls() {
     label.innerHTML = `<input type="checkbox" name="components" value="${c}" ${c === "B8" ? "checked" : ""}><span>${engine.DISPLAY[c]}</span>`;
     return label;
   }));
-  fillSelect($("site"), Object.entries(d.sites).map(([s, info]) => [s, `${s} (${info.latitude_deg.toFixed(1)}° N)`]), "Kamioka");
+  fillSelect($("site"), Object.entries(d.sites).map(([s, info]) => [s, `${s} (${info.latitude_deg.toFixed(1)}° N)`]), "SURF");
   const earth = d.earth_models.map((e) => [e, statusOf("earth_model", e)]).sort(([, a], [, b]) => (a.status !== "current") - (b.status !== "current"));
   fillSelect($("earth"), earth.map(([e, s]) => [e, (EARTH[e] || e) + suffix(s)]), "prem_crust1");
   fillSelect($("detector"), Object.keys(d.detectors).map((k) => [k, DETECTORS[k] || k]), "water");
@@ -227,6 +232,23 @@ function efficiencyTable() {
   return { id: v, x: c.x, y: c.y, name: c.label, curve: name };
 }
 
+function presetSummary(es) {
+  // the preset's detector settings in one line, for the Preset view (Manual shows them all)
+  const s = readSetup(), parts = [];
+  parts.push(s.threshold > 0 ? `threshold ${s.threshold} MeV (${es ? "T" : "visible energy"})` : "no threshold");
+  if (s.resolution_poly.length) parts.push("Super-K IV resolution");
+  else if (s.smearing_table) parts.push("imported smearing");
+  else if (s.resolution_a > 0 || s.resolution_b > 0)
+    parts.push(`resolution ${[s.resolution_a > 0 ? `${s.resolution_a} √E` : "", s.resolution_b > 0 ? `${+(100 * s.resolution_b).toFixed(1)} % E` : ""].filter(Boolean).join(" ⊕ ")}`);
+  else parts.push("perfect resolution");
+  if (s.efficiency_table) parts.push(`efficiency: ${s.efficiency_table.name}`);
+  else if (s.efficiency < 1 || s.efficiency_e50 > 0) parts.push(`efficiency ${+(100 * s.efficiency).toFixed(1)} %${s.efficiency_e50 > 0 ? `, 50 % at ${s.efficiency_e50} MeV` : ""}`);
+  if (s.exposure) parts.push(`${fmt(number("mass"))} kt × ${fmt(number("years"))} yr`);
+  const unc = [["energy scale", s.energy_scale_error], ["resolution", s.resolution_error], ["rate", s.normalisation_error]].filter(([, v]) => v > 0);
+  if (unc.length) parts.push(`±1σ ${unc.map(([k, v]) => `${k} ${+(100 * v).toFixed(2)} %`).join(", ")}`);
+  return `${parts.join(" · ")}. Switch to Manual to change them.`;
+}
+
 function sync() {
   // offer only what applies: channels of the target, threshold for ES, nuclear models for CC, the Earth only at night
   const d = app.inputs.data, detector = $("detector").value;
@@ -242,7 +264,14 @@ function sync() {
   $("eff-import").hidden = !effImport;
   $("eff-parametric").hidden = $("eff-parametric-hint").hidden = effImport || effCurve;
   if (app.imports.smearing) app.imports.smearing.true_axis = $("smear-neutrino").checked ? "neutrino" : "observed";
-  $("preset-note").textContent = PRESET_NOTES[$("preset").value];
+  // step 5: a named preset, or every setting by hand (a preset edited by hand, or set so by a template, is manual)
+  if ($("preset").value === "custom") setRadio("config", "manual");
+  else app.lastPreset = $("preset").value;
+  const manual = radio("config") === "manual";
+  $("manual-fields").hidden = !manual;
+  $("preset-row").hidden = $("preset-summary").hidden = manual;
+  $("preset-note").textContent = manual ? "" : PRESET_NOTES[$("preset").value];
+  if (!manual) $("preset-summary").textContent = presetSummary(es);
   $("threshold-label").textContent = es ? "Threshold on the electron kinetic energy T (MeV)" : "Threshold on the visible energy (MeV)";
   const q = d.visible_offset_MeV[$("channel").value];
   $("observable-note").textContent = es
@@ -589,7 +618,7 @@ function render() {
   const events = live && quantity === "rate"
     ? `<div class="sub">Expected interactions in ${fmt(setup.exposure)} kt·yr: ${fmt(central * live, total.Sigma * live)}</div>` : "";
   $("headline").innerHTML = `
-    <div class="what"><span>${describe(setup, quantity)} · ${app.inputs.data.parameter_sets.sets[r.set].label}</span>
+    <div class="what"><span>${describe(setup, quantity)}${thumbShown() ? "" : ` · ${app.inputs.data.parameter_sets.sets[r.set].label}`}</span>
       <span class="timing">Computed with ${N_DRAWS} draws in ${Math.round(r.ms)} ms.</span></div>
     <div class="sampled"><div class="value">${fmt(central * scale, total.Sigma * scale)}<small>${unit}</small></div>
       <div class="sub">± 1σ sampled from: ${sampled.join(", ")}</div>${events}</div>
@@ -787,7 +816,7 @@ function applyValues(values) {
 const STEP5 = ["threshold", "res-model", "res-a", "res-b", "eff-model", "eff", "eff-e50", "eff-width", "mass", "years", "unc-scale", "unc-res", "unc-norm"];
 
 function applyCheck(id) {
-  if (id === "thumb") { applyValues(CHECK_BASE); $("preset").value = "thumb"; applyPreset("thumb"); return; }
+  if (id === "thumb") { applyValues(CHECK_BASE); applyValues(THUMB_INPUTS); $("preset").value = "thumb"; applyPreset("thumb"); return; }
   const c = CHECKS.find((x) => x.id === id);
   if (!c) return;
   const { preset, ...values } = c.values;
@@ -834,7 +863,7 @@ async function init() {
   for (const [name, c] of Object.entries(app.inputs.data.efficiency_curves || {})) // published curves, before "Imported curve"
     $("eff-model").insertBefore(new Option(`Published: ${c.label}`, `curve:${name}`), $("eff-model").querySelector('option[value="import"]'));
   sync();
-  applyPreset($("preset").value); // the opening example, unless the link carries a setup
+  applyCheck($("check").value); // the opening example (the thumb), unless the link carries a setup
   sync();
   loadHash();
   sync();
@@ -842,6 +871,16 @@ async function init() {
     if (e.target.id === "unit") {
       if (app.result && app.result.quantity === "rate") [app.result.scale, app.result.unit] = UNITS[e.target.value];
       saveHash(); render(); return;
+    }
+    if (e.target.name === "config") {
+      // back to a preset from manual settings: the last preset chosen (the settings by hand are dropped)
+      if (e.target.value === "preset" && $("preset").value === "custom") {
+        $("preset").value = app.lastPreset || "thumb";
+        applyPreset($("preset").value);
+        $("check").value = "";
+        sync(); refreshSources(); schedule();
+      } else sync();
+      return;
     }
     if (e.target.id === "check") applyCheck(e.target.value);
     else if (e.target.closest(".step")) $("check").value = ""; // edited by hand: no longer the published setup

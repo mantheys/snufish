@@ -88,10 +88,12 @@ an issue.
 
 - DUNE solar rate tables (thesis ch. 3, paper app. A;
   [dune-solar-tables.md](dune-solar-tables.md)): SNOwGLoBES-style tables are reproduced with
-  `ar40_marley1_bhattacharya2009`, `nu_threshold`, `nc_ar40` and
+  `ar40_marley1_allowed` (MARLEY v1.2.1's cross section), `nu_threshold`, `nc_ar40` and
   `night_fraction`; the thesis's T_e > 8 and 10 MeV CC values (+16 %, −28 %)
-  and the paper's appendix A (CC 482, ES 141, NC 18.8) are not reproduced and
-  their generating script has not been found.
+  are not reproduced. The paper's appendix A (CC 482, ES 141, NC 18.8) came
+  from a rate spectrum folded as a flux (P_ee applied twice); the paper's
+  rates now come from `scripts/dune_phase1_rates.py`
+  ([dune-solar-tables.md](dune-solar-tables.md#phase-i-paper)).
 - SOLAR's Earth density model: set in its NuFast-Earth Python binding, which
   is outside its repository; `night_mode="solar"` matches its depth, latitude
   and nadir PDF but not necessarily its Earth.

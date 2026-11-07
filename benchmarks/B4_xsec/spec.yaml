@@ -66,8 +66,15 @@ variants:
     required: false
     quantities: [cc_nue_ar40]
     description: >-
-      MARLEY's v1 reaction file (allowed approximation over all levels, B(GT) of Bhattacharya et al. 2009),
-      run by MARLEY 2.0.0: SNOwGLoBES's xs_nue_Ar40_marley.dat above 5 MeV, down to threshold.
+      MARLEY's v1 reaction file (all levels from B(GT) of Bhattacharya et al. 2009, no HF-CRPA), run by
+      MARLEY 2.0.0 with its default nucleon and nuclear form factors: SNOwGLoBES's xs_nue_Ar40_marley.dat
+      above 5 MeV, down to threshold.
+  ar40_marley1_allowed:
+    required: false
+    quantities: [cc_nue_ar40]
+    description: >-
+      The same reaction file in the allowed approximation (MARLEY 2.0.0, form_factors "allowed"): MARLEY
+      v1.2.1's cross section, used by DUNE's MARLEY samples and SOLAR's neutrino_cc_final.txt.
 
 constants:
   G_F_GeV-2: 1.1663788e-5       # PDG 2024

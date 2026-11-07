@@ -247,11 +247,12 @@ the measured one) is dropped.
 
 ### Measured nuclear strengths
 
-For the MARLEY 2 models of νₑ–⁴⁰Ar, each measured bound-level B(GT) has a
-1σ uncertainty in MARLEY's reaction file. σ is linear in each B(GT), so
-the contribution's `bgt_levels.parquet` holds one cross-section table per
-level with that level's B(GT) raised by 1σ; the quantity's uncertainty is
-the quadrature sum of the shifts it produces (levels independent).
+For `ar40_marley2_bhattacharya2009` and `ar40_marley1_allowed`, each
+measured bound-level B(GT) has a 1σ uncertainty in MARLEY's reaction file.
+σ is linear in each B(GT), so the contribution's `bgt_levels.parquet` holds
+one cross-section table per model and level with that level's B(GT) raised
+by 1σ; the quantity's uncertainty is the quadrature sum of the shifts it
+produces (levels independent).
 
 ## Analyses
 

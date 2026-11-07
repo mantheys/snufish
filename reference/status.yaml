@@ -161,7 +161,12 @@ xsec_model:
     ar40_marley1_bhattacharya2009:
       status: legacy
       superseded_by: ar40_marley2_bhattacharya2009
-      summary: "MARLEY's v1 model (allowed approximation over all levels). Superseded by MARLEY 2's HF-CRPA continuum."
+      summary: "MARLEY's v1 reaction file (measured B(GT) for all levels, no HF-CRPA) with MARLEY 2's form factors. Superseded by MARLEY 2's HF-CRPA continuum."
+      refs: [arXiv:2010.02393]
+    ar40_marley1_allowed:
+      status: legacy
+      superseded_by: ar40_marley2_bhattacharya2009
+      summary: "MARLEY's v1 reaction file in the allowed approximation: MARLEY v1.2.1's cross section, used by DUNE's MARLEY samples and SOLAR (2.8–7.6 % above the form-factor version at 6–14 MeV). Superseded by MARLEY 2."
       refs: [arXiv:2010.02393]
     ar40_marley:
       status: legacy
