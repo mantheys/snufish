@@ -154,6 +154,6 @@ export const CREDITS = [
   ["B4 Interaction: cross sections", [SOURCES.es_tree, SOURCES.es_radiative, SOURCES.nakamura, SOURCES.snowglobes, SOURCES.marley2, SOURCES.marley_prc, SOURCES.marley,
                       SOURCES.bgt_pn, SOURCES.bgt_liu, SOURCES.bgt_b1998, SOURCES.ksz, SOURCES.suzuki, SOURCES.klmv]],
   ["B5 Detector: experiments", [SOURCES.sk_solar, SOURCES.hyperk, SOURCES.dune_snb, SOURCES.dune_solar, SOURCES.sno, SOURCES.sno_salt, SOURCES.borexino, SOURCES.juno_b8]],
-  ["Tools", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus]],
-  ["Software in this page", [SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
+  ["Tools and software", [SOURCES.nufast_code, SOURCES.snowglobes, SOURCES.marley_code, SOURCES.peanuts, SOURCES.plotipus,
+                          SOURCES.plotly, SOURCES.pyodide, SOURCES.hyparquet, SOURCES.fflate]],
 ];
