@@ -15,7 +15,7 @@ dependencies = ["numpy", "pandas", "pyarrow", "pyyaml", "scipy"]
 [project.optional-dependencies]
 # plotipus pinned to a release (Zenodo DOI 10.5281/zenodo.24044062), so the plots CI makes are reproducible; bump it deliberately
 plots = ["plotipus @ git+https://github.com/mantheys/plotipus.git@v0.1.0"]
-dev = ["pytest", "ruff==0.17.3"]
+dev = ["pytest", "pytest-cov", "ruff==0.17.3"]
 
 [project.scripts]
 snufish = "snufish.cli:main"
@@ -25,6 +25,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["snufish"]
+branch = true
 
 [tool.ruff]
 line-length = 150
