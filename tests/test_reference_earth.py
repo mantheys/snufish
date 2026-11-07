@@ -83,3 +83,53 @@ def test_two_flavour_constant_density(energy):
     expected = np.sin(theta) ** 2 + np.sin(2 * (theta_m - theta)) * np.sin(2 * theta_m) * np.sin(
         dm2_m * length / (4 * energy * 1e6)) ** 2
     assert p2e == pytest.approx(expected, abs=1e-10)
+
+
+def _as_regions(shell_list):
+    return [dict(outer_radius_km=s["outer_radius_km"], coefficients=[s["density"]], ye=s["ye"]) for s in shell_list]
+
+
+@pytest.mark.parametrize("cos_nadir", [0.0, 0.2, 0.84, 1.0])
+def test_magnus_exact_on_constant_shells(spec, cos_nadir):
+    """For constant density the two Magnus exponentials make one exact propagator, whatever the step."""
+    from snufish.reference.earth import probabilities_ie_regions
+
+    osc, earth = spec["oscillation"], spec["earth"]
+    args = (pmns(osc), osc["dm2_21_eV2"], osc["dm2_31_eV2"], earth["radius_km"])
+    energies = [2.0, 10.0, 18.0]
+    stepped = probabilities_ie_regions(energies, cos_nadir, *args, _as_regions(shells(spec)), step_km=300.0)
+    exact = [probabilities_ie(e, cos_nadir, *args, shells(spec)) for e in energies]
+    assert stepped == pytest.approx(np.array(exact), abs=1e-12)
+
+
+@pytest.mark.parametrize("model, cos_nadir", [("prem_four", 0.3), ("prem_four", 0.95), ("prem_full", 0.6),
+                                              ("prem_full", 1.0)])
+def test_magnus_on_continuous_density_against_thin_shells(spec, model, cos_nadir):
+    """Continuous PREM regions against the exact solver on 1 km constant shells (density at mid radius)."""
+    from snufish.reference.earth import _density, probabilities_ie_regions
+
+    osc, earth = spec["oscillation"], spec["earth"]
+    radius = earth["radius_km"]
+    args = (pmns(osc), osc["dm2_21_eV2"], osc["dm2_31_eV2"], radius)
+    regions = spec["earth_models"][model]["regions"]
+    thin, inner = [], 0.0
+    for region in regions:
+        edges = np.unique(np.concatenate([np.arange(inner, region["outer_radius_km"], 1.0), [region["outer_radius_km"]]]))
+        thin += [dict(outer_radius_km=b, density=_density(region, 0.5 * (a + b), radius), ye=region["ye"])
+                 for a, b in zip(edges[:-1], edges[1:])]
+        inner = region["outer_radius_km"]
+    for energy in (5.0, 15.0):
+        stepped = probabilities_ie_regions([energy], cos_nadir, *args, regions)[0]
+        assert stepped == pytest.approx(probabilities_ie(energy, cos_nadir, *args, thin), abs=3e-6)
+        assert stepped.sum() == pytest.approx(1.0, abs=1e-10)  # rounding over ~2000 products
+
+
+def test_magnus_is_fourth_order(spec):
+    from snufish.reference.earth import probabilities_ie_regions
+
+    osc, earth = spec["oscillation"], spec["earth"]
+    args = (pmns(osc), osc["dm2_21_eV2"], osc["dm2_31_eV2"], earth["radius_km"])
+    regions = spec["earth_models"]["prem_full"]["regions"]
+    p = [probabilities_ie_regions([15.0], 0.1, *args, regions, step_km=h)[0] for h in (100.0, 50.0, 25.0)]
+    ratio = np.abs(p[0] - p[1]).max() / np.abs(p[1] - p[2]).max()
+    assert ratio > 6  # 16 for a clean fourth order; 4 for second

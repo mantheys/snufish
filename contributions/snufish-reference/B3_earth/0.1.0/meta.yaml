@@ -4,10 +4,14 @@ tool_commit: null
 benchmark: B3_earth
 benchmark_version: 0.3.0
 contributor: SNUfish maintainers
-date: '2026-10-28'
+date: '2026-10-31'
 command: snufish reference B3_earth
 settings:
-  method: exact matrix exponential per constant-density segment
+  method: 'constant shells: exact matrix exponential per segment; continuous regions:
+    fourth-order commutator-free Magnus along the chord, 6.25 km steps ending on every
+    region border'
   variants:
   - prem_prob3
+  - prem_four
+  - prem_full
 license: CC-BY-4.0

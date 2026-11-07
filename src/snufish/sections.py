@@ -16,7 +16,9 @@ B2 solver (the tables hold each component's own profile only). B3 adds the
 Earth models that approximate the state of the art (reference/status.yaml),
 as signed shifts from it: with a single current Earth model, B3 has no
 model range, and the overview shows the shift to PREM's average crust
-(``CRUST_PROXY``, flagged ``overview``) in its place. With them,
+(``CRUST_PROXY``, flagged ``overview``) in its place; and the solver's
+approximation, NuFast-Earth's mean density per region crossing, against
+thin shells (``SPLIT_KM``). With them,
 per benchmark, the curves its pages plot (solar profiles, P_ee per
 component, regeneration per Earth model) and the agreement between tools.
 """
@@ -68,6 +70,9 @@ CRUST_PROXY = "prem_full"
 EARTH_LABELS = {"prem_full": "PREM's average crust and ocean (prem_full)",
                 "prem_four": "no crust, PREM's four main regions (prem_four)",
                 "prem_prob3": "four shells of constant density (prem_prob3)"}
+# the solver's approximation: NuFast-Earth takes each region crossing's mean density; SPLIT_KM shells remove it
+SOLVER_APPROXIMATION = "mean density per region crossing (NuFast-Earth, the engine's night)"
+SPLIT_KM = 25.0
 ENERGIES = np.geomspace(0.1, 20.0, 120)
 RADII = np.round(np.arange(0.0, 0.4001, 0.0025), 6)
 
@@ -92,6 +97,21 @@ class ProductionTreatment:
 
     def night(self, osc, earth_model, site):
         return self._night.night(osc, earth_model, site)
+
+
+class ThinShellNight:
+    """The exact solvers, with the continuous Earth regions cut into SPLIT_KM shells for NuFast-Earth."""
+
+    def day(self, osc, solar_model, component, energies):
+        from .export import ExactProbabilities
+
+        return ExactProbabilities().day(osc, solar_model, component, energies)
+
+    def night(self, osc, earth_model, site):
+        from .export import site_latitude
+        from .scan import night_probabilities
+
+        return night_probabilities(osc, earth_model, site_latitude(site), site, split_km=SPLIT_KM)
 
 
 def _section(source):
@@ -153,6 +173,11 @@ def impacts(inputs, tables, params):
                 if m == CRUST_PROXY:
                     row["overview"] = True
                 rows.append(row)
+            if _has_driver():
+                from .export import ExactProbabilities
+
+                rows.append(dict(section="B3", source=SOLVER_APPROXIMATION, kind="approximation",
+                                 shift=value(ExactProbabilities()) - value(ThinShellNight())))
         out[name] = dict(label=o["label"], quantity=q, central=central, rows=rows)
     return out
 
@@ -195,6 +220,16 @@ def regeneration(inputs, tables, osc):
             F = tables.day(osc, SOLAR_MODEL, "B8", energy)
             out[earth][site] = (np.sum(F * P, axis=1) - F @ ue2).tolist()
     return dict(energy=np.asarray(energy).tolist(), models=out)
+
+
+def _has_driver():
+    from .scan import _nufast_driver
+
+    try:
+        _nufast_driver()
+    except FileNotFoundError:
+        return False
+    return True
 
 
 def _contribution(tool, benchmark):

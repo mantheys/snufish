@@ -1,6 +1,9 @@
-"""Reference solver for B3: three-flavour evolution through a piecewise
-constant Earth, exact for that model (one matrix exponential per shell
-crossing, no stepping).
+"""Reference solver for B3: three-flavour evolution through the Earth.
+Piecewise constant shells are exact (one matrix exponential per shell
+crossing, no stepping); continuous density (PREM polynomial regions) is
+integrated along the chord with the fourth-order commutator-free Magnus
+scheme in steps that end on every region border, converged by halving the
+step (``CONVERGED_STEP_KM``).
 
 In the flavour basis H = U diag(0, dm21, dm31) U^dagger / 2E + diag(V, 0, 0),
 V = sqrt(2) G_F N_e. A mass eigenstate nu_i arriving at the Earth is the
@@ -69,10 +72,80 @@ def probabilities_ie(energy_mev, cos_nadir, U, dm2_21, dm2_31, radius, shells):
     return np.abs((S @ U)[0]) ** 2
 
 
-# Variants with constant-shell Earth models, the ones this solver is exact for.
+# Fourth-order commutator-free Magnus (Blanes & Moan 2006): over a step h with H1, H2 at the Gauss points
+# t = 1/2 -+ sqrt(3)/6, S = exp(-i h (a1 H1 + a2 H2)) exp(-i h (a2 H1 + a1 H2)): the right factor acts first.
+# For constant H the two factors make exp(-i h H): exact on constant shells.
+_GAUSS = (0.5 - np.sqrt(3) / 6, 0.5 + np.sqrt(3) / 6)
+_A1, _A2 = (3 - 2 * np.sqrt(3)) / 12, (3 + 2 * np.sqrt(3)) / 12
+CONVERGED_STEP_KM = 6.25   # P_ie within 4e-7 of the 1.5625 km solution on 43 chords x 39 energies
+
+
+def _density(region, r_km, radius):
+    x = r_km / radius
+    return sum(c * x**k for k, c in enumerate(region["coefficients"]))
+
+
+def chord_regions(cos_nadir, radius, regions):
+    """Ordered (start_km, end_km, region) pieces of the chord, measured from
+    where it enters the Earth, for regions given innermost first."""
+    pieces = []
+    half = radius * cos_nadir
+    b2 = radius**2 * (1 - cos_nadir**2)  # squared distance of the chord from the centre
+    for k, region in enumerate(regions):
+        outer = region["outer_radius_km"] ** 2 - b2
+        if outer <= 0:
+            continue
+        inner = regions[k - 1]["outer_radius_km"] ** 2 - b2 if k else -1.0
+        d_out, d_in = np.sqrt(outer), (np.sqrt(inner) if inner > 0 else 0.0)
+        if d_in > 0:  # crossed twice: on the way in and on the way out
+            pieces += [(half - d_out, half - d_in, region), (half + d_in, half + d_out, region)]
+        else:
+            pieces.append((half - d_out, half + d_out, region))
+    return sorted(pieces, key=lambda p: p[0])
+
+
+def _vacuum_hamiltonians(energies_mev, U, dm2_21, dm2_31):
+    return np.einsum("ai,i,bi,e->eab", U, np.array([0.0, dm2_21, dm2_31]), U.conj(), 1 / (2e6 * np.asarray(energies_mev)))
+
+
+def probabilities_ie_regions(energies_mev, cos_nadir, U, dm2_21, dm2_31, radius, regions, step_km=CONVERGED_STEP_KM):
+    """[len(energies), 3]: P1e, P2e, P3e through continuous regions (density polynomials in r/R)."""
+    energies_mev = np.atleast_1d(np.asarray(energies_mev, float))
+    vacuum = _vacuum_hamiltonians(energies_mev, U, dm2_21, dm2_31)
+    half = radius * cos_nadir
+    b2 = radius**2 * (1 - cos_nadir**2)
+    weights, lengths = [], []  # the matter term of every exponential, in the order they act
+    for start, end, region in chord_regions(cos_nadir, radius, regions) if cos_nadir > 0 else []:
+        n = max(1, int(np.ceil((end - start) / step_km)))
+        h = (end - start) / n
+        x = start + (np.arange(n)[:, None] + np.array(_GAUSS)[None, :]) * h - half
+        V = matter_potential(_density(region, np.sqrt(b2 + x * x), radius), region["ye"])  # [step, Gauss point]
+        terms = np.stack([_A2 * V[:, 0] + _A1 * V[:, 1], _A1 * V[:, 0] + _A2 * V[:, 1]], axis=1)  # a + b = 1/2
+        weights.append(terms.ravel())
+        lengths.append(np.full(2 * n, h * KM_TO_INV_EV))
+    if not weights:
+        return np.tile(np.abs(U[0]) ** 2, (len(energies_mev), 1))
+    weights, lengths = np.concatenate(weights), np.concatenate(lengths)
+    H = np.broadcast_to(0.5 * vacuum, (len(weights), *vacuum.shape)).copy()
+    H[:, :, 0, 0] += weights[:, None]
+    values, vectors = np.linalg.eigh(H)
+    factors = np.einsum("meai,mei,mebi->meab", vectors, np.exp(-1j * values * lengths[:, None, None]), vectors.conj())
+    while len(factors) > 1:  # ordered product, later factors on the left, by pairs
+        odd = factors[-1:] if len(factors) % 2 else factors[:0]
+        pairs = factors[: len(factors) - len(odd)]
+        factors = np.concatenate([pairs[1::2] @ pairs[0::2], odd])
+    return np.abs(np.einsum("eab,bi->eai", factors[0], U)[:, 0]) ** 2
+
+
+def solved_variants(spec):
+    """Variants with an Earth model written out in the spec (shells or regions)."""
+    return [name for name, variant in spec.variants.items() if variant["earth_model"]]
+
+
 def exact_variants(spec):
-    return [name for name, variant in spec.variants.items()
-            if variant["earth_model"] and "shells" in spec["earth_models"][variant["earth_model"]]]
+    """Variants with constant-shell Earth models, the ones solved without stepping."""
+    return [name for name in solved_variants(spec)
+            if "shells" in spec["earth_models"][spec.variants[name]["earth_model"]]]
 
 
 def solve_b3(spec, variant="prem_prob3", grid="map"):
@@ -80,16 +153,21 @@ def solve_b3(spec, variant="prem_prob3", grid="map"):
     for one grid of ``spec``."""
     from ..spec import pmns
 
-    if variant not in exact_variants(spec):
-        raise ValueError(f"the reference solver is exact only for constant shells: {exact_variants(spec)}")
+    if variant not in solved_variants(spec):
+        raise ValueError(f"no Earth model written out for {variant!r}: {solved_variants(spec)}")
     osc, earth = spec["oscillation"], spec["earth"]
-    shells = spec["earth_models"][spec.variants[variant]["earth_model"]]["shells"]
+    model = spec["earth_models"][spec.variants[variant]["earth_model"]]
     U = pmns(osc)
+    energies = spec.axis("energy", grid)
     records = []
     for cos_nadir in spec.axis("cos_nadir", grid):
-        for energy in spec.axis("energy", grid):
-            probs = probabilities_ie(energy, cos_nadir, U, osc["dm2_21_eV2"], osc["dm2_31_eV2"],
-                                     earth["radius_km"], shells)
-            for i, p in enumerate(probs, start=1):
+        if "shells" in model:
+            probs = [probabilities_ie(e, cos_nadir, U, osc["dm2_21_eV2"], osc["dm2_31_eV2"], earth["radius_km"],
+                                      model["shells"]) for e in energies]
+        else:
+            probs = probabilities_ie_regions(energies, cos_nadir, U, osc["dm2_21_eV2"], osc["dm2_31_eV2"],
+                                             earth["radius_km"], model["regions"])
+        for energy, row in zip(energies, probs):
+            for i, p in enumerate(row, start=1):
                 records.append((grid, variant, f"P{i}e", energy, cos_nadir, p))
     return records

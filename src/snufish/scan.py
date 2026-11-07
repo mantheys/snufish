@@ -83,19 +83,21 @@ def _nufast_driver():
     return path
 
 
-def night_probabilities(osc, earth_model, latitude_deg, site=None):
+def night_probabilities(osc, earth_model, latitude_deg, site=None, split_km=None):
     """(energies MeV, array [E, 3] of P(nu_i -> nu_e) averaged over the night at
     the given latitude), on the B3 exposure grid. ``site``: for the site-dependent
-    Earth models (:mod:`snufish.crust`)."""
-    energies, cosines, P = night_grid(osc, earth_model, site)
+    Earth models (:mod:`snufish.crust`); ``split_km``: see :func:`night_grid`."""
+    energies, cosines, P = night_grid(osc, earth_model, site, split_km=split_km)
     return energies, np.einsum("eci,c->ei", P, cell_weights(cosines, np.radians(latitude_deg)))
 
 
-def night_grid(osc, earth_model, site=None, depth_km=None, cos_grid=None):
+def night_grid(osc, earth_model, site=None, split_km=None, depth_km=None, cos_grid=None):
     """(energies MeV, cos nadir, array [E, cos, 3] of P(nu_i -> nu_e)) on the
-    B3 exposure grid, before averaging over a site's night. ``depth_km``: the
-    detector depth (default B3's, 0); ``cos_grid``: (start, stop, step) of cos nadir
-    in place of B3's."""
+    B3 exposure grid, before averaging over a site's night. ``split_km``: cut the
+    continuous regions into shells of at most this, so that NuFast-Earth's mean
+    density per crossing follows the profile (:func:`crust.split`); ``depth_km``:
+    the detector depth (default B3's, 0); ``cos_grid``: (start, stop, step) of cos
+    nadir in place of B3's."""
     spec = load_spec("B3_earth")
     grid = {a: dict(v) for a, v in spec["grids"]["exposure"].items()}
     if cos_grid is not None:
@@ -103,6 +105,14 @@ def night_grid(osc, earth_model, site=None, depth_km=None, cos_grid=None):
     if earth_model in crust.SITE_MODELS:
         if site is None:
             raise ValueError(f"{earth_model} depends on the site")
+        regions = crust.regions(earth_model, site)
+        name = f"{earth_model}_{site}"
+    else:
+        regions = spec["earth_models"][earth_model].get("regions")
+        name = earth_model
+    if split_km and regions:
+        earth_model = f"regions:{crust.write_regions(crust.split(regions, split_km), f'{name}_split{split_km:g}')}"
+    elif earth_model in crust.SITE_MODELS:
         earth_model = f"regions:{crust.regions_file(earth_model, site)}"
     argv = [earth_model, *(str(osc[k]) for k in ("sin2_theta12", "sin2_theta13", "sin2_theta23", "delta_cp_deg",
                                                  "dm2_21_eV2", "dm2_31_eV2")),
