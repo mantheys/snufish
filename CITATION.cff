@@ -1,4 +1,4 @@
-# The first citable release (docs/release.md); add the DOI once Zenodo mints it.
+# The first citable release (docs/release.md), archived on Zenodo.
 cff-version: 1.2.0
 message: "If you use SNUfish, please cite the archived release you used (its Zenodo DOI)."
 title: "SNUfish: community benchmarks of solar neutrino tools"
@@ -13,7 +13,7 @@ url: "https://mantheys.github.io/snufish/"
 license: MIT
 version: 0.2.0
 date-released: "2026-11-07"
-# doi: 10.5281/zenodo.XXXXXXX (the version DOI Zenodo mints for the tag)
+doi: 10.5281/zenodo.24045167   # version DOI of v0.2.0; concept DOI (every version) 10.5281/zenodo.24045166
 keywords:
   - solar neutrinos
   - neutrino oscillations

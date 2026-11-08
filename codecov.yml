@@ -1,0 +1,8 @@
+# Coverage is reported, not enforced: the statuses never block a merge (require-ci waits on validate-and-plot only).
+coverage:
+  status:
+    project:
+      default: {informational: true}
+    patch:
+      default: {informational: true}
+comment: false
