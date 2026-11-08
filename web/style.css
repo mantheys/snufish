@@ -236,7 +236,8 @@ a.button.ghost-link { background: transparent; color: var(--text-primary); borde
 label.inline { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; }
 label.inline select { width: auto; margin-top: 0; }
 .plot-legend .kind { color: var(--plot-muted); }
-#b2-tools, #b3-tools, #b5-tools { overflow-x: auto; padding: 0 6px 6px; }
+#b2-tools, #b3-tools, #b5-tools, #b5-observed { overflow-x: auto; padding: 0 6px 6px; }
+#b5-observed th, #b5-observed td.num { white-space: nowrap; }
 .matrix td.template { min-width: 15em; }
 .matrix td.template a.source { display: block; margin-top: 2px; font-size: 0.76rem; color: var(--accent); }
 .matrix td.num .unit { display: block; color: var(--text-muted); font-size: 0.74rem; white-space: normal; }
