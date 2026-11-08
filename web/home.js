@@ -19,6 +19,11 @@ const SHORT_XS = { ar40_marley1_bhattacharya2009: "MARLEY v1", ar40_marley: "SNO
 const $ = (id) => document.getElementById(id);
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const series = (n) => css(`--series-${n}`);
+// the steps and their colours, as the benchmark pages (benchmarks.js SECTIONS, SECTION_SERIES)
+const STEPS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
+const STEP_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 };
+const LIMIT_LABELS = { water_es_b8: "⁸B ES, water", scint_es_be7: "⁷Be ES, scintillator", argon_cc_b8: "⁸B CC, ⁴⁰Ar",
+                       argon_cc_hep: "hep CC, ⁴⁰Ar", water_es_adn: `${ADN}, water` };
 const page = { sections: null, inputs: null, tab: "overview", adn: null };
 
 // ------------------------------------------------------------------ helpers
@@ -237,7 +242,31 @@ function folding() {
       xaxis: { categoryorder: "array", categoryarray: ORDER.map((k) => DISPLAY[k]) }, yaxis: { automargin: true } }), CONFIG);
 }
 
-const FIGURES = [oscillations, composition, earth, argon, folding, toolsVsInputs, outdated]; // the findings: B1 to B5, then across steps
+function limits() {
+  // 8. per reference observable, the largest state-of-the-art contribution of each step (sampled σ or the reach of a
+  // range over current models; approximations and legacy inputs left out, as the benchmark overview)
+  const c = colours(), node = $("plot-f8"), obs = page.sections.observables;
+  const ids = ["water_es_b8", "scint_es_be7", "argon_cc_b8", "argon_cc_hep", "water_es_adn"].filter((id) => obs[id]);
+  const traces = Object.entries(STEPS).map(([step, name]) => {
+    const best = ids.map((id) => {
+      const o = obs[id], rows = o.rows.filter((r) => r.section === step && (r.kind === "sampled" || r.kind === "model range"));
+      return rows.reduce((b, r) => { const v = Math.abs(sizeOf(r, o.central)); return v > (b?.v ?? -1) ? { v, source: r.source } : b; }, null);
+    });
+    return { type: "bar", orientation: "h", name, y: ids.map((id) => LIMIT_LABELS[id]), x: best.map((b) => (b && b.v >= 1e-3 ? b.v : null)),
+             text: best.map((b) => (b && b.v >= 1 ? pct(b.v).slice(1) : "")), textposition: "outside", cliponaxis: false,
+             textfont: { size: 10, color: c.secondary },
+             customdata: best.map((b) => (b ? `${math(b.source)}: ${pct(b.v).slice(1)}` : "")), marker: { color: series(STEP_SERIES[step]) },
+             hovertemplate: `%{y}, ${name}: %{customdata}<extra></extra>` };
+  });
+  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })),
+             `JUNO 2025 parameters, B23 MB22m, 100 kt·yr through each detector's published response`);
+  node.style.height = "420px";
+  return Plotly.react(node, traces, layout(c, node, "The largest uncertainty from each step", "Relative to the central value (%), log scale", "",
+    { showlegend: false, barmode: "group", bargap: 0.2, margin: { l: 20, r: 20, t: 16, b: 48 },
+      xaxis: { type: "log", range: [-3, 2.4], exponentformat: "power" }, yaxis: { autorange: "reversed", automargin: true } }), CONFIG);
+}
+
+const FIGURES = [oscillations, composition, earth, argon, folding, toolsVsInputs, outdated, limits]; // the findings: B1 to B5, then across steps
 
 // ------------------------------------------------------------------ About: the status of every input
 
