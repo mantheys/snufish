@@ -76,6 +76,14 @@ SNUfish reports as model ranges.
    5 MeV and without the Coulomb factor), A<sub>DN</sub> up to 40 % high (Earth
    models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear
    rates).
+8. **One or two inputs limit each prediction.** The largest state-of-the-art
+   contribution of each step (B1 to B5) to the five reference observables of
+   the benchmark pages (JUNO 2025, B23-MB22m, 100 kt·yr through each
+   detector's published response): the solar model for ES rates (−15.9 % for
+   ⁸B, −7.8 % for ⁷Be; with the SNO NC ⁸B flux, 4.0 %), the ⁴⁰Ar nuclear model
+   for CC (−36 % for ⁸B; for hep −29 %, as large as its flux, 29 %),
+   statistics for A<sub>DN</sub> (64 % at 100 kt·yr in water). The oscillation
+   parameters add 0.7–2.9 %, the current Earth models at most 0.11 %.
 
 The model ranges, state of the art against everything SNUfish offers
 (B23-MB22m, JUNO 2025, PREM with the local crust, annual rates):

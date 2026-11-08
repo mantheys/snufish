@@ -100,6 +100,12 @@ Details and references: [docs/status-of-inputs.md](docs/status-of-inputs.md).
 7. **Most large spreads were outdated inputs, not uncertainties.** The
    <sup>40</sup>Ar tables of SNOwGLoBES differ by a factor 5–7, Earth models without
    a crust overstate A<sub>DN</sub> by up to 40 %, and B16 gives 6.5 % more <sup>8</sup>B.
+8. **One or two inputs limit each prediction.** ES rates by the solar model
+   (16 % for <sup>8</sup>B, 8 % for <sup>7</sup>Be; the SNO NC <sup>8</sup>B flux
+   takes 16 % to 4 %), CC on <sup>40</sup>Ar by the nuclear model (36 % for
+   <sup>8</sup>B) and, for hep, equally by its flux (29 %), A<sub>DN</sub> by
+   statistics (64 % at 100 kt·yr in water). The oscillation parameters add
+   under 3 %, the Earth model, among current models, 0.1 % or less.
 
 ## Results so far
 
