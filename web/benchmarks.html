@@ -177,19 +177,23 @@
   <section data-page="B5" hidden>
     <section class="hero">
       <h2><span class="bench-id">B5</span> Detector · interaction rates and the detector response</h2>
-      <p>B5 has two parts. Part 1 folds the B2 fluxes and oscillations and the B4 cross sections into interactions per
-        kiloton-year in true neutrino energy, the input of every detector. Part 2 passes them through each detector's
+      <p>B5 closes the chain: it folds the B2 fluxes and oscillations and the B4 cross sections into interactions per
+        kiloton-year in true neutrino energy, the input of every detector, and passes them through each detector's
         published response (resolution, efficiency, threshold) into observed spectra and rates above threshold:
         Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II for scintillator and DUNE's far
-        detector for argon. Its entry in the overview is the statistics of 100 kt·yr and the published detector
-        uncertainties. Tools that compute the whole chain (SNOwGLoBES) are compared with SNUfish's folding of exactly
-        the same inputs; a tool may also contribute observed rates, with the spec's response or its own.</p>
+        detector for argon. Tools that fold the whole chain themselves (SNOwGLoBES) are compared with SNUfish's folding
+        of exactly the same inputs: 0.4 % on ⁸B and hep, but 2–21 % low below 2 MeV, where GLoBES evaluates
+        flux × σ once per sampling bin at its midpoint. The response matters where the spectrum rises:
+        Super-K IV's efficiency halves the rate above its threshold, DUNE's and SNO's resolutions take 4.4 % and
+        3.6 % off their CC rates above threshold, and under 3 % off the falling ES recoil spectra. Its entry in the
+        overview is the statistics of 100 kt·yr and the published detector uncertainties; a tool may also
+        contribute observed rates, with the spec's response or its own.</p>
     </section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
+    <section class="card"><h3 class="plot-title">Full-chain rates over SNUfish's folding</h3><div id="b5-tools"></div></section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-observed" class="plot tall"></div>
       <label class="inline">Component <select id="b5-component"></select></label></section>
-    <section class="card"><h3 class="plot-title">Part 2: rates above each preset's threshold, B16-GS98, per kt·yr by day</h3><div id="b5-observed"></div></section>
-    <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
-    <section class="card"><h3 class="plot-title">Part 1: full-chain rates over SNUfish's folding</h3><div id="b5-tools"></div></section>
+    <section class="card"><h3 class="plot-title">Rates above each preset's threshold, B16-GS98, per kt·yr by day</h3><div id="b5-observed"></div></section>
   </section>
 
   <section data-page="discrepancies" hidden>

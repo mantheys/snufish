@@ -368,9 +368,9 @@ const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visi
                      cc_nue_o16: "CC: visible energy E<sub>ν</sub> − 15.42 MeV", cc_nue_d: "CC: visible energy E<sub>ν</sub> − 1.442 MeV" };
 
 function b5Observed() {
-  // part 2: observed spectra through each detector's published response (B5_Observed), one line per detector and channel
+  // observed spectra through each detector's published response (B5_Observed), one line per detector and channel
   const c = colours(), data = page.sections.observed, node = $("plot-b5-observed");
-  if (!data || !data.cases) { $("b5-observed").innerHTML = `<p class="hint">Run snufish build and export-sections for part 2.</p>`; return; }
+  if (!data || !data.cases) { $("b5-observed").innerHTML = `<p class="hint">Run snufish build and export-sections for the observed spectra.</p>`; return; }
   const select = $("b5-component");
   if (!select.options.length) {
     for (const k of ["all", ...ORDER]) select.add(new Option(k === "all" ? "All components" : DISPLAY[k], k));
@@ -398,15 +398,15 @@ function b5Observed() {
     data.cases.filter((k) => k.totals[comp]).map((k) => { const t = k.totals[comp]; return `<tr><td>${DETECTOR_LABEL[k.detector]}</td><td>${k.preset}</td><td>${OBSERVABLE[k.channel] || k.channel}</td>
       <td class="num">${k.threshold}</td><td class="num">${fmt(t.interactions)}</td><td class="num">${fmt(t.true_above)}</td><td class="num">${fmt(t.above)}</td>
       <td class="num">${t.true_above > 0 ? (t.above / t.true_above).toFixed(3) : "—"}</td></tr>`; }).join("")
-  }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for part 2 (BKS for ES,
+  }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for the response (BKS for ES,
     MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Observed energy: for ES the electron's kinetic energy T, for CC
     E<sub>ν</sub> − Q. Solid lines ES, dashed CC; dotted lines: the thresholds. The ratio is the response's effect above the threshold:
     resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>`;
 }
 
 function whenVisible(node, draw) {
-  // draw a figure the first time it scrolls into view (once per call): the B5 tab opens on its part-2 figure, so the
-  // part-1 figure further down costs nothing until it is seen
+  // draw a figure the first time it scrolls into view (once per call): the B5 tab now opens on the full-chain
+  // figure, so nothing below the fold is drawn until it is seen
   node.visibilityObserver?.disconnect();
   const observer = new IntersectionObserver((entries) => {
     if (entries.some((e) => e.isIntersecting)) { observer.disconnect(); draw(); }
@@ -421,12 +421,12 @@ function b5() {
   const node = $("plot-b5-chain");
   const cases = [...new Set(rows.map((r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`))];
   const key = (r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`;
-  const title = "Part 1: SNOwGLoBES full chain over SNUfish's folding (B16-GS98)";
+  const title = "SNOwGLoBES full chain over SNUfish's folding (B16-GS98)";
   node.previousElementSibling.innerHTML = title;
   whenVisible(node, () => b5Chain(node, rows, cases, key, title));
   $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
     rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
-  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; part 1 rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
+  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; the rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
     : `<p class="hint">No full-chain tool has contributed yet.</p>`;
 }
 
