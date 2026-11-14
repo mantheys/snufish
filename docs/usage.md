@@ -105,6 +105,26 @@ Writes `inputs.json`, `day_<solar model>.{json,bin}`,
 `night_<Earth model>.{json,bin}` and a manifest
 ([methods.md](methods.md#app-tables)).
 
+### `snufish export-pkl`
+
+```bash
+snufish export-pkl                                  # build/pkl/theory/Solar_Neutrino_Spectrum.pkl, B16-GS98
+snufish export-pkl --solar_model b23_mb22m          # any B2 solar model
+snufish export-pkl --period day --parameter_set juno_2025   # nu_e flux in the detector (x P_ee by day)
+snufish export-pkl --period annual --site SURF      # night and annual: through the Earth (NuFast-Earth driver)
+plotipus line --path theory --datafile Solar_Neutrino_Spectrum -i Source -x Energy -y Flux --logx --logy --exact
+```
+
+The solar neutrino spectrum as a plotipus pickle in the layout of the DUNE
+papers (left panel of the LOWE reconstruction paper's fig. 1): one row per
+component with arrays `Flux` and `Energy`, `Source` (`pp pep b7 b8 n13 o15 f17 hep`)
+and `Plot` (the solar model). Continua are in cm<sup>-2</sup> s<sup>-1</sup> MeV<sup>-1</sup>; lines
+(<sup>7</sup>Be, pep) are `Energy = [E, E]`, `Flux = [0, F]` with F in cm<sup>-2</sup> s<sup>-1</sup>, each
+<sup>7</sup>Be line its own row. The continua reproduce the paper's pickle to 10<sup>-5</sup>; the paper's
+line heights are scaled for display, SNUfish's are the physical fluxes.
+`--period none` (default) is the model's flux, flavours summed; `day`, `night` and `annual` multiply by
+P<sub>ee</sub>(E). `plotipus` option `--path`/`--datafile` correspond to `--path`/`--datafile` here (`--out` is its `data_root`).
+
 ### `snufish export-sections`
 
 ```bash

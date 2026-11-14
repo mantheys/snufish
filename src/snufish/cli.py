@@ -166,6 +166,15 @@ def cmd_export_sections(args):
     return 0
 
 
+def cmd_export_pkl(args):
+    from .pkl import solar_spectrum, write_pkl
+
+    _status_notes([("solar_model", args.solar_model)] + ([("parameter_set", args.parameter_set)] if args.period != "none" else []))
+    frame = solar_spectrum(args.solar_model, args.period, args.parameter_set, args.site, args.earth_model)
+    print(f"wrote   {write_pkl(frame, args.out, args.datafile, args.path)} ({len(frame)} rows)")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="snufish", description=__doc__)
     parser.add_argument("--version", action="version", version=__version__)
@@ -219,6 +228,18 @@ def main(argv=None):
     p = sub.add_parser("export-sections", help="uncertainty and impact of each benchmark, for the web page")
     p.add_argument("--tables", default="build/app", help="app tables (snufish export-app); sections.json goes there")
     p.set_defaults(func=cmd_export_sections)
+
+    p = sub.add_parser("export-pkl", help="the solar neutrino spectrum as a plotipus pickle (DUNE papers' layout)")
+    p.add_argument("--solar_model", default="b16_gs98")
+    p.add_argument("--period", choices=["none", "day", "night", "annual"], default="none",
+                   help="none: the model's flux; day/night/annual: the nu_e flux in the detector (times P_ee)")
+    p.add_argument("--parameter_set", default="solar_global_2024", help="oscillation parameters, with --period")
+    p.add_argument("--site", default="Kamioka", help="detector site, with --period night/annual")
+    p.add_argument("--earth_model", default="prem_crust1")
+    p.add_argument("--out", default="build/pkl", help="plotipus data_root")
+    p.add_argument("--path", default="theory", help="subdirectory (plotipus --path)")
+    p.add_argument("--datafile", default="Solar_Neutrino_Spectrum", help="file name without .pkl (plotipus --datafile)")
+    p.set_defaults(func=cmd_export_pkl)
 
     args = parser.parse_args(argv)
     return args.func(args)
