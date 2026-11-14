@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SNUfish Solar Neutrino Rates</title>
+  <meta name="description" content="Solar neutrino rates and their uncertainties, from published models, measurements and tools.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23eda100'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@4.1.2/plotly-basic.min.js"></script>
+  <script type="module" src="home.js"></script>
+</head>
+<body>
+<header class="top">
+  <h1>SNUfish <span>solar neutrino rates and their uncertainties</span></h1>
+  <div class="actions">
+    <a class="button" href="rates.html">Calculator</a>
+    <a class="button ghost-link" href="benchmarks.html">Benchmarks</a>
+    <button id="theme" class="ghost icon" type="button" aria-label="Colour theme"></button>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Home">
+  <a href="#overview" data-tab="overview">Overview</a>
+  <a href="#about" data-tab="about">About</a>
+</nav>
+
+<main class="home">
+  <p id="status" class="status"></p>
+
+  <section data-page="overview">
+    <section class="hero">
+      <h2>Solar Neutrino Rate and Uncertainty Tools</h2>
+      <p>
+        SNUfish computes solar neutrino interaction rates and day-night asymmetries for a chosen set of oscillation
+        parameters, solar model, site, Earth model, interaction channel and detector response, and propagates the
+        uncertainty of every input to the result: oscillation parameters and solar fluxes (with their correlations) are
+        sampled; the choice between competing state-of-the-art models is shown as a range, never folded into a σ, and
+        legacy models stay selectable but labelled and out of the ranges. The spectra, the sampled values and the error budget are plotted, and can be downloaded as data with
+        <a href="https://github.com/mantheys/plotipus" target="_blank" rel="noopener">plotipus</a> commands.
+      </p>
+      <p class="actions"><a class="button" href="rates.html">Calculator</a>
+        <a class="button ghost-link" href="benchmarks.html">Benchmarks</a></p>
+    </section>
+
+    <h2 class="credits-title">What we have learned</h2>
+    <div class="findings">
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a></span>
+        <p><b>Reactors fix Δm²₂₁; the Sun prefers it 1.5σ lower.</b> JUNO measures 7.50 × 10⁻⁵ eV² to 1.6 %, solar
+          data alone give 6.1 × 10⁻⁵ eV² to about 15 %, and both agree on sin²θ₁₂. The gap is physics to resolve, not an
+          input to choose.</p>
+        <h3 class="plot-title"></h3><div id="plot-f1" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B2">B2</a></span>
+        <p><b>Solar composition is the largest open flux uncertainty.</b> AAG21 predicts 16 % less ⁸B, 8 % less ⁷Be
+          and 30 % less CNO than MB22m, each beyond MB22m's own 1σ. MB22p and MB22m agree to 1 %.</p>
+        <h3 class="plot-title"></h3><div id="plot-f2" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B3">B3</a></span>
+        <p><b>The crust near the detector shifts A<sub>DN</sub> by −2.5 % to +3.7 %</b>, with a size and sign set by
+          the site. Taking it along each night chord instead of under the detector moves it by at most 0.2 %: that
+          is the Earth range, with one crust model. Han et al.'s 3D Earth (another crust, LITHO1.0, on a 3D mantle)
+          differs from it by 3–4 % of A<sub>DN</sub> at LNGS and SURF; neither is included yet.</p>
+        <h3 class="plot-title"></h3><div id="plot-f3" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
+        <p><b>⁴⁰Ar CC is uncertain by 37 % because the Gamow–Teller quenching is unsettled.</b> MARLEY 2 and the
+          Suzuki–Honma shell model agree within 3 %. Kostensalo's shell model is 27–35 % lower with g<sub>A</sub> = 1.00
+          and agrees with the free g<sub>A</sub>. A stopped-pion measurement would settle it.</p>
+        <h3 class="plot-title"></h3><div id="plot-f4" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B5">B5</a></span>
+        <p><b>SNOwGLoBES matches SNUfish to 0.4 % for ⁸B and hep, not below 2 MeV; the detector response matters
+          more.</b> On the same fluxes and cross sections its full chain is 16–21 % lower for ⁷Be, pep and ¹³N (GLoBES
+          takes flux × σ once per 0.5 MeV bin). Through the published responses, Super-K IV keeps 52 % of the ⁸B ES rate
+          above its threshold; DUNE's and SNO's resolutions take 4.4 % and 3.6 % off the CC rate.</p>
+        <h3 class="plot-title"></h3><div id="plot-f5" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
+        <p><b>The tools agree; the inputs do not.</b> Through the same Earth, NuFast-Earth, nuSQuIDS and PEANUTS agree
+          with the reference to 10⁻⁸–10⁻⁵; out of the Sun, NuFast-Earth and PEANUTS to 3 × 10⁻⁸ and 10⁻⁴; the two ES
+          radiative corrections to 0.1 %. That is orders of magnitude below the spread of competing inputs, and what is
+          left is each tool's hard-coded constants. The largest tool effect, NuFast-Earth's mean density per crossing on
+          PREM, moves the ⁸B A<sub>DN</sub> by 0.3 %; the calculator's night cuts PREM into 50 km shells, which removes it.</p>
+        <h3 class="plot-title"></h3><div id="plot-f6" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a></span>
+        <p><b>Most large spreads were outdated inputs, not uncertainties.</b> SNOwGLoBES's ⁴⁰Ar tables differ by a
+          factor 5–7, Earth models without a crust overstate A<sub>DN</sub> by up to 40 %, and B16 gives 6.5 % more ⁸B.
+          SNUfish labels these legacy or approximations and keeps them out of the ranges.</p>
+        <h3 class="plot-title"></h3><div id="plot-f7" class="plot"></div>
+      </article>
+      <article class="card finding">
+        <span class="chips-b"><a class="bench-id" href="benchmarks.html#B1">B1</a><a class="bench-id" href="benchmarks.html#B2">B2</a><a class="bench-id" href="benchmarks.html#B3">B3</a><a class="bench-id" href="benchmarks.html#B4">B4</a><a class="bench-id" href="benchmarks.html#B5">B5</a></span>
+        <p><b>One or two inputs limit each prediction.</b> ES rates are limited by the solar model (16 % for ⁸B, 8 %
+          for ⁷Be; the SNO NC ⁸B flux takes 16 % to 4 %), CC on ⁴⁰Ar by the nuclear model (36 % for ⁸B) and, for hep,
+          equally by its flux (29 %), and A<sub>DN</sub> by statistics: 64 % at 100 kt·yr in water. The oscillation
+          parameters add under 3 %; the Earth model, among current models, 0.1 % or less.</p>
+        <h3 class="plot-title"></h3><div id="plot-f8" class="plot"></div>
+      </article>
+    </div>
+    <p class="hint">Every input's status and the literature behind it: <a href="#status">About</a> and
+      <code>docs/status-of-inputs.md</code>. The figures are drawn from the benchmark data; the
+      <a href="benchmarks.html">benchmark pages</a> have the full comparisons.</p>
+  </section>
+
+  <section data-page="about" hidden>
+    <section class="home-grid">
+      <section class="step">
+        <h2>How the numbers are made</h2>
+        <ul class="plain">
+          <li>Every input comes from a published model, measurement or tool, credited below and linked from the
+            calculator's information buttons.</li>
+          <li>Oscillations in the Sun come from the SNUfish adiabatic reference solver; through the Earth from
+            NuFast-Earth, on 50 km shells (chord by chord for the crust along each chord). The page interpolates
+            tables of their results, which reproduce them to 2×10⁻⁴ for rates and 1 % for the day-night asymmetry.</li>
+          <li>The page's engine is a port of the SNUfish Python engine, checked against it to 10⁻⁹ on the same inputs
+            and random draws.</li>
+          <li>Rates are in observed energy after a detector response (threshold, Gaussian resolution or a smearing
+            matrix, efficiency): a published preset or your own. There is no background model.</li>
+        </ul>
+      </section>
+      <section class="step">
+        <h2>The benchmarks behind it</h2>
+        <ul class="plain">
+          <li>The benchmarks are the calculator's steps after the result, in the same order and under the same names:
+            <ul class="plain">
+              <li><span class="bench-id">B1</span> <b>Oscillation parameters</b>: measurements and global fits in one
+                format.</li>
+              <li><span class="bench-id">B2</span> <b>Sun</b>: the standard solar models (fluxes, spectra, density
+                and production profiles) and the oscillations inside the Sun.</li>
+              <li><span class="bench-id">B3</span> <b>Earth</b>: the crossing of the Earth at night.</li>
+              <li><span class="bench-id">B4</span> <b>Interaction</b>: the cross sections, ν–e scattering, CC and NC.</li>
+              <li><span class="bench-id">B5</span> <b>Detector</b>: everything folded into interaction rates, then
+                through each detector's published response.</li>
+            </ul></li>
+          <li>Each benchmark fixes its inputs, so tools that compute the same thing can be compared on the same plot.</li>
+          <li><a href="benchmarks.html">The benchmark pages</a> show what each step varies, how tools agree on it, and how
+            much it moves the rates and the day-night asymmetry.</li>
+          <li>SNUfish is not a product of any collaboration. Please cite the original work of the results you use.</li>
+        </ul>
+      </section>
+    </section>
+
+    <h2 id="status" class="credits-title">State of the art, legacy and approximations</h2>
+    <section class="step status-section">
+      <p>
+        Not every input SNUfish offers is current. <span class="badge current">state of the art</span> inputs are the
+        latest calculations and measurements; where several exist (the high- and low-metallicity solar models, the
+        measured Gamow–Teller strengths of ⁴⁰Ar, two radiative-correction calculations) they compete, and their spread is
+        the model range the calculator reports. <span class="badge legacy">legacy</span> inputs have been superseded and
+        are kept to reproduce published numbers; <span class="badge approximation">approximation</span>s simplify a
+        current input. A difference between a legacy or approximate input and the state of the art is not an
+        uncertainty, so the calculator labels both, keeps them out of the model ranges and says when a result uses one.
+        The literature behind each entry: <code>docs/status-of-inputs.md</code>.
+      </p>
+      <div id="status-table" class="status-table"></div>
+    </section>
+
+    <h2 id="credits" class="credits-title">Credits</h2>
+    <p class="hint">The experiments, models, calculations and software SNUfish is built on.</p>
+    <div id="credit-groups" class="credits"></div>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SNUfish benchmarks</title>
+  <meta name="description" content="What each SNUfish benchmark (B1–B5) varies, how well tools agree on it, and how much it moves solar neutrino rates and the day-night asymmetry, and how the calculator's templates compare with the published numbers.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23eda100'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@4.1.2/plotly-basic.min.js"></script>
+  <script type="module" src="benchmarks.js"></script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1><a href="index.html" class="home-link">SNUfish</a> <span>what each benchmark contributes to the uncertainty</span></h1>
+  </div>
+  <div class="actions">
+    <a class="button ghost-link" href="rates.html">Calculator</a>
+    <button id="theme" class="ghost icon" type="button" aria-label="Colour theme"></button>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Benchmarks">
+  <a href="#overview" data-tab="overview">Overview</a>
+  <a href="#B1" data-tab="B1">B1 Oscillation parameters</a>
+  <a href="#B2" data-tab="B2">B2 Sun</a>
+  <a href="#B3" data-tab="B3">B3 Earth</a>
+  <a href="#B4" data-tab="B4">B4 Interaction</a>
+  <a href="#B5" data-tab="B5">B5 Detector</a>
+  <a href="#discrepancies" data-tab="discrepancies">Discrepancies</a>
+</nav>
+
+<main class="home bench">
+  <p id="status" class="status"></p>
+
+  <section data-page="overview" hidden>
+    <section class="hero">
+      <h2>Where the uncertainty of a solar neutrino result comes from</h2>
+      <p>A rate or a day-night asymmetry is built from five steps, the steps of the calculator, each fixed by the
+        SNUfish benchmark of the same number and name: <b>B1 Oscillation parameters</b>, <b>B2 Sun</b> (the solar
+        model and the oscillations inside the Sun), <b>B3 Earth</b> (its crossing at night), <b>B4 Interaction</b>
+        (the cross sections) and <b>B5 Detector</b> (the folding into a rate and the detector response). Each step has its own spread: published uncertainties, a choice between models, or an
+        approximation that some tools make. The table attributes every source of the calculator's error budget to the
+        step it comes from, for five reference observables, counting state-of-the-art inputs only: published
+        uncertainties, the spread between competing current models and, for B5, the statistics of 100 kt·yr and the
+        published detector uncertainties. Each observable is seen through its detector's published response (Super-K IV,
+        DUNE, Borexino Phase-II: the B5 benchmark's).
+        Approximations and legacy models are shown on each benchmark's own page.</p>
+      <p class="hint" id="reference-note"></p>
+    </section>
+    <section class="card">
+      <h3 class="plot-title">Largest effect of each step, relative to the central value</h3>
+      <div id="matrix" class="matrix"></div>
+      <p class="hint official-caption">Sampled: the 1σ spread from published uncertainties. Model range: the largest
+        deviation from the nominal among the competing state-of-the-art alternatives (not a σ); legacy models are
+        plotted and labelled on each step's page but never counted here. B3: the two current crust models, under the
+        detector and along each chord. B5: the statistical 1σ of 100 kt·yr
+        (10 kt for 10 years) and the detector's published energy-scale, resolution and normalisation uncertainties
+        (Super-K IV's for water; DUNE and Borexino publish none for solar neutrinos).</p>
+    </section>
+    <section class="card">
+      <label class="inline">Observable <select id="overview-observable"></select></label>
+      <h3 class="plot-title"></h3><div id="plot-overview" class="plot tall"></div>
+    </section>
+  </section>
+
+  <section data-page="B1" hidden>
+    <section class="hero">
+      <h2><span class="bench-id">B1</span> Oscillation parameters · measurements and fits in one format</h2>
+      <p>The solar parameters Δm²₂₁ and sin²θ₁₂ of each measurement and global fit, with their 1σ, in one format; the
+        parameters a set does not determine (θ₁₃, θ₂₃, δ, Δm²₃₁) are NuFIT 6.0's. Like the solar models of B2 these are
+        inputs, not computations: no tool is compared here. B2 and B3 run on them, and the calculator samples the
+        chosen set's 1σ. Four sets are the state of the art: JUNO alone, NuFIT 6.1 with JUNO, and the solar data alone
+        (all solar, and Super-K + SNO). Δm²₂₁ from the Sun sits about 1.5σ below JUNO's: a physics question (solar
+        against reactor), not a choice of input, so the sets are never combined into a range.</p>
+    </section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b1-impact" class="plot"></div></section>
+    <div class="trio">
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b1-sets" class="plot"></div></section>
+    </div>
+    <section class="card"><h3 class="plot-title">Parameter sets</h3><div id="b1-table" class="matrix"></div></section>
+  </section>
+
+  <section data-page="B2" hidden>
+    <section class="hero">
+      <h2><span class="bench-id">B2</span> Sun · solar models and the oscillations inside the Sun</h2>
+      <p><b>Solar models.</b> Ten published standard solar models (B16, BS05, B23 with different surface compositions)
+        in one format: the flux of every component with its uncertainty, the electron density n<sub>e</sub>(r) and
+        where each component is produced. They set the normalisation of every rate: the flux uncertainty (sampled,
+        with the B23 correlations) and the spread between models (the composition problem) are the largest inputs to
+        most rates. Three of the ten are the state of the art: B23 with the MB22 abundances (meteoritic and
+        photospheric scales; high metallicity, favoured by helioseismology and the Borexino CNO rate) and B23 with
+        AAG21 (low metallicity). Their spread is the composition problem as it stands; the other seven are legacy,
+        labelled so, and kept to reproduce published numbers.</p>
+      <p><b>Oscillations inside the Sun.</b> For the measured parameters the propagation out of the Sun is adiabatic:
+        a neutrino leaves as a mass eigenstate with probability |V<sub>ei</sub>|² set by the electron density where it
+        was produced. NuFast-Earth agrees with the reference to 3 × 10⁻⁸ and PEANUTS to 1.2 × 10⁻⁴ (its hard-coded
+        matter potential), so the solar model, not the solver, is what moves a result. Each
+        component is produced in its own region (⁸B at 0.05 R☉, ⁷Be at 0.07, pp at 0.12, hep at 0.14), so each has its
+        own P<sub>ee</sub>(E). SNUfish averages over each component's production profile. Solvers that put every
+        component at one point, or on ⁸B's profile, shift the result; the shift is largest for hep, produced furthest
+        out (Lopes &amp; Turck-Chièze, <a href="https://arxiv.org/abs/1302.2791">arXiv:1302.2791</a>; Zaidel &amp;
+        Beacom, <a href="https://arxiv.org/abs/2504.10583">arXiv:2504.10583</a>).</p>
+    </section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-impact" class="plot"></div></section>
+    <div class="trio">
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-flux" class="plot"></div></section>
+      <section class="card">
+        <label class="inline">Solar model <select id="b2-model"></select></label>
+        <h3 class="plot-title"></h3><div id="plot-b2-production" class="plot"></div>
+      </section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-density" class="plot"></div></section>
+    </div>
+    <div class="trio">
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-components" class="plot"></div></section>
+      <section class="card">
+        <label class="inline">Component <select id="b2-component"></select></label>
+        <h3 class="plot-title"></h3><div id="plot-b2-treatments" class="plot"></div>
+      </section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b2-models" class="plot"></div></section>
+    </div>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b2-tools"></div></section>
+  </section>
+
+  <section data-page="B3" hidden>
+    <section class="hero">
+      <h2><span class="bench-id">B3</span> Earth · crossing the Earth at night</h2>
+      <p>At night the mass eigenstates cross the Earth and partly regenerate ν<sub>e</sub>: the day-night asymmetry.
+        B3 compares P(ν<sub>i</sub> → ν<sub>e</sub>) through PREM in three levels of detail (ten regions, four
+        regions, Prob3++'s four shells), averaged over each site's night. On constant shells NuFast-Earth, nuSQuIDS and
+        PEANUTS agree with the reference to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶ (PEANUTS's matter potential is rounded); on
+        PREM's continuous regions nuSQuIDS integrates the
+        polynomials and agrees with the reference to 10⁻⁶, while NuFast-Earth, which computes the calculator's night,
+        takes each crossing's mean density, off by up to 2 % in the ⁸B A<sub>DN</sub> at 10–15 MeV against the reference
+        (fourth-order Magnus, converged). The calculator's night therefore cuts those regions into 50 km shells (within
+        0.05 %); the bar "mean density per region crossing" is what NuFast-Earth's own treatment would shift. The state
+        of the art is PREM with the CRUST1.0 crust, in two competing models: the column under the detector (radial) and
+        the crust along each night chord (3D, near the detector and where the chord enters). Against full PREM they move
+        A<sub>DN</sub> by −2.5 to +3.7 %; against each other by at most 0.2 %, B3's model range: the far side of a chord
+        averages out. The range covers one crust model only: Han et al.'s 3D Earth (LITHO1.0 on the SAW642AN mantle)
+        differs from it by ~0.05 pp, 3–4 % of A<sub>DN</sub>, at LNGS and SURF. A second crust model and a 3D mantle are
+        not included yet. The crustless models are 20–40 % high; the other bars are approximations, signed shifts
+        against the default.</p>
+    </section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b3-impact" class="plot"></div></section>
+    <div class="trio">
+      <section class="card">
+        <label class="inline">Site <select id="b3-site"></select></label>
+        <h3 class="plot-title"></h3><div id="plot-b3-models" class="plot"></div>
+      </section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b3-sites" class="plot"></div></section>
+    </div>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b3-tools"></div></section>
+  </section>
+
+  <section data-page="B4" hidden>
+    <section class="hero">
+      <h2><span class="bench-id">B4</span> Interaction · cross sections: ν–e scattering, CC and NC</h2>
+      <p>Elastic scattering on electrons is known to well under 1 %: radiative corrections (Bahcall, Kamionkowski &amp;
+        Sirlin) and SNOwGLoBES's tables differ by a per mille or less on the rates (up to 0.5 % point by point, ν<sub>μ</sub>
+        and ν<sub>τ</sub> in opposite directions); tree level, an approximation, is 2–4 % high.
+        ν<sub>e</sub> CC on ⁴⁰Ar is not. MARLEY 2, with each of the three sets of measured Gamow–Teller
+        strengths, and the shell model of Suzuki &amp; Honma agree within 11 %; the shell model of Kostensalo, Suhonen
+        &amp; Zuber, which quenches the strength (g<sub>A</sub> = 1.00), is 27–35 % lower. That 37 % range is the
+        largest model uncertainty for argon detectors. The older tables (KLMV, SNOwGLoBES's, MARLEY v1) are legacy:
+        plotted for reference, not counted.</p>
+    </section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-impact" class="plot"></div></section>
+    <div class="trio">
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-argon" class="plot"></div></section>
+      <section class="card"><h3 class="plot-title"></h3><div id="plot-b4-es" class="plot"></div></section>
+    </div>
+    <section class="card"><h3 class="plot-title">Tools on the same inputs</h3><div id="b4-tools"></div></section>
+  </section>
+
+  <section data-page="B5" hidden>
+    <section class="hero">
+      <h2><span class="bench-id">B5</span> Detector · interaction rates and the detector response</h2>
+      <p>B5 closes the chain: it folds the B2 fluxes and oscillations and the B4 cross sections into interactions per
+        kiloton-year in true neutrino energy, the input of every detector, and passes them through each detector's
+        published response (resolution, efficiency, threshold) into observed spectra and rates above threshold:
+        Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II for scintillator and DUNE's far
+        detector for argon. Tools that fold the whole chain themselves (SNOwGLoBES) are compared with SNUfish's folding
+        of exactly the same inputs: 0.4 % on ⁸B and hep, but 2–21 % low below 2 MeV, where GLoBES evaluates
+        flux × σ once per sampling bin at its midpoint. The response matters where the spectrum rises:
+        Super-K IV's efficiency halves the rate above its threshold, DUNE's and SNO's resolutions take 4.4 % and
+        3.6 % off their CC rates above threshold, and under 3 % off the falling ES recoil spectra. Its entry in the
+        overview is the statistics of 100 kt·yr and the published detector uncertainties; a tool may also
+        contribute observed rates, with the spec's response or its own.</p>
+    </section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
+    <section class="card"><h3 class="plot-title">Full-chain rates over SNUfish's folding</h3><div id="b5-tools"></div></section>
+    <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-observed" class="plot tall"></div>
+      <label class="inline">Component <select id="b5-component"></select></label></section>
+    <section class="card"><h3 class="plot-title">Rates above each preset's threshold, B16-GS98, per kt·yr by day</h3><div id="b5-observed"></div></section>
+  </section>
+
+  <section data-page="discrepancies" hidden>
+    <section class="hero">
+      <h2>Discrepancies · the calculator's result templates</h2>
+      <p>Every result template of the calculator sets each step to a paper's inputs. Each one is computed here twice,
+        to keep apart two kinds of divergence:</p>
+      <ul class="plain">
+        <li><b>Reproduction</b>: SNUfish with the paper's own assumptions (its solar model, oscillation parameters,
+          cross section, Earth model) against the number the paper publishes. What remains is what SNUfish cannot
+          reproduce: rounding, an undocumented choice of the paper, or a difference of method; each template's note
+          says which.</li>
+        <li><b>Update</b>: SNUfish again, with every legacy input and approximation replaced by the state of the art
+          (<a href="index.html#status">which inputs are which</a>), against SNUfish with the paper's. That is what newer
+          models and measurements change in the prediction: not an error of the paper, and not an uncertainty. A paper's
+          own oscillation parameters are kept: they are the scenario its number answers (an asymmetry at a stated
+          Δm²).</li>
+      </ul>
+      <p>For measurements, the first table gives the pull: how far each prediction lies from the measured value, in
+        its error. Day-night asymmetries
+        are in the papers' convention, (D − N)/mean. See also
+        <a href="https://github.com/mantheys/snufish/blob/main/docs/crosschecks.md">docs/crosschecks.md</a>.</p>
+    </section>
+    <p id="discrepancy-status" class="status"></p>
+    <section class="card">
+      <h3 class="plot-title">Measurements: pulls of the predictions</h3>
+      <div id="pull-scale" class="scale"></div>
+      <div id="pull-table" class="matrix"></div>
+    </section>
+    <section class="card">
+      <label class="inline">Order <select id="discrepancy-order">
+        <option value="size">Largest reproduction difference first</option>
+        <option value="shift">Largest update shift first</option>
+        <option value="calculator">As in the calculator</option>
+      </select></label>
+      <div id="discrepancy-scale" class="scale"></div>
+      <div id="discrepancy-table" class="matrix"></div>
+    </section>
+  </section>
+</main>
+</body>
+</html>
