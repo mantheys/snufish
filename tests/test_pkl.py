@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -27,3 +29,16 @@ def test_day_survival_lowers_b8_and_cli_writes_pkl(tmp_path):
     assert main(["export-pkl", "--out", str(tmp_path)]) == 0
     back = pd.read_pickle(tmp_path / "theory" / "Solar_Neutrino_Spectrum.pkl")
     assert len(back) == len(vacuum)
+
+
+def test_xsec_comparison_layout(tmp_path):
+    marley = Path("/home/smanthey/Code/marley")
+    xscns = Path("/home/smanthey/Code/GLoBES/snowglobes/xscns")
+    if not (marley / "build" / "bin" / "marley").exists() or not xscns.exists():
+        pytest.skip("needs a built MARLEY checkout and SNOwGLoBES's xscns")
+    curves = {r["Config"]: r for r in pkl.xsec_comparison(marley, xscns)}
+    assert set(curves) == {"xs_nue_Ar40", "xs_nuebar_Ar40", "xs_nue_e", "xs_nuebar_e", "xs_numu_nutau_e", "xs_nc_nue_Ar40"}
+    cc = curves["xs_nue_Ar40"]
+    assert cc["Energy"][0] == 0.5 and cc["Energy"][-1] == 100.0
+    assert np.interp(10.0, cc["Energy"], cc["XS"]) == pytest.approx(7.24e-4, rel=1e-2)   # ar40_marley1_allowed, 1e-38 cm^2
+    assert np.interp(100.0, cc["Energy"], cc["XS"]) == pytest.approx(0.446, rel=1e-2)

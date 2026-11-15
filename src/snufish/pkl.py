@@ -7,6 +7,9 @@ same plotipus command draws it from SNUfish's solar models:
 
     plotipus line --path theory --datafile Solar_Neutrino_Spectrum -i Source -x Energy -y Flux --logx --logy --exact
 
+``xsec_comparison`` (``snufish export-xsec``) writes the neutrino-argon cross sections of the paper's
+fig. 2, ``xs_comparison.pkl``.
+
 One row per flux component, columns ``Flux`` and ``Energy`` (arrays), ``Source``
 (``pp pep b7 b8 n13 o15 f17 hep``) and ``Plot`` (the solar model's label).
 A continuum is its flux density in cm^-2 s^-1 MeV^-1 at the energies of its
@@ -79,5 +82,67 @@ def write_pkl(frame, directory, datafile, path="theory"):
     """``<directory>/<path>/<datafile>.pkl``: where ``--path`` and ``--datafile`` of plotipus look."""
     out = Path(directory) / path / f"{datafile}.pkl"
     out.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_pickle(out)
+    pd.to_pickle(frame, out)
     return out
+
+
+XSEC_CONFIGS = (  # Config, Flavor, Interaction: the rows of the paper's xs_comparison.pkl
+    ("xs_nue_Ar40", r"$\nu_e$", "CC"),
+    ("xs_nuebar_Ar40", r"$\bar{\nu}_e$", "CC"),
+    ("xs_nue_e", r"$\nu_e$", "ES"),
+    ("xs_nuebar_e", r"$\bar{\nu}_e$", "ES"),
+    ("xs_numu_nutau_e", r"$\nu_{\mu ,\nu_\tau}$", "ES"),
+    ("xs_nc_nue_Ar40", r"$\nu_x$", "NC"),
+)
+
+
+def _snowglobes_table(xscns, name, column):
+    """sigma in 1e-38 cm^2 from a SNOwGLoBES table (log10 E/GeV, sigma/E in 1e-38 cm^2/GeV); column 1 is nu_e, 4 nu_e_bar."""
+    table = np.loadtxt(Path(xscns) / f"{name}.dat", comments="#")
+    energy = 10 ** table[:, 0] * 1e3
+    return energy, table[:, column] * 10 ** table[:, 0]
+
+
+def xsec_comparison(marley, xscns, cc_model="ar40_marley1_allowed", energies=None):
+    """Neutrino-argon cross sections (1e-38 cm^2) in the layout of the paper's ``xs_comparison.pkl``.
+
+    The settings of DUNE's official MARLEY production (``roiana_marley_dune.fcl``: MARLEY v1.2.1, reactions
+    ``ve40ArCC_Bhattacharya2009.react`` and ``ES.react``): nu_e CC on 40Ar is ``marley xsec`` of the checkout
+    ``marley`` with the B4 variant ``cc_model`` (``contributions/marley/scripts/run_b4.py``; default
+    ``ar40_marley1_allowed``, MARLEY v1.2.1's cross section), at any energy. ES (nu_e, nu_e-bar, nu_mu, nu_tau;
+    the last two averaged) is ``ES.react``: tree level, per electron. NC on 40Ar is the SNOwGLoBES table SNUfish
+    stores. nu_e-bar CC is the SNOwGLoBES table in ``xscns`` (a SNOwGLoBES checkout's ``xscns``), which MARLEY
+    does not have.
+    """
+    import importlib.util
+    import tempfile
+
+    import yaml
+
+    from .paths import contributions_dir, repo_root
+    energies = np.geomspace(0.5, 100.0, 1001) if energies is None else np.asarray(energies, dtype=float)
+    spec = importlib.util.spec_from_file_location("snufish_marley_run_b4", contributions_dir() / "marley" / "scripts" / "run_b4.py")
+    run_b4 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(run_b4)
+    if cc_model not in run_b4.CONFIGS:
+        raise ValueError(f"cc_model is one of {sorted(run_b4.CONFIGS)}")
+    marley = Path(marley).resolve()
+    with tempfile.TemporaryDirectory() as tmp:
+        grid = np.round(np.arange(0.02, energies.max() + 0.02, 0.02), 2)   # B4's step, up to the top of the range
+        sigma = run_b4.xsec(run_b4.executable(marley), marley, run_b4.CONFIGS[cc_model], Path(tmp), grid,
+                            run_b4.OPTIONS.get(cc_model)) * 1e38
+        # the official production's ES (DUNE's MARLEY v1.2.1 fcl: "ES.react"): tree level, per electron (Z = 18)
+        es = {f: np.interp(energies, grid, run_b4.xsec(run_b4.executable(marley), marley, ["ES.react"], Path(tmp), grid,
+                                                       neutrino=name, pdg=pdg)) * 1e38 / 18
+              for f, name, pdg in (("nue", "ve", 12), ("nuebar", "vebar", -12), ("numu", "vu", 14), ("nutau", "vt", 16))}
+    with (repo_root() / "reference" / "xsec" / "snowglobes_nc_ar40.yaml").open() as handle:
+        nc = yaml.safe_load(handle)
+    curves = {
+        "xs_nue_Ar40": np.interp(energies, grid, sigma, left=0.0),
+        "xs_nuebar_Ar40": np.interp(energies, *_snowglobes_table(xscns, "xs_nuebar_Ar40", 4)),
+        "xs_nue_e": es["nue"],
+        "xs_nuebar_e": es["nuebar"],
+        "xs_numu_nutau_e": 0.5 * (es["numu"] + es["nutau"]),
+        "xs_nc_nue_Ar40": np.interp(energies, nc["energy_MeV"], np.asarray(nc["sigma_cm2"]) * 1e38),
+    }
+    return [dict(Config=c, Flavor=f, Energy=energies.copy(), XS=curves[c], Interaction=i) for c, f, i in XSEC_CONFIGS]
