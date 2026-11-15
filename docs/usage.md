@@ -125,6 +125,21 @@ line heights are scaled for display, SNUfish's are the physical fluxes.
 `--period none` (default) is the model's flux, flavours summed; `day`, `night` and `annual` multiply by
 P<sub>ee</sub>(E). `plotipus` option `--path`/`--datafile` correspond to `--path`/`--datafile` here (`--out` is its `data_root`).
 
+### `snufish export-xsec`
+
+```bash
+snufish export-xsec --marley ~/Code/marley --snowglobes ~/Code/GLoBES/snowglobes/xscns   # build/pkl/theory/xs_comparison.pkl
+```
+
+The neutrino-argon cross sections of the LOWE reconstruction paper's fig. 2 (`xs_comparison.pkl`, a list of
+`Config`, `Flavor`, `Energy`, `XS` in 10<sup>-38</sup> cm<sup>2</sup>, `Interaction`) from 0.5 to 100 MeV (1001
+points, log-spaced as SNOwGLoBES's tables), with the settings of DUNE's official MARLEY production
+(`roiana_marley_dune.fcl`: MARLEY v1.2.1, `ve40ArCC_Bhattacharya2009.react` and `ES.react`). ν<sub>e</sub> CC on
+<sup>40</sup>Ar is `marley xsec` of the checkout given (`--cc_model`, a B4 MARLEY variant; default
+`ar40_marley1_allowed`, MARLEY v1.2.1's cross section), not limited to the B4 grid. ES (ν<sub>e</sub>,
+ν&#772;<sub>e</sub>, ν<sub>μ</sub>/ν<sub>τ</sub>) is `ES.react`: tree level, per electron, within 3 % of SNOwGLoBES's table.
+NC is the SNOwGLoBES table SNUfish stores and ν&#772;<sub>e</sub> CC the SNOwGLoBES table of `--snowglobes`: MARLEY has neither.
+
 ### `snufish export-sections`
 
 ```bash

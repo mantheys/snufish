@@ -67,13 +67,13 @@ def executable(checkout):
     raise SystemExit(f"no marley executable in {checkout} (build it first: make IGNORE_ROOT=1 IGNORE_HEPMC3=1)")
 
 
-def xsec(marley, checkout, reactions, work, energies, options=None):
-    """sigma(E) in cm^2 per 40Ar atom at the B4 energies, from `marley xsec`."""
+def xsec(marley, checkout, reactions, work, energies, options=None, neutrino="ve", pdg=12):
+    """sigma(E) in cm^2 per 40Ar atom at the B4 energies, from `marley xsec` (neutrino: MARLEY's name, ve vebar vu vubar vt vtbar; pdg: its code)."""
     kemax = float(energies[-1])
     steps = int(round(kemax / (energies[1] - energies[0]))) + 1  # KE grid 0, step, ..., kemax
     config = {"reactions": reactions, **(options or {}), "target": {"nuclides": [1000180400], "atom_fractions": [1.0]},
-              "source": {"type": "mono", "neutrino": "ve", "energy": 10.0},
-              "xsec": {"KEmin": 0.0, "KEmax": kemax, "steps": steps, "pdg": 12}}
+              "source": {"type": "mono", "neutrino": neutrino, "energy": 10.0},
+              "xsec": {"KEmin": 0.0, "KEmax": kemax, "steps": steps, "pdg": pdg}}
     run = len(list(work.glob("config_*.js"))) + 1
     cfg, out = work / f"config_{run}.js", work / f"xsec_{run}.txt"
     cfg.write_text(json.dumps(config, indent=1))
