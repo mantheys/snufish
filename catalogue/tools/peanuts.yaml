@@ -8,7 +8,7 @@ documentation: README.md in the repository, and the paper
 reference: arXiv:2303.15527   # Gonzalo & Lucente, Eur. Phys. J. C 84, 119 (2024)
 maintainers: [Tomás E. Gonzalo, Michele Lucente]
 benchmarks: [B2_sun, B3_earth]
-status: verified          # contributions/peanuts/scripts (pinned submodule, v1.6 = 39ef11f)
+status: verified          # contributions/peanuts/scripts (pinned submodule, v1.7 = 1783f9f)
 notes: >
   B2: peanuts.solar.Tei at the spec's n_e(r0), every variant. Its matter term is hard-coded,
   V/k = 3.868e-7/2.533 n_e E/dm^2, 3.6e-4 above the spec's constants; with its approximate matter angles

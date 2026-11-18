@@ -293,7 +293,7 @@ drivers and pinned versions in their `scripts/`). Neither was tuned: each runs w
 difference below beyond 10⁻⁸ was traced to its cause by changing that one input in a scratch run, never in the
 contribution.
 
-**PEANUTS 1.6, B2** (`peanuts.solar.Tei` at the spec's n_e(r₀)): F_i differ from the reference by up to
+**PEANUTS 1.7, B2** (`peanuts.solar.Tei` at the spec's n_e(r₀)): F_i differ from the reference by up to
 1.2 × 10⁻⁴, at every solar model, where F₁ ≈ 0.28 (the steepest part of the MSW transition). Two causes:
 
 - its matter term is hard-coded, V/k = 3.868 × 10⁻⁷ / 2.533 · n_e E / Δm² (`matter_mixing.Vk`), 3.6 × 10⁻⁴ above
@@ -305,7 +305,7 @@ contribution.
 The daytime P_ee averaged over each component's production moves by at most 4.6 × 10⁻⁵ (1.2 × 10⁻⁴ of itself),
 a hundred times below the B2 solar-model spread. NuFast-Earth, which diagonalises exactly, agrees to 3 × 10⁻⁸.
 
-**PEANUTS 1.6, B3** (`peanuts.earth.Pearth`, analytical mode). On `prem_prob3` it is exact (constant shells: the
+**PEANUTS 1.7, B3** (`peanuts.earth.Pearth`, analytical mode). On `prem_prob3` it is exact (constant shells: the
 first-order term vanishes), and agrees with the reference to 8.7 × 10⁻⁶, most at high energy through the core.
 That is its Earth matter potential, 3.868 × 10⁻⁷ m⁻¹ per mol/cm³ (`potentials.MatterPotential`), 1.8 × 10⁻⁵
 above the spec's 3.86793 × 10⁻⁷: with the shell densities rescaled by it the difference falls to 2 × 10⁻¹¹ (a
@@ -321,6 +321,13 @@ sub-grid of 1 260 points). What it cannot do:
   PEANUTS's numerical mode would not have this problem, but it integrates in Python (SciPy's LSODA, 10³–10⁴
   output points per chord): one chord at 10 MeV ran for more than ten minutes here, against the ~58 000 chords
   of the B3 grids.
+
+**PEANUTS 1.7** adds a reader for the B23 / SF-III solar models and changes nothing else that SNUfish calls: the
+B2 and B3 contributions rerun with it are bit-for-bit those of 1.6 (39ef11f), and the notes above stand. Its
+`Data/B23_SF3/` ships the GS98 and AGSS09 profiles of the same Zenodo v1.2 archive SNUfish imports (same SHA-256
+as `benchmarks/B2_sun/models.yaml`). Read by its own `SolarModel`, they give SNUfish's `b23_gs98` and `b23_agss09`
+radii, n_e and fluxes exactly and the production fractions to 1 × 10⁻⁵ per R_sun, the `%.6e` rounding of
+`reference/ssm/` (the fractions peak at 7–18).
 
 **nuSQuIDS 1.13.3, B3** (one single-energy nuSQUIDS per point, vacuum mass eigenstate in, EvalFlavorAtNode(0)
 out). On `prem_prob3`, where it rotates to the propagation eigenstates exactly, it agrees with the reference to

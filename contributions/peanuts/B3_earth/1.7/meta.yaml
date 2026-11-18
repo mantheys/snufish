@@ -1,10 +1,10 @@
 tool: peanuts
-tool_version: '1.6'
-tool_commit: 39ef11f
+tool_version: '1.7'
+tool_commit: 1783f9f
 benchmark: B3_earth
 benchmark_version: 0.3.0
 contributor: SNUfish maintainers (wrapper); PEANUTS by T. E. Gonzalo and M. Lucente
-date: '2026-11-07'
+date: '2026-11-19'
 command: cd contributions/peanuts/scripts && python run_b3.py
 settings:
   quantity: peanuts.earth.Pearth(e_i, mode='analytical', massbasis=True)[0], depth
