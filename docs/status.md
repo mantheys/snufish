@@ -185,4 +185,4 @@ From [crosschecks.md](crosschecks.md):
 - Pushes to `main` publish the page (`web/deploy.sh`) once lint and tests
   pass. plotipus is pinned to a commit in `pyproject.toml`; the page serves
   the wheel of that commit.
-- No release on PyPI; the package version is 0.1.0. A first citable release (v0.2.0) is prepared in docs/release.md, not tagged.
+- No release on PyPI. Citable releases on Zenodo (docs/release.md): v0.2.0 (10.5281/zenodo.24045167); v0.3.0 is prepared, not tagged.

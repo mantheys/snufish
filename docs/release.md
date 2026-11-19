@@ -8,14 +8,46 @@ the first release: 0.1.0 is the untagged development version; 0.2.0 adds the
 DUNE table options (`night_fraction`, `nu_threshold`, `nc_ar40`, the SOLAR
 night). The steps below are what it took; repeat 2 to 4 for the next one.
 
+Prepared: **v0.3.0** (steps 2 done, 3 and 4 to do). Release notes below.
+
+## v0.3.0 release notes
+
+SNUfish 0.3.0 adds the exports that make the theory inputs of the DUNE
+low-energy reconstruction paper and the DUNE solar Phase I paper, and
+replaces the last SNOwGLoBES cross section those figures used. Every rate of
+0.2.0 is unchanged: `scripts/dune_phase1_rates.py` gives the same numbers
+(B16-GS98 8B + hep, CC above E_ν = 5 MeV: 2420 per kt-yr).
+
+- `snufish export-pkl` (#24): the solar neutrino spectrum (per component, at
+  the detector, by period and site) as a plotipus pickle.
+- `snufish export-xsec` (#25, #27): neutrino-argon cross sections from 0.5 to
+  100 MeV as a plotipus pickle, with the settings of DUNE's official MARLEY
+  production (MARLEY v1.2.1, `ve40ArCC_Bhattacharya2009` in the allowed
+  approximation, `ES.react` at tree level). ν̄e CC on 40Ar is the HF+CRPA
+  calculation of Van Dessel, Jachowicz & Nikolakopoulos, PRC 100, 055503
+  (2019) (`reference/xsec/vandessel2019_nuebar_ar40.yaml`, free g_A = 1.27;
+  `--nuebar_model vandessel2019_quenched` gives a legacy g_A = 1.00 variant,
+  SNUfish's estimate), no longer SNOwGLoBES's undocumented table. NC is still
+  SNOwGLoBES's table (`reference/xsec/snowglobes_nc_ar40.yaml`).
+- PEANUTS v1.7 (#26): B2 and B3 rerun, bit-for-bit unchanged.
+- Web page (#21 to #23): Zenodo DOI badge and citation, the eighth Home
+  finding (one or two inputs limit each prediction), B5 tab in physics order,
+  observed-rates table scrolls on mobile.
+
+Submodules (Zenodo archives the repository without them): NuFast-Earth at
+`327586d` (v1.2.0-3), PEANUTS at `1783f9f` (v1.7).
+
+Cite the version DOI of 0.3.0 (Zenodo mints it at the release) or the concept
+DOI 10.5281/zenodo.24045166.
+
 ## Files
 
 | File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | done (`date-released` 2026-11-07, version DOI) |
-| `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | done (ORCID included) |
-| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | done (`0.2.0`; plotipus pinned to its `v0.1.0` release) |
-| `catalogue/tools/snufish-reference.yaml` | `reference` | done (the concept DOI, cites every version) |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.3.0: `version`, `date-released` 2026-11-19 (the tag date), concept DOI until step 4 |
+| `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.3.0 (ORCID included) |
+| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.3.0 (plotipus pinned to its `v0.1.0` release) |
+| `catalogue/tools/snufish-reference.yaml` | `reference` | unchanged (the concept DOI, cites every version) |
 
 ## Steps
 
