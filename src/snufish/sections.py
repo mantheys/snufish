@@ -33,7 +33,9 @@ import pandas as pd
 import yaml
 
 from . import engine
+from . import export
 from .export import MARLEY_DEFAULT
+from .reference import nc_ar40 as nc_ar40_reference
 from .paths import build_dir, contributions_dir, repo_root
 from .reference.sun import adiabatic_fractions, fractions_at_density
 from .scan import _with_oscillation
@@ -308,6 +310,66 @@ def tool_agreement():
     return out
 
 
+# NC on 40Ar (B4's NC card). The default model is the measured 1+ levels (Tornow et al. 2025) plus the HF+CRPA
+# continuum of Van Dessel et al. 2019, read from their fig. 8. NC is flavour-blind, so its rate needs no oscillation;
+# the rates are those of DUNE's solar Phase I settings (B16-GS98 8B + hep, E_nu > 5 MeV) and of this page's solar model.
+NC_MODELS = ("default", "tornow2025", "vandessel2019", "snowglobes")
+NC_SOLAR_MODELS = ("b16_gs98", SOLAR_MODEL)
+NC_HALF_STEP = 1.9e-43  # cm^2: half a plotting step of the figure (reference/xsec/vandessel2019_nc_ar40.yaml)
+
+
+def nc_reading_variants():
+    """{name: sigma(E) of the continuum} for the figure-reading variants of the default NC model: every digitised
+    point, or only the first nonzero one (12 MeV, which sets the 10-12 MeV onset), moved by half a plotting step, and
+    the continuum started at 11 MeV instead of 10 (its last zero)."""
+    table = export._yaml("reference/xsec/vandessel2019_nc_ar40.yaml")
+    nodes, sigma, threshold = np.asarray(table["energy_MeV"]), np.asarray(table["total_1e-40cm2"]) * 1e-40, table["threshold_MeV"]
+    first, positive = np.argmax(sigma > 0), sigma > 0
+    only = np.arange(len(sigma)) == first
+    shifted = {"all points −½ step": np.where(positive, np.clip(sigma - NC_HALF_STEP, 1e-50, None), sigma),
+               "all points +½ step": np.where(positive, sigma + NC_HALF_STEP, sigma),
+               "12 MeV point −½ step": np.where(only, np.clip(sigma - NC_HALF_STEP, 1e-50, None), sigma),
+               "12 MeV point +½ step": np.where(only, sigma + NC_HALF_STEP, sigma)}
+    out = {k: (lambda e, s=s: export._threshold_loglog(e, threshold, nodes, s)) for k, s in shifted.items()}
+    out["onset at 11 MeV"] = lambda e: export._threshold_loglog(e, 11.0, nodes, sigma)
+    return out
+
+
+def nc_ar40(inputs, tables, params):
+    """Cross sections, figure-reading band and rates of NC on 40Ar for B4's NC card."""
+    table = export._yaml("reference/xsec/vandessel2019_nc_ar40.yaml")
+    variants = nc_reading_variants()
+    grid = np.unique(np.round(np.concatenate([np.arange(8.0, 30.0001, 0.05), np.arange(9.30, 12.0, 0.01),
+                                              nc_ar40_reference.levels()[0]]), 6))
+    discrete = nc_ar40_reference.discrete(grid)
+    with_variants = {**inputs.data, "xsec": {**inputs.data["xsec"], "nc_ar40": {
+        **inputs.data["xsec"]["nc_ar40"],
+        **{k: {"energy": grid.tolist(), "sigma": (discrete + f(grid)).tolist()} for k, f in variants.items()}}}}
+    nc_inputs = engine.Inputs(with_variants)
+    osc = engine.oscillation(params)
+
+    def rate(model, solar_model="b16_gs98", threshold=5.0):
+        setup = engine.Setup(solar_model=solar_model, components=("B8", "hep"), detector="argon", site="SURF",
+                             channel="nc_ar40", xsec_model=model, period="day", nu_threshold=threshold)
+        per = engine.combine(engine.component_totals(nc_inputs, tables, setup, osc), list(setup.components))
+        return engine.quantity_value("rate", "day", *per)
+
+    snowglobes = inputs.data["xsec"]["nc_ar40"]["snowglobes"]
+    keep = [i for i, e in enumerate(snowglobes["energy"]) if 8.0 <= e <= 30.0]
+    sigma = {"default": (discrete + export.vandessel2019_nc(grid)).tolist(), "tornow2025": discrete.tolist(),
+             "vandessel2019": export.vandessel2019_nc(grid).tolist()}
+    band = np.array([discrete + f(grid) for f in variants.values()])
+    thresholds = np.round(np.arange(8.0, 16.0001, 0.25), 6)
+    return dict(
+        energy=grid.tolist(), sigma=sigma, band_low=band.min(axis=0).tolist(), band_high=band.max(axis=0).tolist(),
+        snowglobes=dict(energy=[snowglobes["energy"][i] for i in keep], sigma=[snowglobes["sigma"][i] for i in keep]),
+        points=dict(energy=[e for e in table["energy_MeV"] if e <= 30],
+                    sigma=[s * 1e-40 for e, s in zip(table["energy_MeV"], table["total_1e-40cm2"]) if e <= 30]),
+        half_step=NC_HALF_STEP, solar_models=list(NC_SOLAR_MODELS),
+        rates={m: {sm: rate(m, sm) for sm in NC_SOLAR_MODELS} for m in [*NC_MODELS, *variants]},
+        above=dict(threshold=thresholds.tolist(), **{m: [rate(m, threshold=t) for t in thresholds] for m in ("default", "snowglobes")}))
+
+
 def _clean(x):
     """NaN and numpy scalars to JSON, floats to 6 significant digits."""
     if isinstance(x, dict):
@@ -330,7 +392,7 @@ def export_sections(tables_dir):
     data = dict(set=SET, solar_model=SOLAR_MODEL, draws=N_DRAWS, single_density=SINGLE_DENSITY,
                 observables=impacts(inputs, tables, params), solar_profiles=sun_profiles(inputs),
                 survival=survival_curves(inputs, osc), regeneration=regeneration(inputs, tables, osc),
-                tools=tool_agreement(), observed=observed())
+                tools=tool_agreement(), observed=observed(), nc_ar40=nc_ar40(inputs, tables, params))
     path = tables_dir / "sections.json"
     with path.open("w") as handle:
         json.dump(_clean(data), handle, allow_nan=False, separators=(",", ":"))  # compact: the page downloads it

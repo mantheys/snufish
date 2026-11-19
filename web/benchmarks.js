@@ -345,6 +345,81 @@ function b4() {
   Plotly.react(node, esTraces, layout(c, node, "ES: SNOwGLoBES over tree level", "Neutrino energy (MeV)", "σ(SNOwGLoBES) / σ(tree)",
     { showlegend: false, hovermode: "x unified", xaxis: { type: "log", tickvals: energyAxis.tickvals, ticktext: energyAxis.ticktext },
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
+  b4Nc();
+}
+
+function b4Nc() {
+  // NC on 40Ar: the default (measured 1+ levels + HF+CRPA continuum), its parts, the band of the figure reading
+  // and SNOwGLoBES's legacy table; then the 8B + hep rate above a neutrino-energy cut, and the rates table
+  const nc = page.sections.nc_ar40;
+  if (!nc) { $("b4-nc-rates").innerHTML = `<p class="hint">No NC data in sections.json: rerun snufish export-sections.</p>`; return; }
+  const c = colours(), [blue, orange, green] = palette(), [phase1, ref] = nc.solar_models, r = nc.rates;
+  const fmt = (v) => (v >= 100 ? v.toFixed(0) : v.toFixed(1));
+  const label = { default: "default: 1⁺ levels + continuum", tornow2025: "measured 1⁺ levels (Tornow 2025)",
+                  vandessel2019: "HF+CRPA continuum (Van Dessel 2019)", snowglobes: "SNOwGLoBES (legacy)" };
+  let node = $("plot-b4-nc");
+  const line = (y, name, colour, width, dash) => ({ x: nc.energy, y, mode: "lines", name, line: { color: colour, width, dash },
+    hovertemplate: `%{x:.2f} MeV: %{y:.3g} cm²<extra>${name}</extra>` });
+  const floor = 1e-46, clip = (a) => a.map((v) => Math.max(v, floor));
+  const traces = [
+    { x: nc.energy, y: clip(nc.band_low), mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false },
+    { x: nc.energy, y: clip(nc.band_high), mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: alpha(blue, 0.2),
+      name: "figure reading", hoverinfo: "skip" },
+    line(clip(nc.sigma.tornow2025), label.tornow2025, orange, 1.4),
+    line(clip(nc.sigma.vandessel2019), label.vandessel2019, green, 1.4),
+    { x: nc.snowglobes.energy, y: clip(nc.snowglobes.sigma), mode: "lines", name: label.snowglobes, line: { color: c.muted, width: 1.4, dash: "dot" },
+      hovertemplate: `%{x:.2f} MeV: %{y:.3g} cm²<extra>${label.snowglobes}</extra>` },
+    line(clip(nc.sigma.default), label.default, blue, 2.4),
+    { x: nc.points.energy, y: nc.points.sigma.map((v) => (v > 0 ? v : null)), mode: "markers", name: "points read from the figure",
+      marker: { color: green, size: 6 }, hovertemplate: `%{x:.0f} MeV: %{y:.3g} cm²<extra>figure point</extra>` },
+  ];
+  htmlLegend(node, [{ label: label.default, colour: blue }, { label: label.tornow2025, colour: orange },
+                    { label: label.vandessel2019, colour: green }, { label: label.snowglobes, colour: c.muted, dash: true },
+                    { label: "figure reading (±½ plotting step; onset at 10–11 MeV)", colour: alpha(blue, 0.35), fill: true }],
+             "Dots: the figure's points.");
+  Plotly.react(node, traces, layout(c, node, "NC ν–⁴⁰Ar inelastic cross section", "Neutrino energy (MeV)", "σ (cm²)",
+    { showlegend: false, hovermode: "closest", xaxis: { range: [8, 30] },
+      yaxis: { type: "log", range: [-45, Math.log10(3e-41)], exponentformat: "power" } }), CONFIG);
+
+  node = $("plot-b4-nc-above");
+  const above = nc.above;
+  const aboveTraces = [
+    { x: above.threshold, y: above.default, mode: "lines", name: "default", line: { color: blue, width: 2.4 },
+      hovertemplate: `E<sub>ν</sub> > %{x:.2f} MeV: %{y:.1f}<extra>default</extra>` },
+    { x: above.threshold, y: above.snowglobes, mode: "lines", name: "SNOwGLoBES", line: { color: c.muted, width: 1.4, dash: "dot" },
+      hovertemplate: `E<sub>ν</sub> > %{x:.2f} MeV: %{y:.1f}<extra>SNOwGLoBES (legacy)</extra>` }];
+  htmlLegend(node, [{ label: "default", colour: blue }, { label: "SNOwGLoBES (legacy)", colour: c.muted, dash: true },
+                    { label: "10–12 MeV: the figure's last zero to its first point", colour: alpha(green, 0.3), fill: true }]);
+  Plotly.react(node, aboveTraces, layout(c, node, "Where the ⁸B + hep NC rate comes from", "Cut in neutrino energy E<sub>ν</sub> (MeV)",
+    "NC rate above the cut (per kt·yr)",
+    { showlegend: false, hovermode: "x unified", xaxis: { range: [8, 16] },
+      shapes: [{ type: "rect", xref: "x", yref: "paper", x0: 10, x1: 12, y0: 0, y1: 1, fillcolor: alpha(green, 0.12), line: { width: 0 } }] }), CONFIG);
+
+  const solarLabel = (m) => (page.inputs.solar_models?.[m]?.label || m).split(" · ")[0];
+  const signed = (v) => `${v < 0 ? "−" : "+"}${Math.abs(v).toFixed(0)} %`;
+  const at = (t) => above.default[above.threshold.findIndex((x) => Math.abs(x - t) < 1e-6)];
+  const continuum = r.vandessel2019[phase1] / r.default[phase1], onset = (at(10) - at(12)) / r.default[phase1];
+  const step = nc.half_step.toExponential(1).split("e");
+  const named = (name, text, kind) => `<tr><td>${text}</td><td>${kind}</td><td class="num">${fmt(r[name][phase1])}</td>` +
+    `<td class="num">${name === "default" ? "" : signed(100 * (r[name][phase1] / r.default[phase1] - 1))}</td>` +
+    `<td class="num">${fmt(r[name][ref])}</td></tr>`;
+  const variants = Object.keys(r).filter((n) => !(n in label));
+  $("b4-nc-rates").innerHTML = `<table><thead><tr><th>NC model</th><th>Status</th><th class="num">${solarLabel(phase1)} (DUNE Phase I)</th>` +
+    `<th class="num">vs default</th><th class="num">${solarLabel(ref)} (this page)</th></tr></thead><tbody>` +
+    named("default", `<b>${label.default}</b>`, "current") +
+    named("tornow2025", label.tornow2025, "approximation (part)") +
+    named("vandessel2019", label.vandessel2019, "approximation (part)") +
+    named("snowglobes", label.snowglobes, "legacy") +
+    variants.map((n) => named(n, `default, continuum ${n.replace("onset", "starting")}`, "figure reading")).join("") +
+    `</tbody></table><p class="hint">⁸B + hep NC interactions per kt·yr of argon with E<sub>ν</sub> > 5 MeV, no detector response; ` +
+    `NC is flavour-blind, so the oscillation parameters do not enter. ${solarLabel(phase1)} is DUNE's solar Phase I setting. ` +
+    `<b>Why the band is so wide:</b> Van Dessel et al. publish the continuum only as a figure (their fig. 8), read from its vector ` +
+    `source to ±${step[0]} × 10<sup>${Number(step[1])}</sup> cm², half a plotting step. The curve is zero at 10 MeV and ` +
+    `its first nonzero point, 12 MeV, is only one step up (±43 %), but the falling ⁸B spectrum puts most of the rate right there: ` +
+    `${(100 * continuum).toFixed(0)} % of it is continuum, and ${(100 * onset).toFixed(0)} % of the whole rate comes from neutrinos of 10–12 MeV, where the continuum is filled in from the 12 MeV point. Moving that point ` +
+    `by half a step changes the rate by ${signed(100 * (r["12 MeV point −½ step"][phase1] / r.default[phase1] - 1))} to ${signed(100 * (r["12 MeV point +½ step"][phase1] / r.default[phase1] - 1))}. <b>Not in the band:</b> the continuum may count again the measured levels ` +
+    `above the neutron threshold (9.87–10.28 MeV), which would lower the rate; only the authors' tabulated dσ/dω would settle ` +
+    `this and the reading (docs/status-of-inputs.md).</p>`;
 }
 
 function esTable(rows) {
