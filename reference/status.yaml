@@ -216,5 +216,20 @@ xsec_model:
       refs: [nucl-th/0201062]
   nc_ar40:
     default:
+      status: current
+      summary: "SNUfish's NC model: the discrete 1⁺ levels of ⁴⁰Ar at 9.3–10.3 MeV from their measured spin-flip M1 strength (Tornow et al. 2025, 1.31(18) μ_N², as GT₀ strength; allowed, with MARLEY 2's form factors) plus the HF+CRPA continuum of Van Dessel et al. 2019, which leaves out discrete excitations. The combination MARLEY's authors plan for their NC model (MARLEY v2.1.0 has none). ⁸B + hep rate 3.7 times the SNOwGLoBES table's (105.7 against 28.8 per kt·yr above 5 MeV), 93 % of it from the continuum's onset at 10–14 MeV, which the figure barely resolves (61–156) and which may double-count the measured levels above 9.9 MeV (see docs/status-of-inputs.md)."
+      refs: [doi:10.1103/55xh-b4f7, doi:10.1103/PhysRevC.100.055503, arXiv:2604.26801]
+    vandessel2019:
       status: approximation
-      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. Here so that the NC column of SNOwGLoBES rate tables can be reproduced; not validated, and no other calculation to compare with."
+      superseded_by: default
+      summary: "The continuum half of the default alone: Van Dessel, Jachowicz & Nikolakopoulos (2019), HF+CRPA, all multipoles, free g_A = 1.27, fig. 8 digitised from its vector PDF (±1.9 × 10⁻⁴³ cm²). Without the discrete 1⁺ levels at 9.3–10.3 MeV (the paper: \"discrete excitations are not taken into account\"); zero up to 10 MeV, the curve's last zero."
+      refs: [doi:10.1103/PhysRevC.100.055503, arXiv:1903.07726]
+    tornow2025:
+      status: approximation
+      superseded_by: default
+      summary: "The discrete half of the default alone: the measured 1⁺ levels at 9.3–10.3 MeV (Tornow et al. 2025) as GT₀ strength, allowed, with form factors. All of the default below 10 MeV, 5–14 % of it from 11 to 30 MeV, 1 % at 100 MeV; 7.4 of its 105.7 per kt·yr (⁸B + hep, above 5 MeV)."
+      refs: [doi:10.1103/55xh-b4f7]
+    snowglobes:
+      status: legacy
+      superseded_by: default
+      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. The default before; kept to reproduce SNOwGLoBES rate tables and the 28.8 per kt·yr quoted for DUNE so far (⁸B + hep, E_ν > 5 MeV)."

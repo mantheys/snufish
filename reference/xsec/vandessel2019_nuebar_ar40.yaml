@@ -38,7 +38,7 @@
 # vector magnetic multipoles (not quenched) and the axial-vector interference (which scales as g_A, not g_A^2), and
 # natural parity holds axial magnetic multipoles (left unquenched); whether the quenching found for allowed
 # Gamow-Teller transitions applies to forbidden ones at finite momentum transfer is open. At 100 MeV sigma_q is
-# 0.86 of the total. It brackets the effect of quenching; it is not a quenched HF+CRPA result.
+# 0.86 of the total. It shows the size of the effect; it is not a quenched HF+CRPA result.
 source: Phys. Rev. C 100, 055503 (2019), arXiv:1903.07726, fig. 9 (bottom panel, Total)
 retrieved: '2026-11-19'
 method: digitised (vector PDF of the figure, arXiv source)

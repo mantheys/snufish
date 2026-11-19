@@ -2,7 +2,7 @@
 JSON. SOLAR's settings (docs/dune-solar-tables.md): B16-GS98 8B + hep, dm2_21 = 6e-5 eV^2, sin2_12 = 0.304,
 sin2_13 = 0.022, SOLAR's night at SURF, night share 0.507, annual, per kt-yr of liquid argon, no detector response.
 
-    python scripts/dune_phase1_rates.py [--out build/dune_phase1] [--cc-model ar40_marley1_bhattacharya2009]
+    python scripts/dune_phase1_rates.py [--out build/dune_phase1] [--cc-model ar40_marley1_bhattacharya2009] [--nc-model snowglobes]
 
 Writes <out>/snufish_rates.tex (\\snufishRate<Channel><Axis><Threshold> macros, e.g. \\snufishRateCCTeFive),
 <out>/snufish_rates_table.tex (a booktabs tabular for the paper's appendix table) and <out>/snufish_rates.json
@@ -11,7 +11,9 @@ Te in electron kinetic energy (CC: the electron alone, from the 40K level shares
 no electron: E_nu cuts only. CC: the cross section of DUNE's MARLEY samples (MARLEY v1.2.1 in dunesw v09_91_04,
 reaction file ve40ArCC_Bhattacharya2009.react, allowed approximation: ar40_marley1_allowed, equal to SOLAR's
 neutrino_cc_final.txt). The T_e cut takes the model's own 40K level shares (from its measured B(GT)), or MARLEY 2's
-(ar40_marley2_bhattacharya2009) for a model without them.
+(ar40_marley2_bhattacharya2009) for a model without them. NC: SNUfish's default NC model (the measured discrete 1+
+strength of Tornow et al. 2025 plus the HF+CRPA continuum of Van Dessel et al. 2019); --nc-model snowglobes for
+SNOwGLoBES's table.
 """
 
 import argparse
@@ -30,6 +32,9 @@ SOLAR = {"dm2_21_eV2": 6e-5, "sin2_theta12": 0.304, "sin2_theta13": 0.022, "dm2_
 SETTINGS = dict(solar_model="b16_gs98", components=("B8", "hep"), detector="argon", site="SURF",
                 earth_model="prem_full", night_fraction=0.507)
 CC_MODEL = "ar40_marley1_allowed"
+# NC: SNUfish's default NC model, the measured discrete 1+ strength plus the HF+CRPA continuum (--nc-model snowglobes
+# for SNOwGLoBES's table, 28.8 per kt-yr above 1 and 5 MeV)
+NC_MODEL = "default"
 FALLBACK_LEVELS = "ar40_marley2_bhattacharya2009"  # the 40K level shares of a model without its own
 # (channel, axis, threshold in MeV): the cuts the paper quotes
 CUTS = [("CC", "Enu", 1.0), ("ES", "Enu", 1.0), ("NC", "Enu", 1.0),
@@ -40,7 +45,7 @@ NUMBER_WORDS = {1.0: "One", 5.0: "Five", 8.0: "Eight", 10.0: "Ten", 15.0: "Fifte
 PERIODS = ("day", "night", "annual")
 
 
-def rates(cc_model=CC_MODEL, earth_model="prem_full"):
+def rates(cc_model=CC_MODEL, earth_model="prem_full", nc_model=NC_MODEL):
     """{(channel, axis, threshold): {period: rate per kt-yr}} for CUTS."""
     inputs = engine.Inputs(collect_inputs())
     probabilities = ExactProbabilities(night_mode="solar")
@@ -53,6 +58,8 @@ def rates(cc_model=CC_MODEL, earth_model="prem_full"):
         setup = base.replace(channel=CHANNELS[channel])
         if channel == "CC":
             setup = setup.replace(xsec_model=cc_model)
+        elif channel == "NC":
+            setup = setup.replace(xsec_model=nc_model)
         if axis == "Enu":
             setup = setup.replace(nu_threshold=threshold)
         elif channel == "CC":
@@ -88,7 +95,7 @@ def commit():
         return "unknown"
 
 
-def write(values, out, cc_model, earth_model, levels=None):
+def write(values, out, cc_model, earth_model, levels=None, nc_model=NC_MODEL):
     out.mkdir(parents=True, exist_ok=True)
     levels = levels or cc_model
     version = f"{__version__} ({commit()})"
@@ -119,7 +126,7 @@ def write(values, out, cc_model, earth_model, levels=None):
     record = {"snufish": version, "units": "interactions per kt-yr (365.25 d) of liquid argon",
               "settings": {**SETTINGS, "earth_model": earth_model, "components": list(SETTINGS["components"]),
                            "oscillation": SOLAR, "night": "SOLAR (1.478 km, latitude 44.35 deg, 80 nadir bins)",
-                           "cc_model": cc_model, "cc_te_level_shares": levels},
+                           "cc_model": cc_model, "cc_te_level_shares": levels, "nc_model": nc_model},
               "rates": [{"channel": c, "axis": a, "threshold_MeV": t, "macro": macro_name(c, a, t), **v}
                         for (c, a, t), v in values.items()]}
     (out / "snufish_rates.json").write_text(json.dumps(record, indent=1) + "\n")
@@ -130,10 +137,13 @@ def main():
     parser.add_argument("--out", type=Path, default=ROOT / "build" / "dune_phase1")
     parser.add_argument("--cc-model", default=CC_MODEL, help="CC cross section for the E_nu cuts")
     parser.add_argument("--earth", default="prem_full", help="Earth model (SOLAR's is not known)")
+    parser.add_argument("--nc-model", default=NC_MODEL, help="NC cross section on 40Ar (default: SNUfish's, the measured "
+                        "discrete strength plus the HF+CRPA continuum; snowglobes: SNOwGLoBES's table)")
     args = parser.parse_args()
 
-    values = rates(args.cc_model, args.earth)
-    write(values, args.out, args.cc_model, args.earth, levels_model(engine.Inputs(collect_inputs()), args.cc_model))
+    values = rates(args.cc_model, args.earth, args.nc_model)
+    write(values, args.out, args.cc_model, args.earth, levels_model(engine.Inputs(collect_inputs()), args.cc_model),
+          args.nc_model)
     print(f"{'channel':8s} {'cut':12s} {'day':>9s} {'night':>9s} {'annual':>9s}   (per kt-yr)")
     for (channel, axis, threshold), v in values.items():
         print(f"{channel:8s} {axis + ' > ' + format(threshold, 'g'):12s} "

@@ -87,6 +87,7 @@ def write_pkl(frame, directory, datafile, path="theory"):
 
 
 NUEBAR_MODELS = ("vandessel2019", "vandessel2019_quenched")   # reference/status.yaml, xsec_model: cc_nuebar_ar40
+NC_MODELS = ("default", "vandessel2019", "tornow2025", "snowglobes")   # reference/status.yaml, xsec_model: nc_ar40
 XSEC_CONFIGS = (  # Config, Flavor, Interaction: the rows of the paper's xs_comparison.pkl
     ("xs_nue_Ar40", r"$\nu_e$", "CC"),
     ("xs_nuebar_Ar40", r"$\bar{\nu}_e$", "CC"),
@@ -97,15 +98,19 @@ XSEC_CONFIGS = (  # Config, Flavor, Interaction: the rows of the paper's xs_comp
 )
 
 
-def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None, nuebar_model="vandessel2019"):
+def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None, nuebar_model="vandessel2019",
+                    nc_model="default"):
     """Neutrino-argon cross sections (1e-38 cm^2) in the layout of the paper's ``xs_comparison.pkl``.
 
     The settings of DUNE's official MARLEY production (``roiana_marley_dune.fcl``: MARLEY v1.2.1, reactions
     ``ve40ArCC_Bhattacharya2009.react`` and ``ES.react``): nu_e CC on 40Ar is ``marley xsec`` of the checkout
     ``marley`` with the B4 variant ``cc_model`` (``contributions/marley/scripts/run_b4.py``; default
     ``ar40_marley1_allowed``, MARLEY v1.2.1's cross section), at any energy. ES (nu_e, nu_e-bar, nu_mu, nu_tau;
-    the last two averaged) is ``ES.react``: tree level, per electron. NC on 40Ar is the SNOwGLoBES table SNUfish
-    stores (``reference/xsec/snowglobes_nc_ar40.yaml``). nu_e-bar CC on 40Ar, which MARLEY does not have, is the
+    the last two averaged) is ``ES.react``: tree level, per electron. NC on 40Ar, which MARLEY does not have, is
+    SNUfish's default (``nc_model``, ``NC_MODELS``): the measured discrete 1+ strength of Tornow et al. 2025 plus the
+    HF+CRPA continuum of Van Dessel et al. 2019 (``snufish.export.nc_ar40_default``); ``"vandessel2019"`` and
+    ``"tornow2025"`` are its two parts, ``"snowglobes"`` the SNOwGLoBES table used before (legacy). nu_e-bar CC on
+    40Ar, which MARLEY does not have either, is the
     HF+CRPA calculation of Van Dessel, Jachowicz & Nikolakopoulos, PRC 100, 055503 (2019), fig. 9
     (``reference/xsec/vandessel2019_nuebar_ar40.yaml``, ``snufish.export.vandessel2019_nuebar``): zero up to
     16 MeV, where the published curve leaves zero, free g_A = 1.27; ``nuebar_model="vandessel2019_quenched"`` is
@@ -117,12 +122,15 @@ def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None, nueb
 
     import yaml
 
-    from .export import vandessel2019_nuebar
+    from .export import nc_ar40_default, vandessel2019_nc, vandessel2019_nuebar
+    from .reference.nc_ar40 import discrete
     from .paths import contributions_dir, repo_root
     energies = np.geomspace(0.5, 100.0, 1001) if energies is None else np.asarray(energies, dtype=float)
     spec = importlib.util.spec_from_file_location("snufish_marley_run_b4", contributions_dir() / "marley" / "scripts" / "run_b4.py")
     run_b4 = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(run_b4)
+    if nc_model not in NC_MODELS:
+        raise ValueError(f"nc_model is one of {NC_MODELS}")
     if nuebar_model not in NUEBAR_MODELS:
         raise ValueError(f"nuebar_model is one of {NUEBAR_MODELS}")
     if cc_model not in run_b4.CONFIGS:
@@ -144,6 +152,8 @@ def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None, nueb
         "xs_nue_e": es["nue"],
         "xs_nuebar_e": es["nuebar"],
         "xs_numu_nutau_e": 0.5 * (es["numu"] + es["nutau"]),
-        "xs_nc_nue_Ar40": np.interp(energies, nc["energy_MeV"], np.asarray(nc["sigma_cm2"]) * 1e38),
+        "xs_nc_nue_Ar40": (np.interp(energies, nc["energy_MeV"], np.asarray(nc["sigma_cm2"]) * 1e38) if nc_model == "snowglobes"
+                           else {"default": nc_ar40_default, "vandessel2019": vandessel2019_nc,
+                                 "tornow2025": discrete}[nc_model](energies) * 1e38),
     }
     return [dict(Config=c, Flavor=f, Energy=energies.copy(), XS=curves[c], Interaction=i) for c, f, i in XSEC_CONFIGS]

@@ -28,6 +28,7 @@ from . import crust, earth3d
 from .exposure import cell_weights, orbital_factors, solar_weight
 from .fluxes import components
 from .paths import build_dir, repo_root
+from .reference import nc_ar40 as nc_ar40_reference
 from .reference.radiative import ratio_table
 from .reference.sun import adiabatic_fractions
 from .scan import SPLIT_KM, _with_oscillation, day_fractions, night_grid, night_probabilities, site_latitude
@@ -135,10 +136,18 @@ def collect_inputs():
     nakamura = _yaml("reference/xsec/nakamura2002.yaml")
     for channel in ("cc_nue_d", "nc_d"):
         xsec.setdefault(channel, {})["default"] = {"energy": nakamura["energy_MeV"], "sigma": nakamura[channel]}
-    # NC on 40Ar: SNOwGLoBES's table (QRPA, unpublished; see the file), its small negative values set to zero
+    # NC on 40Ar. Default: the measured discrete 1+ strength (Tornow et al. 2025) plus the HF+CRPA continuum (Van
+    # Dessel et al. 2019), the combination MARLEY's authors plan; on SNOwGLoBES's grid, 10 keV steps where the
+    # discrete levels open (9.3-12 MeV), so that the engine's linear interpolation follows their (E - E_x)^2 onsets
     nc_ar40 = _yaml("reference/xsec/snowglobes_nc_ar40.yaml")
-    xsec["nc_ar40"] = {"default": {"energy": nc_ar40["energy_MeV"],
-                                   "sigma": np.clip(nc_ar40["sigma_cm2"], 0.0, None).tolist()}}
+    grid = np.unique(np.round(np.concatenate([nc_ar40["energy_MeV"], np.arange(9.30, 12.0, 0.01),
+                                              nc_ar40_reference.levels()[0]]), 6))
+    xsec["nc_ar40"] = {name: {"energy": grid.tolist(), "sigma": f(grid).tolist()}
+                       for name, f in (("default", nc_ar40_default), ("vandessel2019", vandessel2019_nc),
+                                       ("tornow2025", nc_ar40_reference.discrete))}
+    # legacy: SNOwGLoBES's table (QRPA, unpublished; see the file), its small negative values set to zero
+    xsec["nc_ar40"]["snowglobes"] = {"energy": nc_ar40["energy_MeV"],
+                                     "sigma": np.clip(nc_ar40["sigma_cm2"], 0.0, None).tolist()}
     detectors = {**b5["detectors"], **APP_DETECTORS}
     # NC channels have no B4 benchmark: the page adds them to the spec's detectors
     detectors["argon"] = {**detectors["argon"], "channels": {**detectors["argon"]["channels"], "nc_ar40": "ar40"}}
@@ -216,6 +225,22 @@ def vandessel2019_nuebar(energy, quenched=False):
         factor = (table["quenched"]["g_A"] / table["g_A"]) ** 2
         sigma = sigma - (1 - factor) * np.asarray(table["unnatural_1e-40cm2"])
     return _threshold_loglog(energy, table["threshold_MeV"], table["energy_MeV"], sigma * 1e-40)
+
+
+def vandessel2019_nc(energy):
+    """nu 40Ar NC inelastic cross section (cm^2, any neutrino flavour), HF+CRPA of Van Dessel, Jachowicz &
+    Nikolakopoulos 2019 (reference/xsec/vandessel2019_nc_ar40.yaml, digitised from their fig. 8): log(sigma) linear
+    in log(E - 10 MeV) between the curve's points, zero up to 10 MeV, the last published zero of the curve. A
+    continuum calculation: the discrete 1+ levels at 9.7-10 MeV, where the measured M1 strength lies, are not in it."""
+    table = _yaml("reference/xsec/vandessel2019_nc_ar40.yaml")
+    return _threshold_loglog(energy, table["threshold_MeV"], table["energy_MeV"], np.asarray(table["total_1e-40cm2"]) * 1e-40)
+
+
+def nc_ar40_default(energy):
+    """nu 40Ar NC inelastic cross section (cm^2, any neutrino flavour), SNUfish's default: the discrete 1+ levels from
+    their measured M1 strength (Tornow et al. 2025; snufish.reference.nc_ar40) plus the HF+CRPA continuum of Van Dessel
+    et al. 2019, which leaves out discrete excitations (vandessel2019_nc)."""
+    return nc_ar40_reference.discrete(energy) + vandessel2019_nc(energy)
 
 
 def status_table():

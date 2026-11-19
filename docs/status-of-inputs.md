@@ -282,6 +282,45 @@ unnatural parity also holds vector magnetic multipoles and interference
 terms linear in g<sub>A</sub>, and natural parity holds axial ones. It shows the
 size of a quenching of g<sub>A</sub>; it is not a quenched calculation.
 
+**NC on ⁴⁰Ar, state of the art: the measured discrete 1⁺ strength plus the
+HF+CRPA continuum (`default`).** No calculation covers both. The discrete
+part: Tornow et al. (PRC 112, 054320 (2025)) measured the spin-flip M1
+strength of ⁴⁰Ar between 9.3 and 10.3 MeV, 28 levels with 1.31(18) μ<sub>N</sub>²,
+twice what was known (and none from 10.3 to 11.7 MeV);
+`snufish/reference/nc_ar40.py` turns it into GT₀ strength (pure isovector
+spin-flip, Langanke et al. 2004) and an allowed NC cross section with MARLEY
+2's form factors. The continuum part: Van Dessel, Jachowicz &
+Nikolakopoulos (PRC 100, 055503 (2019), fig. 8), HF+CRPA with all
+multipoles and the free g<sub>A</sub>, which "does not take discrete excitations
+into account", read from its vector figure. MARLEY's authors plan this
+combination for their NC model (arXiv:2604.26801, sec. VI); MARLEY v2.1.0
+has no NC model. The sum is 4.4 times SNOwGLoBES's table at 12 MeV, 3.7 at
+20 MeV, 2.1 at 30 MeV, 1.4 at 50 MeV and 1.2 at 100 MeV.
+
+Its ⁸B + hep rate is 105.7 per kt·yr above E<sub>ν</sub> = 5 MeV (DUNE Phase I's
+settings), against 28.8 with SNOwGLoBES's table, and it is uncertain:
+
+- **The discrete part is the small one**: 7.4 per kt·yr (±1.0 from the
+  measured strength); the form factors lower it by 2 % (0.1 % of the total).
+- **The continuum carries 93 %**, almost all from its onset: 57 % of it comes
+  from E<sub>ν</sub> = 10–12 MeV, between the curve's last zero (10 MeV) and its
+  first point (12 MeV, a single plotting step of the figure). The plotting
+  step alone moves the rate to 61–156; starting the continuum at 11 MeV
+  instead of 10 gives 79.
+- **Possible double counting**: at E<sub>ν</sub> = 10–12 MeV the CRPA strength must sit
+  at excitation energies below 12 MeV, where the measured levels above the
+  neutron threshold (9.87–10.28 MeV, 0.23 μ<sub>N</sub>²) lie and where Tornow et al.
+  found no further M1 strength. Only the CRPA's dσ/dω, which is not
+  published, would separate them; the authors' tables would settle both
+  this and the digitisation.
+
+Its parts, `tornow2025` and `vandessel2019`, are selectable as
+*approximations* of it. **Legacy:** `snowglobes`, SNOwGLoBES's table (QRPA,
+Pirinen & Suhonen, private communication, 2018, unpublished), the default
+before, and the source of the 28.8 per kt·yr quoted for DUNE so far;
+`scripts/dune_phase1_rates.py` now gives 105.7 (`--nc-model snowglobes` for
+28.8).
+
 **Deuterium.** Nakamura et al. (Nucl. Phys. A 707, 561 (2002)), ±1 %, used
 by SNO; the effective-field-theory calculation of Butler, Chen & Kong
 agrees to about 1 %. Current.

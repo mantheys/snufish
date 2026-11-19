@@ -280,13 +280,16 @@ const XS_NAMES = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", 
                    ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed",
                    ar40_marley: "SNOwGLoBES MARLEY (p,n)", ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "KLMV", default: "default table",
                    vandessel2019: "HF+CRPA, Van Dessel 2019 (free g<sub>A</sub>)", vandessel2019_quenched: "HF+CRPA, Van Dessel 2019, quenched by SNUfish" };
+const XS_NAMES_BY_CHANNEL = { nc_ar40: { default: "measured 1⁺ strength (Tornow 2025) + HF+CRPA continuum (Van Dessel 2019)",
+                                         vandessel2019: "HF+CRPA continuum alone (Van Dessel 2019)",
+                                         tornow2025: "measured 1⁺ strength alone (Tornow 2025)", snowglobes: "SNOwGLoBES table" } };
 const ES = { bks: "BKS", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
 const EARTH_NAMES = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 
 function statusTable(d) {
   const status = d.status || {}, name = (category, key, channel) => ({
     parameter_set: d.parameter_sets.sets[key]?.label, solar_model: d.solar_models[key]?.label, earth_model: EARTH_NAMES[key],
-    es_model: ES[key], xsec_model: `${CHANNELS[channel] || channel}: ${XS_NAMES[key] || key}` }[category] || key);
+    es_model: ES[key], xsec_model: `${CHANNELS[channel] || channel}: ${XS_NAMES_BY_CHANNEL[channel]?.[key] || XS_NAMES[key] || key}` }[category] || key);
   const rows = [];
   for (const [category, title] of Object.entries(CATEGORIES)) {
     const tables = category === "xsec_model" ? Object.entries(status[category] || {}) : [[null, status[category] || {}]];

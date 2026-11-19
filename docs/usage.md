@@ -138,8 +138,10 @@ points, log-spaced as SNOwGLoBES's tables), with the settings of DUNE's official
 <sup>40</sup>Ar is `marley xsec` of the checkout given (`--cc_model`, a B4 MARLEY variant; default
 `ar40_marley1_allowed`, MARLEY v1.2.1's cross section), not limited to the B4 grid. ES (ν<sub>e</sub>,
 ν&#772;<sub>e</sub>, ν<sub>μ</sub>/ν<sub>τ</sub>) is `ES.react`: tree level, per electron, within 3 % of SNOwGLoBES's table.
-MARLEY has neither NC nor ν&#772;<sub>e</sub> CC; both are SNUfish's reference tables. NC is the SNOwGLoBES table
-(`reference/xsec/snowglobes_nc_ar40.yaml`). ν&#772;<sub>e</sub> CC is the HF+CRPA calculation of Van Dessel, Jachowicz &
+MARLEY has neither NC nor ν&#772;<sub>e</sub> CC; both are SNUfish's reference tables. NC is SNUfish's default NC model,
+the measured discrete 1⁺ strength (Tornow et al. 2025) plus the HF+CRPA continuum of Van Dessel et al. 2019, fig. 8
+(`--nc_model`: `vandessel2019` or `tornow2025` for either part, `snowglobes` for the SNOwGLoBES table used until then;
+see `docs/status-of-inputs.md`). ν&#772;<sub>e</sub> CC is the HF+CRPA calculation of Van Dessel, Jachowicz &
 Nikolakopoulos, PRC 100, 055503 (2019), fig. 9 (`reference/xsec/vandessel2019_nuebar_ar40.yaml`, free g<sub>A</sub>),
 zero up to 16 MeV, where the published curve leaves zero (the reaction threshold is 8.50 MeV). No SNOwGLoBES
 checkout is needed; until this change the ν&#772;<sub>e</sub> CC row was SNOwGLoBES's `xs_nuebar_Ar40.dat`, which has no
@@ -268,8 +270,13 @@ documented in `src/snufish/engine.py`; the main ones:
 | detector response | `threshold`, `resolution_a`, `resolution_b`, `resolution_poly`, `efficiency`, `efficiency_e50`, `efficiency_width`, `efficiency_table`, `smearing_table` |
 | uncertainties | `energy_scale_error`, `resolution_error`, `normalisation_error` (fractions), `exposure` (kt·yr) |
 
-`nc_ar40` (NC on ⁴⁰Ar, all flavours) is SNOwGLoBES's table, an unpublished
-QRPA calculation (`reference/xsec/snowglobes_nc_ar40.yaml`); it has no
+`nc_ar40` (NC on ⁴⁰Ar, all neutrino flavours) is by default the measured
+discrete 1⁺ strength (Tornow et al. 2025) plus the HF+CRPA continuum of Van
+Dessel et al. 2019 (`snufish.export.nc_ar40_default`; 105.7 per kt·yr for
+⁸B + hep above E<sub>ν</sub> = 5 MeV, with the caveats of
+`docs/status-of-inputs.md`). `xsec_model` `tornow2025` and `vandessel2019`
+select either part, `snowglobes` SNOwGLoBES's table (28.8, the default until
+then, legacy). None has a
 visible-energy model, so its observed axis is the neutrino energy and
 `threshold` is a cut in E<sub>ν</sub>.
 
