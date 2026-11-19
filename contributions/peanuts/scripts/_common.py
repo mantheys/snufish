@@ -17,7 +17,7 @@ def _git(*args):
 
 
 COMMIT = _git("rev-parse", "--short", "HEAD")
-VERSION = _git("describe", "--tags").removeprefix("v")  # 1.6
+VERSION = _git("describe", "--tags").removeprefix("v")  # 1.7
 REFERENCE = "arXiv:2303.15527"
 CONTRIBUTOR = "SNUfish maintainers (wrapper); PEANUTS by T. E. Gonzalo and M. Lucente"
 # PEANUTS's hard-coded matter potential. Earth (potentials.py): V/(hbar c) = 3.868e-7 m^-1 per mol/cm^3, 1.8e-5

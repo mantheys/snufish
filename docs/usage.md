@@ -24,7 +24,7 @@ The other tools' contributions are committed data; only regenerating them
 needs the tools. Each is pinned (versions in `catalogue/tools/`):
 
 ```bash
-# PEANUTS 1.6: the submodule contributions/peanuts/scripts/PEANUTS, run from its checkout
+# PEANUTS 1.7: the submodule contributions/peanuts/scripts/PEANUTS, run from its checkout
 pip install -r contributions/peanuts/scripts/requirements.txt    # numba, mpmath
 (cd contributions/peanuts/scripts && python run_b2.py && python run_b3.py)
 # nuSQuIDS 1.13.3 on SQuIDS 1.3.1: build_nusquids.sh clones and builds both into scripts/local
