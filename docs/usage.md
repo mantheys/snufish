@@ -143,7 +143,9 @@ MARLEY has neither NC nor ν&#772;<sub>e</sub> CC; both are SNUfish's reference 
 Nikolakopoulos, PRC 100, 055503 (2019), fig. 9 (`reference/xsec/vandessel2019_nuebar_ar40.yaml`, free g<sub>A</sub>),
 zero up to 16 MeV, where the published curve leaves zero (the reaction threshold is 8.50 MeV). No SNOwGLoBES
 checkout is needed; until this change the ν&#772;<sub>e</sub> CC row was SNOwGLoBES's `xs_nuebar_Ar40.dat`, which has no
-documented source; the new curve is 15–73 % above it from 18 to 100 MeV.
+documented source; the new curve is 15–73 % above it from 18 to 100 MeV. `--nuebar_model vandessel2019_quenched`
+selects SNUfish's legacy variant, the unnatural-parity strength quenched to g<sub>A</sub> = 1.00 (12–14 % lower;
+`snufish status` and `docs/status-of-inputs.md` give its approximations).
 
 ### `snufish export-sections`
 

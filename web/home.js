@@ -274,11 +274,12 @@ const CATEGORIES = { parameter_set: "Oscillation parameters", solar_model: "Sola
                      es_model: "ν–e elastic scattering", xsec_model: "CC and NC cross sections" }; // B1 to B4
 const STEP_OF = { parameter_set: "B1", solar_model: "B2", earth_model: "B3", es_model: "B4", xsec_model: "B4" };
 const BADGE = { current: "state of the art", legacy: "legacy", approximation: "approximation" };
-const CHANNELS = { cc_nue_ar40: "⁴⁰Ar", cc_nue_o16: "¹⁶O", cc_nue_d: "d CC", nc_d: "d NC", nc_ar40: "⁴⁰Ar NC" };
+const CHANNELS = { cc_nue_ar40: "⁴⁰Ar", cc_nue_o16: "¹⁶O", cc_nue_d: "d CC", nc_d: "d NC", nc_ar40: "⁴⁰Ar NC", cc_nuebar_ar40: "ν̄ₑ ⁴⁰Ar CC" };
 const XS_NAMES = { ar40_marley2_bhattacharya2009: "MARLEY 2, B(GT) (p,n) 2009", ar40_marley2_liu1998: "MARLEY 2, B(GT) Liu 1998",
                    ar40_marley2_bhattacharya1998: "MARLEY 2, B(GT) Bhattacharya 1998", ar40_ksz2018: "shell model, Kostensalo 2018",
                    ar40_marley1_bhattacharya2009: "MARLEY v1 model", ar40_marley1_allowed: "MARLEY v1 model, allowed",
-                   ar40_marley: "SNOwGLoBES MARLEY (p,n)", ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "KLMV", default: "default table" };
+                   ar40_marley: "SNOwGLoBES MARLEY (p,n)", ar40_marley1: "SNOwGLoBES MARLEY ⁴⁰Ti", ar40_klmv: "KLMV", default: "default table",
+                   vandessel2019: "HF+CRPA, Van Dessel 2019 (free g<sub>A</sub>)", vandessel2019_quenched: "HF+CRPA, Van Dessel 2019, quenched by SNUfish" };
 const ES = { bks: "BKS", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
 const EARTH_NAMES = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 

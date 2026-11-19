@@ -86,6 +86,7 @@ def write_pkl(frame, directory, datafile, path="theory"):
     return out
 
 
+NUEBAR_MODELS = ("vandessel2019", "vandessel2019_quenched")   # reference/status.yaml, xsec_model: cc_nuebar_ar40
 XSEC_CONFIGS = (  # Config, Flavor, Interaction: the rows of the paper's xs_comparison.pkl
     ("xs_nue_Ar40", r"$\nu_e$", "CC"),
     ("xs_nuebar_Ar40", r"$\bar{\nu}_e$", "CC"),
@@ -96,7 +97,7 @@ XSEC_CONFIGS = (  # Config, Flavor, Interaction: the rows of the paper's xs_comp
 )
 
 
-def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None):
+def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None, nuebar_model="vandessel2019"):
     """Neutrino-argon cross sections (1e-38 cm^2) in the layout of the paper's ``xs_comparison.pkl``.
 
     The settings of DUNE's official MARLEY production (``roiana_marley_dune.fcl``: MARLEY v1.2.1, reactions
@@ -107,7 +108,9 @@ def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None):
     stores (``reference/xsec/snowglobes_nc_ar40.yaml``). nu_e-bar CC on 40Ar, which MARLEY does not have, is the
     HF+CRPA calculation of Van Dessel, Jachowicz & Nikolakopoulos, PRC 100, 055503 (2019), fig. 9
     (``reference/xsec/vandessel2019_nuebar_ar40.yaml``, ``snufish.export.vandessel2019_nuebar``): zero up to
-    16 MeV, where the published curve leaves zero. No SNOwGLoBES checkout is needed.
+    16 MeV, where the published curve leaves zero, free g_A = 1.27; ``nuebar_model="vandessel2019_quenched"`` is
+    SNUfish's legacy variant with the unnatural-parity strength quenched to g_A = 1.00. No SNOwGLoBES checkout is
+    needed.
     """
     import importlib.util
     import tempfile
@@ -120,6 +123,8 @@ def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None):
     spec = importlib.util.spec_from_file_location("snufish_marley_run_b4", contributions_dir() / "marley" / "scripts" / "run_b4.py")
     run_b4 = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(run_b4)
+    if nuebar_model not in NUEBAR_MODELS:
+        raise ValueError(f"nuebar_model is one of {NUEBAR_MODELS}")
     if cc_model not in run_b4.CONFIGS:
         raise ValueError(f"cc_model is one of {sorted(run_b4.CONFIGS)}")
     marley = Path(marley).resolve()
@@ -135,7 +140,7 @@ def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None):
         nc = yaml.safe_load(handle)
     curves = {
         "xs_nue_Ar40": np.interp(energies, grid, sigma, left=0.0),
-        "xs_nuebar_Ar40": vandessel2019_nuebar(energies) * 1e38,
+        "xs_nuebar_Ar40": vandessel2019_nuebar(energies, quenched=nuebar_model.endswith("_quenched")) * 1e38,
         "xs_nue_e": es["nue"],
         "xs_nuebar_e": es["nuebar"],
         "xs_numu_nutau_e": 0.5 * (es["numu"] + es["nutau"]),

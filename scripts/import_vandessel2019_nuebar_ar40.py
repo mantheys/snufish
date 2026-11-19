@@ -54,6 +54,19 @@ HEADER = """\
 # SNUfish does not invent strength below the curve: threshold_MeV = 16.0 is the last published zero, sigma = 0 below
 # it, and between 16 and 18 MeV the first segment of log(sigma) in log(E - 16 MeV) is continued to zero. The true
 # cross section between 8.5 and 16 MeV is small but not exactly zero; the figure does not resolve it.
+#
+# PARITY SPLIT: natural_1e-40cm2 and unnatural_1e-40cm2 are the "Total" curves of the top (sigma_J,nat: 0+, 1-, 2+,
+# ...) and middle (sigma_J,unnat: 0-, 1+, 2-, ...) panels, digitised the same way on the same 44 energies; their sum
+# reproduces the total to {closure:.4f}e-40 cm^2, within the three panels' plotting steps.
+#
+# QUENCHED VARIANT (SNUfish's, legacy; not a calculation of the paper): sigma_q = total - (1 - f) unnatural with
+# f = (1.00/1.27)^2 = {factor:.3f}, i.e. the unnatural-parity strength scaled as if it were purely axial and quenched to
+# g_A = 1.00, the natural-parity strength left as it is. Rough in both directions: unnatural parity also holds the
+# vector magnetic multipoles (not quenched) and the axial-vector interference (which scales as g_A, not g_A^2), and
+# natural parity holds axial magnetic multipoles (left unquenched); whether the quenching found for allowed
+# Gamow-Teller transitions applies to forbidden ones at finite momentum transfer is open. At 100 MeV sigma_q is
+# {quenched_100:.2f} of the total. It shows the size of the effect;
+# it is not a quenched HF+CRPA result.
 """
 
 
@@ -71,8 +84,12 @@ def _segments(drawing):
     return [(it[1].x, it[1].y, it[2].x, it[2].y) for it in drawing["items"] if it[0] == "l"]
 
 
-def digitise(pdf):
-    """(energy MeV, sigma 1e-40 cm^2, calibration) of the bottom panel's "Total" curve."""
+PANELS = ("natural", "unnatural", "total")   # fig. 9 from top to bottom: sigma_J,nat, sigma_J,unnat, sigma_J,total
+G_A, G_A_QUENCHED = 1.27, 1.00
+
+
+def digitise(pdf, panel="total"):
+    """(energy MeV, sigma 1e-40 cm^2, calibration) of the "Total" curve of one panel of fig. 9 (``PANELS``)."""
     try:
         import pymupdf as fitz
     except ImportError:   # PyMuPDF < 1.24
@@ -80,29 +97,39 @@ def digitise(pdf):
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     drawings = page.get_drawings()
-    frames = [it[1].rect for d in drawings for it in d["items"] if it[0] == "qu"]
-    frame = max(frames, key=lambda r: r.y1)   # the bottom panel
+    frames = sorted({(r.x0, r.y0, r.x1, r.y1): r for d in drawings for it in d["items"] if it[0] == "qu"
+                     for r in [it[1].rect]}.values(), key=lambda r: r.y1)
+    assert len(frames) == len(PANELS), frames
+    frame = frames[PANELS.index(panel)]
     on = lambda v, w: abs(v - w) < 0.01
     inside = lambda x, y: frame.x0 - 0.01 <= x <= frame.x1 + 0.01 and frame.y0 - 0.01 <= y <= frame.y1 + 0.01
     lines = [s for d in drawings if d.get("color") == (0.0, 0.0, 0.0) for s in _segments(d)]
-    # major ticks: 6.3 pt long, on the bottom edge (x) and the left edge (y)
+    # major ticks: 6.3 pt long, on the panel's bottom edge (x) and left edge (y)
     xticks = sorted({round(s[0], 3) for s in lines if on(s[0], s[2]) and on(s[1], frame.y1) and on(s[1] - s[3], 6.3)})
     yticks = sorted({round(s[1], 3) for s in lines if on(s[1], s[3]) and on(s[0], frame.x0) and on(s[2] - s[0], 6.3)
                      and frame.y0 - 0.01 <= s[1] <= frame.y1 + 0.01})
-    words = [w for w in page.get_text("words") if w[4].lstrip("-").isdigit()]
-    xlabels = {round(0.5 * (w[0] + w[2]), 1): float(w[4]) for w in words if frame.y1 < w[1] < frame.y1 + 10}
-    ylabels = {round(0.5 * (w[1] + w[3]), 1): float(w[4]) for w in words if w[2] < frame.x0 and frame.y0 - 10 < w[1] < frame.y1}
+
+    def number(text):
+        try:
+            return float(text)
+        except ValueError:
+            return None
+
+    words = [(w, number(w[4])) for w in page.get_text("words") if number(w[4]) is not None]
+    xlabels = {round(0.5 * (w[0] + w[2]), 1): v for w, v in words if frame.y1 < w[1] < frame.y1 + 10}
+    ylabels = {round(0.5 * (w[1] + w[3]), 1): v for w, v in words if w[2] < frame.x0 and frame.y0 - 10 < w[1] < frame.y1}
 
     def fit(ticks, labels):
         value = [labels[min(labels, key=lambda c: abs(c - t))] for t in ticks]
         assert len(set(value)) == len(ticks), "tick labels not matched one to one"
         coef = np.polynomial.polynomial.polyfit(ticks, value, 1)
         residual = np.max(np.abs(np.polynomial.polynomial.polyval(ticks, coef) - value)) / abs(coef[1])
+        assert residual < 0.03, f"axis calibration residual {residual} pt"
         return coef, residual
 
     ex, ex_res = fit(xticks, xlabels)
     ey, ey_res = fit(yticks, ylabels)
-    assert len(xticks) == 6 and len(yticks) == 10, (xticks, yticks)
+    assert len(xticks) == 6 and len(yticks) >= 7, (xticks, yticks)
     # the "Total" curve: the solid purple polyline in the frame; the legend sample is a lone segment, not chained
     total = [d for d in drawings if d.get("color") and np.allclose(d["color"], TOTAL_RGB, atol=2e-3)
              and d.get("dashes") in (None, "[] 0") and inside(d["rect"].x1, d["rect"].y1)]
@@ -131,29 +158,42 @@ def main():
     parser.add_argument("--retrieved", default="2026-11-19", help="date the e-print was downloaded")
     args = parser.parse_args()
     tar, pdf = _figure(args.source)
-    energy, sigma, cal = digitise(pdf)
+    panels = {p: digitise(pdf, p) for p in PANELS}
+    energy, sigma, cal = panels["total"]
+    for p in ("natural", "unnatural"):
+        assert np.array_equal(panels[p][0], energy), f"{p} panel on another energy grid"
+    natural, unnatural = panels["natural"][1], panels["unnatural"][1]
+    # natural + unnatural = total, to the panels' plotting steps
+    tolerance = 0.5 * sum(panels[p][2]["step"] for p in PANELS)
+    closure = np.max(np.abs(natural + unnatural - sigma))
+    assert closure <= tolerance + 1e-9, f"natural + unnatural differs from total by {closure}"
     sha = lambda b: hashlib.sha256(b).hexdigest()
     positive = energy[sigma > 0]
     threshold = float(energy[energy < positive[0]].max())
     assert np.all(np.diff(sigma[energy >= threshold]) > 0), "Total curve not increasing above its threshold"
+    factor = (G_A_QUENCHED / G_A) ** 2
     header = HEADER.format(retrieved=args.retrieved, tar_sha=sha(tar)[:16] + "..." if tar else "n/a", figure=FIGURE,
                            n=len(energy), dx=cal["dx"],
                            pdf_sha=sha(pdf)[:16] + "...", ex=cal["ex"], ey=cal["ey"], ex_res=cal["ex_res"],
-                           ey_res=cal["ey_res"], dsig=0.5 * cal["step"] * 1e-40)
+                           ey_res=cal["ey_res"], dsig=0.5 * cal["step"] * 1e-40, closure=closure, factor=factor,
+                           quenched_100=(sigma - (1 - factor) * unnatural)[energy == 100][0] / sigma[energy == 100][0])
     body = {"source": "Phys. Rev. C 100, 055503 (2019), arXiv:1903.07726, fig. 9 (bottom panel, Total)",
             "retrieved": args.retrieved,
             "method": "digitised (vector PDF of the figure, arXiv source)",
             "model": "HF (Skyrme) + CRPA, all multipoles",
-            "g_A": 1.27,
+            "g_A": G_A,
             "coulomb": "Fermi function / MEMA interpolation (zeta^2 closest to 1)",
             "uncertainty_cm2": float(f"{0.5 * cal['step'] * 1e-40:.2g}"),   # digitisation only, absolute
             "reaction_threshold_MeV": 8.50,
             "threshold_MeV": threshold,
             "energy_MeV": [float(e) for e in energy],
-            "total_1e-40cm2": [float(f"{s:.4g}") for s in sigma]}
+            "total_1e-40cm2": [float(f"{s:.4g}") for s in sigma],
+            "natural_1e-40cm2": [float(f"{s:.4g}") for s in natural],       # fig. 9 top panel, Total
+            "unnatural_1e-40cm2": [float(f"{s:.4g}") for s in unnatural],   # fig. 9 middle panel, Total
+            "quenched": {"g_A": G_A_QUENCHED, "scheme": "total - (1 - (g_A/1.27)^2) unnatural (legacy variant, see header)"}}
     OUT.write_text(header + yaml.safe_dump(body, default_flow_style=None, width=118, sort_keys=False))
     print(f"wrote {OUT} ({len(energy)} points, sigma > 0 from {positive[0]:g} MeV, "
-          f"{sigma[energy == 100][0]:.3f}e-40 cm^2 at 100 MeV)")
+          f"{sigma[energy == 100][0]:.3f}e-40 cm^2 at 100 MeV; natural + unnatural - total: {closure:.4f}e-40 at most)")
 
 
 if __name__ == "__main__":

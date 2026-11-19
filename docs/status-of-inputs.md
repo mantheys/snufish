@@ -273,7 +273,14 @@ It is 15–73 % above the SNOwGLoBES table from 18 to 100 MeV (19 % at
 100 MeV). The only published ν̄ₑ ⁴⁰Ar curve with a source here, so current
 by default and without a range. Its g<sub>A</sub> is unquenched; the authors
 note (after Pastore et al.) that the need for quenching may reflect
-missing correlations or too small a model space.
+missing correlations or too small a model space. **Legacy:**
+`vandessel2019_quenched` (`snufish export-xsec --nuebar_model`), SNUfish's
+own variant rather than a published one, scales the unnatural-parity strength
+(fig. 9, middle panel) by (1.00/1.27)² and keeps the natural-parity strength;
+it is 12–14 % below the published curve from 18 to 100 MeV. It is rough:
+unnatural parity also holds vector magnetic multipoles and interference
+terms linear in g<sub>A</sub>, and natural parity holds axial ones. It shows the
+size of a quenching of g<sub>A</sub>; it is not a quenched calculation.
 
 **Deuterium.** Nakamura et al. (Nucl. Phys. A 707, 561 (2002)), ±1 %, used
 by SNO; the effective-field-theory calculation of Butler, Chen & Kong

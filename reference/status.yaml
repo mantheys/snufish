@@ -189,6 +189,16 @@ xsec_model:
       status: legacy
       superseded_by: ar40_marley2_bhattacharya2009
       summary: "SNOwGLoBES's default table (Gil-Botella & Rubbia 2004 / KLMV 2003 era). Predates the measured Gamow–Teller strengths."
+  cc_nuebar_ar40:   # snufish export-xsec only (--nuebar_model); not a channel of the calculator
+    vandessel2019:
+      status: current
+      summary: "Van Dessel, Jachowicz & Nikolakopoulos (2019): HF+CRPA, all multipoles, free g_A = 1.27, Coulomb by a Fermi-function/MEMA interpolation; fig. 9 digitised from its vector PDF. Zero up to 16 MeV, the last zero of the published curve (reaction threshold 8.50 MeV). The only published ν̄ₑ ⁴⁰Ar curve with a source here."
+      refs: [doi:10.1103/PhysRevC.100.055503, arXiv:1903.07726]
+    vandessel2019_quenched:
+      status: legacy
+      superseded_by: vandessel2019
+      summary: "SNUfish's variant of Van Dessel et al. (2019), not a published calculation: the unnatural-parity strength (fig. 9, middle panel) scaled by (1.00/1.27)², the natural-parity strength kept; 12–14 % below the published curve from 18 to 100 MeV. Rough: unnatural parity also holds vector magnetic multipoles and interference terms linear in g_A, natural parity axial ones. Shows the size of a quenching of g_A, nothing more."
+      refs: [doi:10.1103/PhysRevC.100.055503]
   cc_nue_o16:
     default:
       status: current

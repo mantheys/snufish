@@ -117,6 +117,13 @@ def _status_notes(choices):
             print(f"note    {name} is {found['status']}{instead}. {found['summary']}")
 
 
+def _xsec_status(channel, name):
+    from . import engine
+    from .uncertainty import inputs
+
+    return engine.status(inputs(), "xsec_model", name, channel)
+
+
 def cmd_status(args):
     from . import engine
     from .uncertainty import inputs
@@ -178,9 +185,12 @@ def cmd_export_pkl(args):
 def cmd_export_xsec(args):
     from .pkl import xsec_comparison, write_pkl
 
-    records = xsec_comparison(args.marley, args.cc_model)
+    found = _xsec_status("cc_nuebar_ar40", args.nuebar_model)
+    if found["status"] != "current":
+        print(f"note    {args.nuebar_model} is {found['status']}; state of the art: {found['superseded_by']}. {found['summary']}")
+    records = xsec_comparison(args.marley, args.cc_model, nuebar_model=args.nuebar_model)
     out = write_pkl(records, args.out, args.datafile, args.path)
-    print(f"wrote   {out} ({len(records)} curves, nu_e CC: {args.cc_model})")
+    print(f"wrote   {out} ({len(records)} curves, nu_e CC: {args.cc_model}, nu_e-bar CC: {args.nuebar_model})")
     return 0
 
 
@@ -254,6 +264,9 @@ def main(argv=None):
     p.add_argument("--marley", required=True, help="built MARLEY checkout (nu_e CC on 40Ar and ES; NC and nu_e-bar CC "
                    "are SNUfish's reference tables)")
     p.add_argument("--cc_model", default="ar40_marley1_allowed", help="B4 MARLEY variant of the nu_e CC curve")
+    p.add_argument("--nuebar_model", default="vandessel2019", choices=["vandessel2019", "vandessel2019_quenched"],
+                   help="nu_e-bar CC on 40Ar: Van Dessel et al. 2019 (HF+CRPA, free g_A = 1.27), or the legacy variant "
+                   "with the unnatural-parity strength quenched to g_A = 1.00")
     p.add_argument("--out", default="build/pkl", help="plotipus data_root")
     p.add_argument("--path", default="theory", help="subdirectory (plotipus --path)")
     p.add_argument("--datafile", default="xs_comparison", help="file name without .pkl (plotipus --datafile)")
