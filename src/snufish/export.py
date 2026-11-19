@@ -180,18 +180,42 @@ def collect_inputs():
     }
 
 
+def _threshold_loglog(energy, threshold, nodes, sigma):
+    """log(sigma) linear in log(E - threshold) between the nodes with sigma > 0, the first segment continued to the
+    threshold, the last beyond the table; zero at and below the threshold."""
+    nodes, sigma = np.asarray(nodes, dtype=float), np.asarray(sigma, dtype=float)
+    keep = (nodes > threshold) & (sigma > 0)
+    x, y = np.log(nodes[keep] - threshold), np.log(sigma[keep])
+    e = np.asarray(energy, dtype=float)
+    u = np.log(np.clip(e - threshold, 1e-12, None))
+    slope_low, slope_high = (y[1] - y[0]) / (x[1] - x[0]), (y[-1] - y[-2]) / (x[-1] - x[-2])
+    log_sigma = np.where(u < x[0], y[0] + slope_low * (u - x[0]),
+                         np.where(u > x[-1], y[-1] + slope_high * (u - x[-1]), np.interp(u, x, y)))
+    return np.where(e > threshold, np.exp(log_sigma), 0.0)
+
+
 def kostensalo2018(energy):
     """nu_e 40Ar CC cross section (cm^2) of Kostensalo, Suhonen & Zuber 2018 (reference/xsec/kostensalo2018.yaml):
     log(sigma) linear in log(E - Q) between the table's points, the first segment continued to the threshold,
     the last beyond the table."""
     table = _yaml("reference/xsec/kostensalo2018.yaml")
-    q, e = table["threshold_MeV"], np.asarray(energy, dtype=float)
-    x, y = np.log(np.asarray(table["energy_MeV"]) - q), np.log(np.asarray(table["total_1e-42cm2"]) * 1e-42)
-    u = np.log(np.clip(e - q, 1e-12, None))
-    slope_low, slope_high = (y[1] - y[0]) / (x[1] - x[0]), (y[-1] - y[-2]) / (x[-1] - x[-2])
-    log_sigma = np.where(u < x[0], y[0] + slope_low * (u - x[0]),
-                         np.where(u > x[-1], y[-1] + slope_high * (u - x[-1]), np.interp(u, x, y)))
-    return np.where(e > q, np.exp(log_sigma), 0.0)
+    return _threshold_loglog(energy, table["threshold_MeV"], table["energy_MeV"], np.asarray(table["total_1e-42cm2"]) * 1e-42)
+
+
+def vandessel2019_nuebar(energy, quenched=False):
+    """nu_e-bar 40Ar CC cross section (cm^2), HF+CRPA of Van Dessel, Jachowicz & Nikolakopoulos 2019 with the free
+    g_A = 1.27 (reference/xsec/vandessel2019_nuebar_ar40.yaml, digitised from their fig. 9): log(sigma) linear in
+    log(E - 16 MeV) between the curve's points, zero up to 16 MeV, the last published zero of the curve
+    (the reaction threshold is 8.5 MeV; the figure does not resolve the strength below 16 MeV).
+
+    ``quenched``: SNUfish's legacy variant, not the paper's: the unnatural-parity strength scaled by
+    (1.00/1.27)^2 at each point, the natural-parity strength kept (approximations in the YAML's header)."""
+    table = _yaml("reference/xsec/vandessel2019_nuebar_ar40.yaml")
+    sigma = np.asarray(table["total_1e-40cm2"])
+    if quenched:
+        factor = (table["quenched"]["g_A"] / table["g_A"]) ** 2
+        sigma = sigma - (1 - factor) * np.asarray(table["unnatural_1e-40cm2"])
+    return _threshold_loglog(energy, table["threshold_MeV"], table["energy_MeV"], sigma * 1e-40)
 
 
 def status_table():

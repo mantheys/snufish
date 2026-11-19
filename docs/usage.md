@@ -128,7 +128,7 @@ P<sub>ee</sub>(E). `plotipus` option `--path`/`--datafile` correspond to `--path
 ### `snufish export-xsec`
 
 ```bash
-snufish export-xsec --marley ~/Code/marley --snowglobes ~/Code/GLoBES/snowglobes/xscns   # build/pkl/theory/xs_comparison.pkl
+snufish export-xsec --marley ~/Code/marley   # build/pkl/theory/xs_comparison.pkl
 ```
 
 The neutrino-argon cross sections of the LOWE reconstruction paper's fig. 2 (`xs_comparison.pkl`, a list of
@@ -138,7 +138,14 @@ points, log-spaced as SNOwGLoBES's tables), with the settings of DUNE's official
 <sup>40</sup>Ar is `marley xsec` of the checkout given (`--cc_model`, a B4 MARLEY variant; default
 `ar40_marley1_allowed`, MARLEY v1.2.1's cross section), not limited to the B4 grid. ES (ν<sub>e</sub>,
 ν&#772;<sub>e</sub>, ν<sub>μ</sub>/ν<sub>τ</sub>) is `ES.react`: tree level, per electron, within 3 % of SNOwGLoBES's table.
-NC is the SNOwGLoBES table SNUfish stores and ν&#772;<sub>e</sub> CC the SNOwGLoBES table of `--snowglobes`: MARLEY has neither.
+MARLEY has neither NC nor ν&#772;<sub>e</sub> CC; both are SNUfish's reference tables. NC is the SNOwGLoBES table
+(`reference/xsec/snowglobes_nc_ar40.yaml`). ν&#772;<sub>e</sub> CC is the HF+CRPA calculation of Van Dessel, Jachowicz &
+Nikolakopoulos, PRC 100, 055503 (2019), fig. 9 (`reference/xsec/vandessel2019_nuebar_ar40.yaml`, free g<sub>A</sub>),
+zero up to 16 MeV, where the published curve leaves zero (the reaction threshold is 8.50 MeV). No SNOwGLoBES
+checkout is needed; until this change the ν&#772;<sub>e</sub> CC row was SNOwGLoBES's `xs_nuebar_Ar40.dat`, which has no
+documented source; the new curve is 15–73 % above it from 18 to 100 MeV. `--nuebar_model vandessel2019_quenched`
+selects SNUfish's legacy variant, the unnatural-parity strength quenched to g<sub>A</sub> = 1.00 (12–14 % lower;
+`snufish status` and `docs/status-of-inputs.md` give its approximations).
 
 ### `snufish export-sections`
 

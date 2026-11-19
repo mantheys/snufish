@@ -1,0 +1,63 @@
+# nu_e-bar 40Ar -> e+ 40Cl total charged-current cross section (cm^2 per 40Ar nucleus), HF+CRPA: N. Van Dessel,
+# N. Jachowicz and A. Nikolakopoulos, "Forbidden transitions in neutral and charged current interactions between
+# low-energy neutrinos and Argon", Phys. Rev. C 100, 055503 (2019), arXiv:1903.07726 (v3, 2019-10-22), fig. 9, bottom
+# panel ("sigma_J,total"), curve "Total". Retrieved 2026-11-19 from the arXiv source (e-print sha256
+# 9eceab61da78c1e0...), figure file argtotccanti.pdf (sha256 85e6cdc3db6e03e2...). Written by scripts/import_vandessel2019_nuebar_ar40.py.
+#
+# METHOD: digitised from the vector figure, not from pixels. The paper publishes no table (none in the arXiv source,
+# no supplemental material, none found in later papers of the group). The "Total" curve is a single gnuplot polyline
+# of 44 vertices, the plotted data points: E = 10, 16, 18, 20, ..., 100 MeV (2 MeV steps; the vertex abscissae lie
+# within 0.012 MeV of these values and are rounded to them). Axis calibration, a straight-line fit of the major
+# ticks to their labels: E = -38.0676 +0.440889 x/pt MeV (6 ticks, max residual 1.9e-02 pt),
+# sigma = +34.1391 -0.049596 y/pt 1e-40 cm^2 (10 ticks, max residual 1.9e-02 pt).
+# UNCERTAINTY: gnuplot writes coordinates to 0.05 pt, i.e. +-1.2e-43 cm^2 in sigma (half a step), absolute: 1.4 % at
+# 30 MeV, 0.15 % at 50 MeV, 0.014 % at 100 MeV, but 17 % at 20 MeV and 50 % at 18 MeV, where the curve is 1-3 steps
+# above zero. The paper quotes no model uncertainty.
+#
+# MODEL: Hartree-Fock (Skyrme) + continuum RPA, self-consistent residual interaction, all computed multipoles (the
+# J <= 3 curve of the figure lies a few % below the Total at 100 MeV; the paper's fig. 11 sums J <= 7). FREE g_A =
+# 1.27, not quenched (sec. II: "we use the free-nucleon value for the axial coupling of g_A = 1.27"). Coulomb
+# correction of the outgoing positron (Z' = 17): an interpolation between the Fermi function and the modified
+# effective momentum approximation (MEMA), taking at each energy transfer the zeta^2 closest to unity (sec. II, after
+# Engel 1998); for argon the Fermi function applies below about 60-70 MeV, MEMA above.
+#
+# THRESHOLD: the reaction threshold is Q_beta(40Cl) + 2 m_e = 7.48 + 1.022 = 8.50 MeV, but the 40Cl ground state is
+# 2- (unique first-forbidden from the 0+ 40Ar ground state) and the allowed (1+) strength lies higher. The published
+# curve is zero (below 1.2e-43 cm^2, half a plotting step) at its vertices 10 and 16 MeV and positive from 18 MeV.
+# SNUfish does not invent strength below the curve: threshold_MeV = 16.0 is the last published zero, sigma = 0 below
+# it, and between 16 and 18 MeV the first segment of log(sigma) in log(E - 16 MeV) is continued to zero. The true
+# cross section between 8.5 and 16 MeV is small but not exactly zero; the figure does not resolve it.
+#
+# PARITY SPLIT: natural_1e-40cm2 and unnatural_1e-40cm2 are the "Total" curves of the top (sigma_J,nat: 0+, 1-, 2+,
+# ...) and middle (sigma_J,unnat: 0-, 1+, 2-, ...) panels, digitised the same way on the same 44 energies; their sum
+# reproduces the total to 0.0022e-40 cm^2, within the three panels' plotting steps.
+#
+# QUENCHED VARIANT (SNUfish's, legacy; not a calculation of the paper): sigma_q = total - (1 - f) unnatural with
+# f = (1.00/1.27)^2 = 0.620, i.e. the unnatural-parity strength scaled as if it were purely axial and quenched to
+# g_A = 1.00, the natural-parity strength left as it is. Rough in both directions: unnatural parity also holds the
+# vector magnetic multipoles (not quenched) and the axial-vector interference (which scales as g_A, not g_A^2), and
+# natural parity holds axial magnetic multipoles (left unquenched); whether the quenching found for allowed
+# Gamow-Teller transitions applies to forbidden ones at finite momentum transfer is open. At 100 MeV sigma_q is
+# 0.86 of the total. It brackets the effect of quenching; it is not a quenched HF+CRPA result.
+source: Phys. Rev. C 100, 055503 (2019), arXiv:1903.07726, fig. 9 (bottom panel, Total)
+retrieved: '2026-11-19'
+method: digitised (vector PDF of the figure, arXiv source)
+model: HF (Skyrme) + CRPA, all multipoles
+g_A: 1.27
+coulomb: Fermi function / MEMA interpolation (zeta^2 closest to 1)
+uncertainty_cm2: 1.2e-43
+reaction_threshold_MeV: 8.5
+threshold_MeV: 16.0
+energy_MeV: [10.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 42.0, 44.0, 46.0, 48.0,
+  50.0, 52.0, 54.0, 56.0, 58.0, 60.0, 62.0, 64.0, 66.0, 68.0, 70.0, 72.0, 74.0, 76.0, 78.0, 80.0, 82.0, 84.0, 86.0, 88.0,
+  90.0, 92.0, 94.0, 96.0, 98.0, 100.0]
+total_1e-40cm2: [0.0, 0.0, 0.002839, 0.007801, 0.01524, 0.02764, 0.04252, 0.06236, 0.08963, 0.1219, 0.164, 0.2111, 0.2707,
+  0.3376, 0.4145, 0.5013, 0.6005, 0.7096, 0.8336, 0.965, 1.111, 1.265, 1.436, 1.62, 1.821, 2.036, 2.269, 2.52, 2.788, 3.075,
+  3.373, 3.685, 4.015, 4.362, 4.724, 5.101, 5.491, 5.897, 6.321, 6.76, 7.212, 7.68, 8.164, 8.662]
+natural_1e-40cm2: [0.0, 0.0, 0.001535, 0.004844, 0.01146, 0.01807, 0.02965, 0.04288, 0.06108, 0.08258, 0.109, 0.1421, 0.1802,
+  0.2248, 0.2761, 0.334, 0.3985, 0.4712, 0.5539, 0.6416, 0.7359, 0.8384, 0.9492, 1.068, 1.199, 1.34, 1.492, 1.654, 1.827,
+  2.013, 2.208, 2.41, 2.62, 2.843, 3.076, 3.316, 3.566, 3.825, 4.093, 4.373, 4.66, 4.958, 5.264, 5.582]
+unnatural_1e-40cm2: [0.0, 0.0, 0.0009649, 0.002895, 0.004823, 0.008683, 0.01351, 0.02026, 0.02798, 0.03955, 0.05306, 0.06946,
+  0.08875, 0.1119, 0.138, 0.1669, 0.2007, 0.2383, 0.2788, 0.3241, 0.3733, 0.4264, 0.4853, 0.5509, 0.6213, 0.6975, 0.7785,
+  0.8654, 0.9599, 1.062, 1.167, 1.276, 1.395, 1.519, 1.649, 1.784, 1.926, 2.074, 2.228, 2.388, 2.553, 2.723, 2.9, 3.081]
+quenched: {g_A: 1.0, scheme: 'total - (1 - (g_A/1.27)^2) unnatural (legacy variant, see header)'}

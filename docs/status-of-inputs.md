@@ -258,6 +258,30 @@ strengths that dominate at solar energies.
 **¹⁶O.** Kolbe, Langanke & Vogel (PRD 66, 013007 (2002)), as tabulated by
 SNOwGLoBES: the only model here, so current by default and without a range.
 
+**ν̄ₑ on ⁴⁰Ar (`snufish export-xsec` only).** Van Dessel, Jachowicz &
+Nikolakopoulos (PRC 100, 055503 (2019), fig. 9;
+`reference/xsec/vandessel2019_nuebar_ar40.yaml`): HF+CRPA with all
+multipoles, the free g<sub>A</sub> = 1.27 and the positron's Coulomb correction
+interpolated between the Fermi function and MEMA. MARLEY has no ν̄ₑ
+channel, and SNOwGLoBES's `xs_nuebar_Ar40.dat`, used before, has no
+documented source. The paper gives no table; the curve is read from the
+vector figure in its arXiv source (to ±1.2 × 10⁻⁴³ cm²). It is zero up to
+16 MeV, the last zero of the published curve, although the reaction opens
+at Q + 2mₑ = 8.50 MeV: the ⁴⁰Cl ground state is 2⁻ and the allowed strength
+lies higher, and SNUfish does not add strength the figure does not show.
+It is 15–73 % above the SNOwGLoBES table from 18 to 100 MeV (19 % at
+100 MeV). The only published ν̄ₑ ⁴⁰Ar curve with a source here, so current
+by default and without a range. Its g<sub>A</sub> is unquenched; the authors
+note (after Pastore et al.) that the need for quenching may reflect
+missing correlations or too small a model space. **Legacy:**
+`vandessel2019_quenched` (`snufish export-xsec --nuebar_model`), SNUfish's
+own variant rather than a published one, scales the unnatural-parity strength
+(fig. 9, middle panel) by (1.00/1.27)² and keeps the natural-parity strength;
+it is 12–14 % below the published curve from 18 to 100 MeV. It is rough:
+unnatural parity also holds vector magnetic multipoles and interference
+terms linear in g<sub>A</sub>, and natural parity holds axial ones. It shows the
+size of a quenching of g<sub>A</sub>; it is not a quenched calculation.
+
 **Deuterium.** Nakamura et al. (Nucl. Phys. A 707, 561 (2002)), ±1 %, used
 by SNO; the effective-field-theory calculation of Butler, Chen & Kong
 agrees to about 1 %. Current.
