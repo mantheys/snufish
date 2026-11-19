@@ -26,8 +26,15 @@ const XSEC = {
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
-  vandessel2019: "HF+CRPA continuum, Van Dessel, Jachowicz & Nikolakopoulos 2019 (free g<sub>A</sub>, no discrete levels)",
 };
+// the names of a channel's models where they differ from XSEC's ("default" is each channel's own default model)
+const XSEC_BY_CHANNEL = { nc_ar40: {
+  default: "Measured discrete 1⁺ strength (Tornow et al. 2025) + HF+CRPA continuum (Van Dessel et al. 2019)",
+  vandessel2019: "HF+CRPA continuum alone, Van Dessel, Jachowicz & Nikolakopoulos 2019 (free g<sub>A</sub>, no discrete levels)",
+  tornow2025: "Measured discrete 1⁺ strength alone, Tornow et al. 2025 (no continuum)",
+  snowglobes: "SNOwGLoBES table (QRPA, unpublished)",
+} };
+const xsecName = (m, channel) => XSEC_BY_CHANNEL[channel]?.[m] || XSEC[m] || m;
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };
 const ES = { bks: "Radiative corrections (BKS)", tree: "Tree level", snowglobes: "SNOwGLoBES (Marciano & Parsa)" };
@@ -110,7 +117,7 @@ const badge = (status) => `<span class="badge ${status}">${STATUS_LABEL[status]}
 function nameOf(category, name, channel = null) {
   const d = app.inputs.data;
   return { parameter_set: () => d.parameter_sets.sets[name]?.label, solar_model: () => d.solar_models[name]?.label,
-           earth_model: () => EARTH[name], es_model: () => ES[name], xsec_model: () => XSEC[name] }[category]?.() || name;
+           earth_model: () => EARTH[name], es_model: () => ES[name], xsec_model: () => xsecName(name, channel) }[category]?.() || name;
 }
 
 function group(label, options) {
@@ -273,11 +280,11 @@ function sync() {
   $("exposure-note").textContent = exp ? `Exposure ${fmt(exp)} kt·yr (half by night).` : "Set both for a statistical error.";
   const models = es ? [] : app.inputs.xsecModels($("channel").value);
   const keep = models.includes($("xsec").value) ? $("xsec").value : NOMINAL_XSEC.find((m) => models.includes(m)) || models[0];
-  const ordered = [...Object.keys(XSEC).filter((m) => models.includes(m)), ...models.filter((m) => !(m in XSEC))];
   const channel = $("channel").value, xsecStatus = (m) => statusOf("xsec_model", m, channel);
+  const ordered = [...Object.keys(XSEC).filter((m) => models.includes(m)), ...models.filter((m) => !(m in XSEC))];
   $("xsec").replaceChildren(...[
-    group("State of the art", ordered.filter((m) => xsecStatus(m).status === "current").map((m) => option(m, XSEC[m] || m))),
-    group("Legacy (superseded)", ordered.filter((m) => xsecStatus(m).status !== "current").map((m) => option(m, (XSEC[m] || m) + suffix(xsecStatus(m))))),
+    group("State of the art", ordered.filter((m) => xsecStatus(m).status === "current").map((m) => option(m, xsecName(m, channel)))),
+    group("Legacy (superseded)", ordered.filter((m) => xsecStatus(m).status !== "current").map((m) => option(m, xsecName(m, channel) + suffix(xsecStatus(m))))),
   ].filter((g) => g.children.length));
   $("xsec").value = keep;
   if (!es && models.length) statusNote("xsec-status", "xsec_model", $("xsec").value, channel);

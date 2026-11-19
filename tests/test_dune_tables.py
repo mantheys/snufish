@@ -130,10 +130,10 @@ def test_es_cut_in_neutrino_energy(inputs, osc):
 
 # ---------------------------------------------------------------- NC on 40Ar
 
-def test_nc_ar40_is_snowglobes_table_folded_over_the_flux(inputs, osc):
-    s = engine.Setup(**ARGON, channel="nc_ar40", period="annual")
+def test_nc_ar40_snowglobes_table_folded_over_the_flux(inputs, osc):
+    s = engine.Setup(**ARGON, channel="nc_ar40", period="annual", xsec_model="snowglobes")
     engine.check(inputs, s)
-    e, sigma = inputs.xsec["nc_ar40"]["default"]
+    e, sigma = inputs.xsec["nc_ar40"]["snowglobes"]
     assert np.all(sigma >= 0) and sigma[e < 8.0].max() == 0.0
     expected = 0.0
     for c in s.components:
@@ -154,32 +154,37 @@ def test_nc_ar40_axis_is_the_neutrino_energy(inputs, osc):
     for x in (5.0, 10.0, 12.5):
         assert rate(inputs, s.replace(threshold=x), osc) == pytest.approx(rate(inputs, s.replace(nu_threshold=x), osc),
                                                                           rel=1e-6)  # cumulative interpolated vs exact
-    # zero below 8 MeV: a 5 MeV cut removes nothing
+    # zero below 9.3 MeV (the first measured 1+ level): a 5 MeV cut removes nothing
     assert rate(inputs, s.replace(nu_threshold=5.0), osc) == pytest.approx(rate(inputs, s, osc), rel=1e-12)
 
 
 def test_nc_ar40_reference_value(inputs, osc):
-    """B16-GS98 8B + hep, E_nu > 5 MeV: 28.8 per kt-yr (SNOwGLoBES's negative values set to zero)."""
+    """B16-GS98 8B + hep, E_nu > 5 MeV: 28.8 per kt-yr with SNOwGLoBES's table (its negative values set to zero), the
+    number quoted for DUNE; SNUfish's default NC model (discrete + continuum) gives 3.7 times as much."""
     s = engine.Setup(**ARGON, channel="nc_ar40", period="annual", nu_threshold=5.0)
-    assert rate(inputs, s, osc) == pytest.approx(28.80, abs=0.02)
+    assert rate(inputs, s.replace(xsec_model="snowglobes"), osc) == pytest.approx(28.80, abs=0.02)
+    parts = {m: rate(inputs, s.replace(xsec_model=m), osc) for m in ("default", "tornow2025", "vandessel2019")}
+    assert parts["default"] == pytest.approx(DEFAULT_NC_RATE, abs=0.05)
+    assert parts["default"] == pytest.approx(parts["tornow2025"] + parts["vandessel2019"], rel=1e-9)   # linear in sigma
 
 
-VANDESSEL_NC_RATE = 98.36   # per kt-yr, E_nu > 5 MeV, B16-GS98 8B + hep (28.80 with SNOwGLoBES's table)
+DEFAULT_NC_RATE = 105.70   # per kt-yr, E_nu > 5 MeV, B16-GS98 8B + hep, SNUfish's default NC model
 
 
-def test_nc_ar40_vandessel2019_is_selectable_and_not_the_default(inputs, osc):
-    """The HF+CRPA continuum of Van Dessel et al. 2019 is a second NC model; SNOwGLoBES's table stays the default."""
-    assert inputs.xsec_models("nc_ar40") == ["default", "vandessel2019"]
+def test_nc_ar40_models_and_their_status(inputs, osc):
+    """NC on 40Ar: the default is the measured discrete strength plus the HF+CRPA continuum; its two parts are
+    approximations of it, SNOwGLoBES's table is legacy, so there is no NC model range."""
+    assert inputs.xsec_models("nc_ar40") == ["default", "vandessel2019", "tornow2025", "snowglobes"]
     assert engine.Setup(**ARGON, channel="nc_ar40").xsec_model == "default"
-    assert engine.status(inputs, "xsec_model", "vandessel2019", "nc_ar40")["status"] == "current"
-    assert engine.status(inputs, "xsec_model", "default", "nc_ar40")["status"] == "approximation"
-    s = engine.Setup(**ARGON, channel="nc_ar40", period="annual", nu_threshold=5.0, xsec_model="vandessel2019")
+    found = {m: engine.status(inputs, "xsec_model", m, "nc_ar40") for m in inputs.xsec_models("nc_ar40")}
+    assert {m: f["status"] for m, f in found.items()} == {"default": "current", "vandessel2019": "approximation",
+                                                         "tornow2025": "approximation", "snowglobes": "legacy"}
+    assert all(f["superseded_by"] == "default" for m, f in found.items() if m != "default")
+    s = engine.Setup(**ARGON, channel="nc_ar40", period="annual", nu_threshold=5.0)
     engine.check(inputs, s)
-    e, sigma = inputs.xsec["nc_ar40"]["vandessel2019"]
-    assert np.all(sigma[e <= 10.0] == 0.0) and np.all(sigma[e > 10.0] > 0)
-    assert rate(inputs, s, osc) == pytest.approx(VANDESSEL_NC_RATE, abs=0.05)
-    # one current NC model: no NC model range (the SNOwGLoBES table is an approximation)
-    assert engine.alternatives(inputs, s, "xsec_model") == ["vandessel2019"]
+    assert engine.alternatives(inputs, s, "xsec_model") == ["default"]
+    e, sigma = inputs.xsec["nc_ar40"]["default"]
+    assert np.all(sigma[e < 9.311] == 0.0) and np.all(sigma[e > 9.311] > 0)
 
 
 # ---------------------------------------------------------------- SOLAR's night

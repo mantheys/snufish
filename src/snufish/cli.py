@@ -267,9 +267,10 @@ def main(argv=None):
     p.add_argument("--nuebar_model", default="vandessel2019", choices=["vandessel2019", "vandessel2019_quenched"],
                    help="nu_e-bar CC on 40Ar: Van Dessel et al. 2019 (HF+CRPA, free g_A = 1.27), or the legacy variant "
                    "with the unnatural-parity strength quenched to g_A = 1.00")
-    p.add_argument("--nc_model", default="default", choices=["default", "vandessel2019"],
-                   help="NC on 40Ar: default, SNOwGLoBES's table (QRPA, unpublished); vandessel2019, the HF+CRPA continuum of "
-                   "Van Dessel et al. 2019 (fig. 8, free g_A, no discrete levels)")
+    p.add_argument("--nc_model", default="default", choices=["default", "vandessel2019", "tornow2025", "snowglobes"],
+                   help="NC on 40Ar: default, the measured discrete 1+ strength (Tornow et al. 2025) plus the HF+CRPA "
+                   "continuum (Van Dessel et al. 2019); vandessel2019 or tornow2025, either part alone; snowglobes, "
+                   "SNOwGLoBES's table (QRPA, unpublished; legacy)")
     p.add_argument("--out", default="build/pkl", help="plotipus data_root")
     p.add_argument("--path", default="theory", help="subdirectory (plotipus --path)")
     p.add_argument("--datafile", default="xs_comparison", help="file name without .pkl (plotipus --datafile)")

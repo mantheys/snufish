@@ -282,29 +282,44 @@ unnatural parity also holds vector magnetic multipoles and interference
 terms linear in g<sub>A</sub>, and natural parity holds axial ones. It shows the
 size of a quenching of g<sub>A</sub>; it is not a quenched calculation.
 
-**NC on ⁴⁰Ar.** Two models, neither satisfactory at solar energies.
-SNOwGLoBES's table, the default (`reference/xsec/snowglobes_nc_ar40.yaml`),
-is an unpublished QRPA calculation (Pirinen & Suhonen, private
-communication, 2018), kept as an *approximation* so that SNOwGLoBES rate
-tables can be reproduced. Van Dessel, Jachowicz & Nikolakopoulos (PRC 100,
-055503 (2019), fig. 8; `reference/xsec/vandessel2019_nc_ar40.yaml`) is the
-only published σ(E) from 5 to 100 MeV found: HF+CRPA, all multipoles, free
-g<sub>A</sub> = 1.27, read from the vector figure. It is 3–4 times the SNOwGLoBES
-table at 12–20 MeV, 1.8 at 30 MeV and 1.2 at 100 MeV. Above about 20 MeV it is
-the better-documented curve. At solar energies it is not: the CRPA leaves out
-discrete excitations (the paper says so), and for NC on ⁴⁰Ar the measured
-isovector M1 strength (Tornow et al., PLB 835, 137576 (2022), a three-fold
-increase over earlier data) lies in bound 1⁺ levels at 9.7–10 MeV, where
-the curve is zero. The figure resolves σ to ±1.9 × 10⁻⁴³ cm², one step at
-12 MeV, and 57 % of its ⁸B + hep NC rate comes from 10–12 MeV, between
-the curve's last zero and its first point: with DUNE Phase I's settings it
-gives 98 per kt·yr above E<sub>ν</sub> = 5 MeV (53–149 from the plotting step alone,
-72 if the strength starts at 11 MeV instead of 10), against 28.8 with
-SNOwGLoBES's table. A solar NC model needs the measured discrete 1⁺
-strength plus a continuum, as MARLEY 2 does for CC; MARLEY plans such an NC
-model, but v2.1.0 has none. Tornow et al.'s shell-model 0⁺ → 1⁺ cross
-section from the measured strength (±43 %, figure only, discrete states
-only) is not in SNUfish.
+**NC on ⁴⁰Ar, state of the art: the measured discrete 1⁺ strength plus the
+HF+CRPA continuum (`default`).** No calculation covers both. The discrete
+part: Tornow et al. (PRC 112, 054320 (2025)) measured the spin-flip M1
+strength of ⁴⁰Ar between 9.3 and 10.3 MeV, 28 levels with 1.31(18) μ<sub>N</sub>²,
+twice what was known (and none from 10.3 to 11.7 MeV);
+`snufish/reference/nc_ar40.py` turns it into GT₀ strength (pure isovector
+spin-flip, Langanke et al. 2004) and an allowed NC cross section with MARLEY
+2's form factors. The continuum part: Van Dessel, Jachowicz &
+Nikolakopoulos (PRC 100, 055503 (2019), fig. 8), HF+CRPA with all
+multipoles and the free g<sub>A</sub>, which "does not take discrete excitations
+into account", read from its vector figure. MARLEY's authors plan this
+combination for their NC model (arXiv:2604.26801, sec. VI); MARLEY v2.1.0
+has no NC model. The sum is 4.4 times SNOwGLoBES's table at 12 MeV, 3.7 at
+20 MeV, 2.1 at 30 MeV, 1.4 at 50 MeV and 1.2 at 100 MeV.
+
+Its ⁸B + hep rate is 105.7 per kt·yr above E<sub>ν</sub> = 5 MeV (DUNE Phase I's
+settings), against 28.8 with SNOwGLoBES's table, and it is uncertain:
+
+- **The discrete part is the small one**: 7.4 per kt·yr (±1.0 from the
+  measured strength); the form factors lower it by 2 % (0.1 % of the total).
+- **The continuum carries 93 %**, almost all from its onset: 57 % of it comes
+  from E<sub>ν</sub> = 10–12 MeV, between the curve's last zero (10 MeV) and its
+  first point (12 MeV, a single plotting step of the figure). The plotting
+  step alone moves the rate to 61–156; starting the continuum at 11 MeV
+  instead of 10 gives 79.
+- **Possible double counting**: at E<sub>ν</sub> = 10–12 MeV the CRPA strength must sit
+  at excitation energies below 12 MeV, where the measured levels above the
+  neutron threshold (9.87–10.28 MeV, 0.23 μ<sub>N</sub>²) lie and where Tornow et al.
+  found no further M1 strength. Only the CRPA's dσ/dω, which is not
+  published, would separate them; the authors' tables would settle both
+  this and the digitisation.
+
+Its parts, `tornow2025` and `vandessel2019`, are selectable as
+*approximations* of it. **Legacy:** `snowglobes`, SNOwGLoBES's table (QRPA,
+Pirinen & Suhonen, private communication, 2018, unpublished), the default
+before; DUNE's quoted 28.8 per kt·yr, so `scripts/dune_phase1_rates.py`
+keeps it (`--nc-model default` for SNUfish's model), and so does
+`scripts/dune_solar_tables.py`.
 
 **Deuterium.** Nakamura et al. (Nucl. Phys. A 707, 561 (2002)), ±1 %, used
 by SNO; the effective-field-theory calculation of Butler, Chen & Kong
