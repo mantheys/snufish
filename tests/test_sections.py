@@ -91,3 +91,20 @@ def test_tool_agreement_lists_every_tool_on_the_comparison_variant():
         assert all(r["max_abs"] < tolerance for r in rows)
     assert {r["quantity"] for r in tools["B4_xsec"]} == {"es_nue", "es_numu", "es_nutau"}
     assert all(r["max_rel"] < 0.01 for r in tools["B4_xsec"])  # ES with radiative corrections, SNOwGLoBES vs BKS
+
+
+def test_nc_reading_variants_bracket_the_default():
+    # B4's NC card: the figure-reading variants of the HF+CRPA continuum straddle the published points
+    from snufish import export
+    from snufish.sections import nc_reading_variants
+
+    variants = nc_reading_variants()
+    assert len(variants) == 5
+    nominal = export.vandessel2019_nc(np.array([12.0, 20.0]))
+    for name, f in variants.items():
+        sigma = f(np.array([12.0, 20.0]))
+        if "−" in name:
+            assert np.all(sigma <= nominal)
+        elif "+" in name:
+            assert np.all(sigma >= nominal) and sigma[0] > nominal[0]
+    assert variants["onset at 11 MeV"](np.array([10.5]))[0] == 0.0
