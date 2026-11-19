@@ -188,9 +188,9 @@ def cmd_export_xsec(args):
     found = _xsec_status("cc_nuebar_ar40", args.nuebar_model)
     if found["status"] != "current":
         print(f"note    {args.nuebar_model} is {found['status']}; state of the art: {found['superseded_by']}. {found['summary']}")
-    records = xsec_comparison(args.marley, args.cc_model, nuebar_model=args.nuebar_model)
+    records = xsec_comparison(args.marley, args.cc_model, nuebar_model=args.nuebar_model, nc_model=args.nc_model)
     out = write_pkl(records, args.out, args.datafile, args.path)
-    print(f"wrote   {out} ({len(records)} curves, nu_e CC: {args.cc_model}, nu_e-bar CC: {args.nuebar_model})")
+    print(f"wrote   {out} ({len(records)} curves, nu_e CC: {args.cc_model}, nu_e-bar CC: {args.nuebar_model}, NC: {args.nc_model})")
     return 0
 
 
@@ -267,6 +267,9 @@ def main(argv=None):
     p.add_argument("--nuebar_model", default="vandessel2019", choices=["vandessel2019", "vandessel2019_quenched"],
                    help="nu_e-bar CC on 40Ar: Van Dessel et al. 2019 (HF+CRPA, free g_A = 1.27), or the legacy variant "
                    "with the unnatural-parity strength quenched to g_A = 1.00")
+    p.add_argument("--nc_model", default="default", choices=["default", "vandessel2019"],
+                   help="NC on 40Ar: default, SNOwGLoBES's table (QRPA, unpublished); vandessel2019, the HF+CRPA continuum of "
+                   "Van Dessel et al. 2019 (fig. 8, free g_A, no discrete levels)")
     p.add_argument("--out", default="build/pkl", help="plotipus data_root")
     p.add_argument("--path", default="theory", help="subdirectory (plotipus --path)")
     p.add_argument("--datafile", default="xs_comparison", help="file name without .pkl (plotipus --datafile)")

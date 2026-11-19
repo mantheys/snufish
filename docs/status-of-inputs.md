@@ -282,6 +282,30 @@ unnatural parity also holds vector magnetic multipoles and interference
 terms linear in g<sub>A</sub>, and natural parity holds axial ones. It shows the
 size of a quenching of g<sub>A</sub>; it is not a quenched calculation.
 
+**NC on ⁴⁰Ar.** Two models, neither satisfactory at solar energies.
+SNOwGLoBES's table, the default (`reference/xsec/snowglobes_nc_ar40.yaml`),
+is an unpublished QRPA calculation (Pirinen & Suhonen, private
+communication, 2018), kept as an *approximation* so that SNOwGLoBES rate
+tables can be reproduced. Van Dessel, Jachowicz & Nikolakopoulos (PRC 100,
+055503 (2019), fig. 8; `reference/xsec/vandessel2019_nc_ar40.yaml`) is the
+only published σ(E) from 5 to 100 MeV found: HF+CRPA, all multipoles, free
+g<sub>A</sub> = 1.27, read from the vector figure. It is 3–4 times the SNOwGLoBES
+table at 12–20 MeV, 1.8 at 30 MeV and 1.2 at 100 MeV. Above about 20 MeV it is
+the better-documented curve. At solar energies it is not: the CRPA leaves out
+discrete excitations (the paper says so), and for NC on ⁴⁰Ar the measured
+isovector M1 strength (Tornow et al., PLB 835, 137576 (2022), a three-fold
+increase over earlier data) lies in bound 1⁺ levels at 9.7–10 MeV, where
+the curve is zero. The figure resolves σ to ±1.9 × 10⁻⁴³ cm², one step at
+12 MeV, and 57 % of its ⁸B + hep NC rate comes from 10–12 MeV, between
+the curve's last zero and its first point: with DUNE Phase I's settings it
+gives 98 per kt·yr above E<sub>ν</sub> = 5 MeV (53–149 from the plotting step alone,
+72 if the strength starts at 11 MeV instead of 10), against 28.8 with
+SNOwGLoBES's table. A solar NC model needs the measured discrete 1⁺
+strength plus a continuum, as MARLEY 2 does for CC; MARLEY plans such an NC
+model, but v2.1.0 has none. Tornow et al.'s shell-model 0⁺ → 1⁺ cross
+section from the measured strength (±43 %, figure only, discrete states
+only) is not in SNUfish.
+
 **Deuterium.** Nakamura et al. (Nucl. Phys. A 707, 561 (2002)), ±1 %, used
 by SNO; the effective-field-theory calculation of Butler, Chen & Kong
 agrees to about 1 %. Current.

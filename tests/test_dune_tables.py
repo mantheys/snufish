@@ -164,6 +164,24 @@ def test_nc_ar40_reference_value(inputs, osc):
     assert rate(inputs, s, osc) == pytest.approx(28.80, abs=0.02)
 
 
+VANDESSEL_NC_RATE = 98.36   # per kt-yr, E_nu > 5 MeV, B16-GS98 8B + hep (28.80 with SNOwGLoBES's table)
+
+
+def test_nc_ar40_vandessel2019_is_selectable_and_not_the_default(inputs, osc):
+    """The HF+CRPA continuum of Van Dessel et al. 2019 is a second NC model; SNOwGLoBES's table stays the default."""
+    assert inputs.xsec_models("nc_ar40") == ["default", "vandessel2019"]
+    assert engine.Setup(**ARGON, channel="nc_ar40").xsec_model == "default"
+    assert engine.status(inputs, "xsec_model", "vandessel2019", "nc_ar40")["status"] == "current"
+    assert engine.status(inputs, "xsec_model", "default", "nc_ar40")["status"] == "approximation"
+    s = engine.Setup(**ARGON, channel="nc_ar40", period="annual", nu_threshold=5.0, xsec_model="vandessel2019")
+    engine.check(inputs, s)
+    e, sigma = inputs.xsec["nc_ar40"]["vandessel2019"]
+    assert np.all(sigma[e <= 10.0] == 0.0) and np.all(sigma[e > 10.0] > 0)
+    assert rate(inputs, s, osc) == pytest.approx(VANDESSEL_NC_RATE, abs=0.05)
+    # one current NC model: no NC model range (the SNOwGLoBES table is an approximation)
+    assert engine.alternatives(inputs, s, "xsec_model") == ["vandessel2019"]
+
+
 # ---------------------------------------------------------------- SOLAR's night
 
 DRIVER = ROOT / "contributions" / "nufast-earth" / "scripts" / "b3_driver"

@@ -116,6 +116,8 @@ export function forStep(step, setup, quantity, inputs, setName, preset = "custom
                                         S("Model range: BKS against SNOwGLoBES's tables (Marciano & Parsa); tree level, an approximation, is selectable but not in the range")];
     if (setup.channel === "cc_nue_d") return [SOURCES.nakamura];
     if (setup.channel === "nc_d") return [SOURCES.nakamura, SOURCES.nc_capture];
+    if (setup.channel === "nc_ar40" && setup.xsec_model === "vandessel2019")
+      return [S("NC on ⁴⁰Ar: HF+CRPA continuum of Van Dessel, Jachowicz & Nikolakopoulos, Phys. Rev. C 100, 055503 (2019), fig. 8, digitised from its vector figure (free g<sub>A</sub> = 1.27; ±1.9 × 10⁻⁴³ cm² from the figure). The discrete 1⁺ levels at 9.7–10 MeV, which hold the measured M1 strength, are not in it; zero up to 10 MeV. No visible-energy model: the threshold is a cut in neutrino energy", "10.1103/PhysRevC.100.055503")];
     if (setup.channel === "nc_ar40") return [SOURCES.snowglobes, S("NC on ⁴⁰Ar: SNOwGLoBES's xs_nc_nue_Ar40.dat, a QRPA calculation by Pirinen & Suhonen given to SNOwGLoBES by private communication (2018), unpublished and without the measured ⁴⁰Ar levels; its negative values (8–9 MeV) are set to zero. No visible-energy model: the threshold is a cut in neutrino energy")];
     const out = [SOURCES.snowglobes];
     const m = setup.xsec_model;

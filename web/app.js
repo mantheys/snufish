@@ -13,7 +13,7 @@ const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/"; // a hosted b
 const FIRST_DRAWS = 400, N_DRAWS = 1000, SEED = 1;
 const CHANNELS = { es: "Elastic scattering on electrons", cc_nue_ar40: "νₑ CC on ⁴⁰Ar", cc_nue_o16: "νₑ CC on ¹⁶O",
                    cc_nue_d: "νₑ CC on deuterium", nc_d: "NC on deuterium (all flavours)",
-                   nc_ar40: "NC on ⁴⁰Ar (all flavours; SNOwGLoBES table, in neutrino energy)" };
+                   nc_ar40: "NC on ⁴⁰Ar (all flavours, in neutrino energy)" };
 const DETECTORS = { argon: "Liquid argon", water: "Water", scintillator_pc: "Liquid scintillator: pseudocumene (Borexino)",
                     scintillator_lab: "Liquid scintillator: LAB (JUNO)", heavy_water: "Heavy water, D₂O (SNO)" };
 const XSEC = {
@@ -26,6 +26,7 @@ const XSEC = {
   default: "SNOwGLoBES default", ar40_klmv: "SNOwGLoBES: KLMV",
   ar40_marley: "SNOwGLoBES: MARLEY, B(GT) from (p,n) (zero below 5 MeV)",
   ar40_marley1: "SNOwGLoBES: MARLEY, B(GT) from ⁴⁰Ti decay (zero below 5 MeV)",
+  vandessel2019: "HF+CRPA continuum, Van Dessel, Jachowicz & Nikolakopoulos 2019 (free g<sub>A</sub>, no discrete levels)",
 };
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)" };
 const KINDS = { reactor: "Reactor", solar: "Solar", global: "Global fits", paper: "As used in a paper" };

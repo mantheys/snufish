@@ -217,4 +217,8 @@ xsec_model:
   nc_ar40:
     default:
       status: approximation
-      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. Here so that the NC column of SNOwGLoBES rate tables can be reproduced; not validated, and no other calculation to compare with."
+      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. Here so that the NC column of SNOwGLoBES rate tables can be reproduced; not validated. The published HF+CRPA continuum (vandessel2019) is 3–4 times higher at 12–20 MeV and 1.2 times at 100 MeV."
+    vandessel2019:
+      status: current
+      summary: "Van Dessel, Jachowicz & Nikolakopoulos (2019): HF+CRPA, all multipoles, free g_A = 1.27, neutrinos (all flavours alike); fig. 8 digitised from its vector PDF. A continuum calculation: the discrete 1⁺ levels at 9.7–10 MeV that hold the measured M1 strength are not in it (the paper: \"discrete excitations are not taken into account\"), and below 20 MeV the figure resolves σ only to ±1.9 × 10⁻⁴³ cm². Zero up to 10 MeV, the curve's last zero. The only published σ(E) for NC on ⁴⁰Ar from 5 to 100 MeV here."
+      refs: [doi:10.1103/PhysRevC.100.055503, arXiv:1903.07726]

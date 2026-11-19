@@ -139,6 +139,9 @@ def collect_inputs():
     nc_ar40 = _yaml("reference/xsec/snowglobes_nc_ar40.yaml")
     xsec["nc_ar40"] = {"default": {"energy": nc_ar40["energy_MeV"],
                                    "sigma": np.clip(nc_ar40["sigma_cm2"], 0.0, None).tolist()}}
+    # ... and the HF+CRPA continuum of Van Dessel et al. 2019 (selectable, not the default), on the same grid
+    xsec["nc_ar40"]["vandessel2019"] = {"energy": nc_ar40["energy_MeV"],
+                                        "sigma": vandessel2019_nc(nc_ar40["energy_MeV"]).tolist()}
     detectors = {**b5["detectors"], **APP_DETECTORS}
     # NC channels have no B4 benchmark: the page adds them to the spec's detectors
     detectors["argon"] = {**detectors["argon"], "channels": {**detectors["argon"]["channels"], "nc_ar40": "ar40"}}
@@ -216,6 +219,15 @@ def vandessel2019_nuebar(energy, quenched=False):
         factor = (table["quenched"]["g_A"] / table["g_A"]) ** 2
         sigma = sigma - (1 - factor) * np.asarray(table["unnatural_1e-40cm2"])
     return _threshold_loglog(energy, table["threshold_MeV"], table["energy_MeV"], sigma * 1e-40)
+
+
+def vandessel2019_nc(energy):
+    """nu 40Ar NC inelastic cross section (cm^2, any neutrino flavour), HF+CRPA of Van Dessel, Jachowicz &
+    Nikolakopoulos 2019 (reference/xsec/vandessel2019_nc_ar40.yaml, digitised from their fig. 8): log(sigma) linear
+    in log(E - 10 MeV) between the curve's points, zero up to 10 MeV, the last published zero of the curve. A
+    continuum calculation: the discrete 1+ levels at 9.7-10 MeV, where the measured M1 strength lies, are not in it."""
+    table = _yaml("reference/xsec/vandessel2019_nc_ar40.yaml")
+    return _threshold_loglog(energy, table["threshold_MeV"], table["energy_MeV"], np.asarray(table["total_1e-40cm2"]) * 1e-40)
 
 
 def status_table():

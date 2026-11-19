@@ -7,7 +7,7 @@ import yaml
 
 from snufish import pkl
 from snufish.cli import main
-from snufish.export import vandessel2019_nuebar
+from snufish.export import vandessel2019_nc, vandessel2019_nuebar
 
 
 def test_solar_spectrum_layout_and_normalisation():
@@ -105,3 +105,40 @@ def test_export_xsec_quenched_variant_changes_only_the_nuebar_row(tmp_path, caps
 def test_nuebar_ar40_spot_values(energy, sigma_1e40):
     # fig. 9 of PRC 100, 055503, read from its vector PDF: gnuplot's 0.05 pt steps are 0.0025e-40 cm^2
     assert vandessel2019_nuebar(energy) * 1e40 == pytest.approx(sigma_1e40, abs=0.0025)
+
+
+NC_YAML = Path(__file__).resolve().parents[1] / "reference" / "xsec" / "vandessel2019_nc_ar40.yaml"
+
+
+def test_nc_ar40_vandessel2019_zero_below_threshold_monotone_above():
+    table = yaml.safe_load(NC_YAML.read_text())
+    threshold = table["threshold_MeV"]
+    assert threshold == 10.0 and table["g_A"] == 1.27
+    energy = np.linspace(0.0, 100.0, 5001)
+    sigma = vandessel2019_nc(energy)
+    assert np.all(sigma[energy <= threshold] == 0.0)
+    above = sigma[energy > threshold]
+    assert np.all(above > 0) and np.all(np.diff(above) > 0)
+    nodes = np.asarray(table["energy_MeV"])
+    np.testing.assert_allclose(vandessel2019_nc(nodes), np.asarray(table["total_1e-40cm2"]) * 1e-40, rtol=1e-12, atol=0)
+
+
+@pytest.mark.parametrize("energy, sigma_1e40", [(20.0, 0.0431), (50.0, 1.131), (100.0, 12.15)])
+def test_nc_ar40_vandessel2019_spot_values(energy, sigma_1e40):
+    # fig. 8 of PRC 100, 055503, read from its vector PDF: gnuplot's 0.05 pt steps are 0.0039e-40 cm^2
+    assert vandessel2019_nc(energy) * 1e40 == pytest.approx(sigma_1e40, abs=0.004)
+
+
+@needs_marley
+def test_export_xsec_nc_model_changes_only_the_nc_row(tmp_path):
+    rows = {}
+    for model in pkl.NC_MODELS:
+        assert main(["export-xsec", "--marley", str(MARLEY), "--out", str(tmp_path / model), "--nc_model", model]) == 0
+        rows[model] = {r["Config"]: r for r in pd.read_pickle(tmp_path / model / "theory" / "xs_comparison.pkl")}
+    default, crpa = rows["default"], rows["vandessel2019"]
+    assert all(np.array_equal(default[c]["XS"], crpa[c]["XS"]) for c in default if c != "xs_nc_nue_Ar40")
+    nc = crpa["xs_nc_nue_Ar40"]
+    assert np.array_equal(nc["XS"], vandessel2019_nc(nc["Energy"]) * 1e38)
+    table = yaml.safe_load((NC_YAML.parent / "snowglobes_nc_ar40.yaml").read_text())   # the default: unchanged
+    assert np.array_equal(default["xs_nc_nue_Ar40"]["XS"],
+                          np.interp(nc["Energy"], table["energy_MeV"], np.asarray(table["sigma_cm2"]) * 1e38))
