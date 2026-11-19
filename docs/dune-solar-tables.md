@@ -41,7 +41,8 @@ Per kt-yr, annual, ⁸B + hep, `--earth prem_full`, SOLAR's night:
 | CC `ar40_marley2_bhattacharya2009` | T<sub>e</sub> | 1140 | 132 | 11.4 | 0 |
 | ES (BKS) | E<sub>ν</sub> | 1081 | 610 | 276 | 0.387 |
 | ES (BKS) | T<sub>e</sub> | 360 | 93.0 | 22.6 | 0.0174 |
-| NC (SNOwGLoBES table) | E<sub>ν</sub> | 28.8 | 28.8 | 26.5 | 0.161 |
+| NC (default: measured discrete 1⁺ + HF+CRPA continuum) | E<sub>ν</sub> | 105.7 | 105.7 | 105.7 | 0.705 |
+| NC `snowglobes` (SNOwGLoBES table, legacy) | E<sub>ν</sub> | 28.8 | 28.8 | 26.5 | 0.161 |
 | *thesis CC* | *E<sub>ν</sub>* | *2380* | *1990* | *1200* | *3.77* |
 | *thesis CC* | *T<sub>e</sub>* | *1150* | *156* | *8.36* | – |
 | *thesis ES* | *E<sub>ν</sub>* | *1080* | *599* | *265* | *0.384* |
@@ -64,7 +65,8 @@ SOLAR's settings is accounted for. From `ar40_marley1_bhattacharya2009` (CC abov
 | cross section in the allowed approximation (`ar40_marley1_allowed`: SOLAR's file, MARLEY v1) | +4.7 % |
 | ⁸B shape of Bahcall et al. 1996 (mean 6.735 MeV) instead of Winter et al. 2006 (6.77 MeV) | −2.1 % |
 
-The ⁸B shape alone gives the thesis's NC (28.9 → 27.65, −4.3 %). Its CC column is not SNOwGLoBES's MARLEY table
+The thesis's NC is SNOwGLoBES's table: with it, the ⁸B shape alone gives the thesis's value (28.9 → 27.65, −4.3 %);
+SNUfish's default NC model gives 3.7 times as much (see [status-of-inputs.md](status-of-inputs.md)). Its CC column is not SNOwGLoBES's MARLEY table
 (`ar40_marley` is 35 % lower). ES agrees to +0.1 to +4 % (E<sub>ν</sub>) and +0.5 to +4 % (T<sub>e</sub>): fluxes, oscillation and
 exposure are the same. SNOwGLoBES's NC table has negative values at 8–9 MeV, which both set to zero.
 
@@ -93,9 +95,12 @@ Annual, per kt-yr, ⁸B + hep, `ar40_marley1_allowed`:
 
 | Cut | CC | ES | NC |
 |---|---|---|---|
-| E<sub>ν</sub> > 1 MeV | 2426 | 1281 | 28.8 |
-| E<sub>ν</sub> > 5 MeV | 2416 | 1081 | 28.8 |
+| E<sub>ν</sub> > 1 MeV | 2426 | 1281 | 105.7 |
+| E<sub>ν</sub> > 5 MeV | 2416 | 1081 | 105.7 |
 | T<sub>e</sub> > 5 MeV | 1210 | 360 | – |
+
+NC is SNUfish's default model, the measured discrete 1⁺ strength plus the HF+CRPA continuum; with SNOwGLoBES's
+table (`--nc-model snowglobes`), which the paper quoted before, it is 28.8 above both cuts.
 
 **The paper's appendix A (CC 482, ES 141, NC 18.8 above E<sub>ν</sub> = 1 MeV) is wrong.** It was made on 2026-09-09 by an
 intermediate version of `LOWE_RECONSTRUCTION_PUBLICATION/scripts/generate_snowglobes_solar_interactions.py` that took

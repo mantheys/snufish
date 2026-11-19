@@ -49,8 +49,10 @@ def main():
     es = base.replace(channel="es")
     rows.append(("ES (BKS)", "E_nu", [rate(es.replace(nu_threshold=t)) for t in THRESHOLDS]))
     rows.append(("ES (BKS)", "T_e", [rate(es.replace(threshold=t)) for t in THRESHOLDS]))
-    rows.append(("NC (SNOwGLoBES table)", "E_nu", [rate(base.replace(channel="nc_ar40", xsec_model="snowglobes", nu_threshold=t))
-                                                   for t in THRESHOLDS]))
+    nc = base.replace(channel="nc_ar40")
+    rows.append(("NC (default: discrete + HF+CRPA)", "E_nu", [rate(nc.replace(nu_threshold=t)) for t in THRESHOLDS]))
+    rows.append(("NC snowglobes (legacy; the thesis's)", "E_nu",
+                 [rate(nc.replace(xsec_model="snowglobes", nu_threshold=t)) for t in THRESHOLDS]))
 
     print(f"{'channel':40s} {'above':5s} " + " ".join(f"{t:>9g}" for t in THRESHOLDS) + "   (MeV; per kt-yr)")
     for name, axis, values in rows:

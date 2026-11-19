@@ -232,4 +232,4 @@ xsec_model:
     snowglobes:
       status: legacy
       superseded_by: default
-      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. The default before; kept to reproduce SNOwGLoBES rate tables and the 28.8 per kt·yr quoted for DUNE (⁸B + hep, E_ν > 5 MeV)."
+      summary: "SNOwGLoBES's NC table (xs_nc_nue_Ar40.dat, 2018): QRPA by Pirinen & Suhonen, private communication, unpublished, without the measured ⁴⁰Ar levels. The default before; kept to reproduce SNOwGLoBES rate tables and the 28.8 per kt·yr quoted for DUNE so far (⁸B + hep, E_ν > 5 MeV)."

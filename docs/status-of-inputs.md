@@ -317,9 +317,9 @@ settings), against 28.8 with SNOwGLoBES's table, and it is uncertain:
 Its parts, `tornow2025` and `vandessel2019`, are selectable as
 *approximations* of it. **Legacy:** `snowglobes`, SNOwGLoBES's table (QRPA,
 Pirinen & Suhonen, private communication, 2018, unpublished), the default
-before; DUNE's quoted 28.8 per kt·yr, so `scripts/dune_phase1_rates.py`
-keeps it (`--nc-model default` for SNUfish's model), and so does
-`scripts/dune_solar_tables.py`.
+before, and the source of the 28.8 per kt·yr quoted for DUNE so far;
+`scripts/dune_phase1_rates.py` now gives 105.7 (`--nc-model snowglobes` for
+28.8).
 
 **Deuterium.** Nakamura et al. (Nucl. Phys. A 707, 561 (2002)), ±1 %, used
 by SNO; the effective-field-theory calculation of Butler, Chen & Kong
