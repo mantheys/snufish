@@ -8,7 +8,7 @@ same plotipus command draws it from SNUfish's solar models:
     plotipus line --path theory --datafile Solar_Neutrino_Spectrum -i Source -x Energy -y Flux --logx --logy --exact
 
 ``xsec_comparison`` (``snufish export-xsec``) writes the neutrino-argon cross sections of the paper's
-fig. 2, ``xs_comparison.pkl``.
+fig. 2, ``xs_comparison.pkl`` (MARLEY, and SNUfish's reference tables for NC and nu_e-bar CC).
 
 One row per flux component, columns ``Flux`` and ``Energy`` (arrays), ``Source``
 (``pp pep b7 b8 n13 o15 f17 hep``) and ``Plot`` (the solar model's label).
@@ -96,14 +96,7 @@ XSEC_CONFIGS = (  # Config, Flavor, Interaction: the rows of the paper's xs_comp
 )
 
 
-def _snowglobes_table(xscns, name, column):
-    """sigma in 1e-38 cm^2 from a SNOwGLoBES table (log10 E/GeV, sigma/E in 1e-38 cm^2/GeV); column 1 is nu_e, 4 nu_e_bar."""
-    table = np.loadtxt(Path(xscns) / f"{name}.dat", comments="#")
-    energy = 10 ** table[:, 0] * 1e3
-    return energy, table[:, column] * 10 ** table[:, 0]
-
-
-def xsec_comparison(marley, xscns, cc_model="ar40_marley1_allowed", energies=None):
+def xsec_comparison(marley, cc_model="ar40_marley1_allowed", energies=None):
     """Neutrino-argon cross sections (1e-38 cm^2) in the layout of the paper's ``xs_comparison.pkl``.
 
     The settings of DUNE's official MARLEY production (``roiana_marley_dune.fcl``: MARLEY v1.2.1, reactions
@@ -111,14 +104,17 @@ def xsec_comparison(marley, xscns, cc_model="ar40_marley1_allowed", energies=Non
     ``marley`` with the B4 variant ``cc_model`` (``contributions/marley/scripts/run_b4.py``; default
     ``ar40_marley1_allowed``, MARLEY v1.2.1's cross section), at any energy. ES (nu_e, nu_e-bar, nu_mu, nu_tau;
     the last two averaged) is ``ES.react``: tree level, per electron. NC on 40Ar is the SNOwGLoBES table SNUfish
-    stores. nu_e-bar CC is the SNOwGLoBES table in ``xscns`` (a SNOwGLoBES checkout's ``xscns``), which MARLEY
-    does not have.
+    stores (``reference/xsec/snowglobes_nc_ar40.yaml``). nu_e-bar CC on 40Ar, which MARLEY does not have, is the
+    HF+CRPA calculation of Van Dessel, Jachowicz & Nikolakopoulos, PRC 100, 055503 (2019), fig. 9
+    (``reference/xsec/vandessel2019_nuebar_ar40.yaml``, ``snufish.export.vandessel2019_nuebar``): zero up to
+    16 MeV, where the published curve leaves zero. No SNOwGLoBES checkout is needed.
     """
     import importlib.util
     import tempfile
 
     import yaml
 
+    from .export import vandessel2019_nuebar
     from .paths import contributions_dir, repo_root
     energies = np.geomspace(0.5, 100.0, 1001) if energies is None else np.asarray(energies, dtype=float)
     spec = importlib.util.spec_from_file_location("snufish_marley_run_b4", contributions_dir() / "marley" / "scripts" / "run_b4.py")
@@ -139,7 +135,7 @@ def xsec_comparison(marley, xscns, cc_model="ar40_marley1_allowed", energies=Non
         nc = yaml.safe_load(handle)
     curves = {
         "xs_nue_Ar40": np.interp(energies, grid, sigma, left=0.0),
-        "xs_nuebar_Ar40": np.interp(energies, *_snowglobes_table(xscns, "xs_nuebar_Ar40", 4)),
+        "xs_nuebar_Ar40": vandessel2019_nuebar(energies) * 1e38,
         "xs_nue_e": es["nue"],
         "xs_nuebar_e": es["nuebar"],
         "xs_numu_nutau_e": 0.5 * (es["numu"] + es["nutau"]),

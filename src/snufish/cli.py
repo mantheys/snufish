@@ -178,7 +178,7 @@ def cmd_export_pkl(args):
 def cmd_export_xsec(args):
     from .pkl import xsec_comparison, write_pkl
 
-    records = xsec_comparison(args.marley, args.snowglobes, args.cc_model)
+    records = xsec_comparison(args.marley, args.cc_model)
     out = write_pkl(records, args.out, args.datafile, args.path)
     print(f"wrote   {out} ({len(records)} curves, nu_e CC: {args.cc_model})")
     return 0
@@ -251,8 +251,8 @@ def main(argv=None):
     p.set_defaults(func=cmd_export_pkl)
 
     p = sub.add_parser("export-xsec", help="neutrino-argon cross sections up to 100 MeV as a plotipus pickle (paper fig. 2)")
-    p.add_argument("--marley", required=True, help="built MARLEY checkout (nu_e CC on 40Ar)")
-    p.add_argument("--snowglobes", required=True, help="SNOwGLoBES xscns directory (nu_e-bar CC and ES)")
+    p.add_argument("--marley", required=True, help="built MARLEY checkout (nu_e CC on 40Ar and ES; NC and nu_e-bar CC "
+                   "are SNUfish's reference tables)")
     p.add_argument("--cc_model", default="ar40_marley1_allowed", help="B4 MARLEY variant of the nu_e CC curve")
     p.add_argument("--out", default="build/pkl", help="plotipus data_root")
     p.add_argument("--path", default="theory", help="subdirectory (plotipus --path)")
