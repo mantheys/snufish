@@ -1,0 +1,49 @@
+# Spin-flip M1 strength of 40Ar: the 1+ levels between 9.3 and 10.3 MeV excitation measured by nuclear resonance
+# fluorescence with polarised photons at HIgS: W. Tornow, A. P. Tonchev, S. W. Finch, Krishichayan and R. V. F. Janssens,
+# "Measurement of magnetic dipole strength in 40Ar between 9.3 and 10.3 MeV excitation energy and impact on neutral
+# current neutrino interaction", Phys. Rev. C 112, 054320 (2025), doi:10.1103/55xh-b4f7, table II. Read from the
+# accepted manuscript (OSTI 3012352, LLNL-JRNL-2010555, sha256 e573b23c47ba1904...), retrieved 2026-11-19, by
+# scripts/import_tornow2025_m1_ar40.py: 28 levels, sum B(M1 up) = 1.306 mu_N^2 (the paper: 1.31 +- 0.18; its
+# uncertainty adds 5 % for unobserved inelastic decays to the per-level 7-30 %).
+#
+# This is the "discrete neutral GT strength based on photonuclear data" that MARLEY's authors name for their planned
+# NC model on 40Ar (Gardiner et al., arXiv:2604.26801, sec. VI). The paper finds no M1 strength from 10.3 to 11.7 MeV
+# (detection limit 2e-3 mu_N^2), and none was found between 7.7 and 9.2 MeV by Li et al. (PRC 73, 054306 (2006));
+# below 7.7 MeV the M1 strength of Gayer et al. (PRC 100, 034305 (2019)) is mainly orbital, not spin-flip, and is not
+# used (the authors: "spin-flip M1 strength ... is not expected at such low energies"). The neutron separation energy
+# is 9.870 MeV, but neutron emission is hindered by the centrifugal barrier below 11.137 MeV, so all levels are bound
+# for this purpose. B(M1 up) of Tornow et al. 2022 (PLB 835, 137576), where measured, in b_m1_2022. At 9850.6 keV
+# B(M1 up) is not 0.2592 Gamma_0 / Ex^3 (77): the authors correct its M1 yield for the strong E1 line at 9850.4 keV.
+source: Phys. Rev. C 112, 054320 (2025), table II (accepted manuscript, OSTI 3012352)
+retrieved: '2026-11-19'
+method: table
+total_b_m1_muN2: [1.31, 0.18]
+levels:
+- {ex_keV: 9311.0, gamma0_meV: 118, b_m1_1e-3muN2: 38, error_1e-3muN2: 5}
+- {ex_keV: 9363.4, gamma0_meV: 104, b_m1_1e-3muN2: 33, error_1e-3muN2: 7}
+- {ex_keV: 9397.9, gamma0_meV: 90, b_m1_1e-3muN2: 28, error_1e-3muN2: 6}
+- {ex_keV: 9418.6, gamma0_meV: 159, b_m1_1e-3muN2: 49, error_1e-3muN2: 12}
+- {ex_keV: 9432.9, gamma0_meV: 128, b_m1_1e-3muN2: 39, error_1e-3muN2: 6}
+- {ex_keV: 9501.3, gamma0_meV: 269, b_m1_1e-3muN2: 81, error_1e-3muN2: 9}
+- {ex_keV: 9583.8, gamma0_meV: 264, b_m1_1e-3muN2: 78, error_1e-3muN2: 10}
+- {ex_keV: 9576.3, gamma0_meV: 100, b_m1_1e-3muN2: 30, error_1e-3muN2: 10}
+- {ex_keV: 9585.7, gamma0_meV: 367, b_m1_1e-3muN2: 108, error_1e-3muN2: 13}
+- {ex_keV: 9691.7, gamma0_meV: 100, b_m1_1e-3muN2: 28, error_1e-3muN2: 4}
+- {ex_keV: 9700.9, gamma0_meV: 248, b_m1_1e-3muN2: 70, error_1e-3muN2: 7, b_m1_2022_1e-3muN2: 66}
+- {ex_keV: 9754.4, gamma0_meV: 84, b_m1_1e-3muN2: 24, error_1e-3muN2: 5}
+- {ex_keV: 9762.3, gamma0_meV: 630, b_m1_1e-3muN2: 176, error_1e-3muN2: 15, b_m1_2022_1e-3muN2: 193}
+- {ex_keV: 9791.9, gamma0_meV: 53, b_m1_1e-3muN2: 15, error_1e-3muN2: 3}
+- {ex_keV: 9803.6, gamma0_meV: 120, b_m1_1e-3muN2: 33, error_1e-3muN2: 5, b_m1_2022_1e-3muN2: 75}
+- {ex_keV: 9810.6, gamma0_meV: 197, b_m1_1e-3muN2: 54, error_1e-3muN2: 5}
+- {ex_keV: 9843.8, gamma0_meV: 568, b_m1_1e-3muN2: 154, error_1e-3muN2: 13, b_m1_2022_1e-3muN2: 154}
+- {ex_keV: 9850.6, gamma0_meV: 282, b_m1_1e-3muN2: 37, error_1e-3muN2: 4}
+- {ex_keV: 9874.9, gamma0_meV: 239, b_m1_1e-3muN2: 64, error_1e-3muN2: 6, b_m1_2022_1e-3muN2: 60}
+- {ex_keV: 9891.3, gamma0_meV: 62, b_m1_1e-3muN2: 17, error_1e-3muN2: 4, b_m1_2022_1e-3muN2: 31}
+- {ex_keV: 9898.6, gamma0_meV: 147, b_m1_1e-3muN2: 39, error_1e-3muN2: 5}
+- {ex_keV: 10034.8, gamma0_meV: 121, b_m1_1e-3muN2: 31, error_1e-3muN2: 5, b_m1_2022_1e-3muN2: 54}
+- {ex_keV: 10152.9, gamma0_meV: 72, b_m1_1e-3muN2: 18, error_1e-3muN2: 3}
+- {ex_keV: 10162.8, gamma0_meV: 60, b_m1_1e-3muN2: 15, error_1e-3muN2: 3}
+- {ex_keV: 10184.6, gamma0_meV: 83, b_m1_1e-3muN2: 20, error_1e-3muN2: 6}
+- {ex_keV: 10196.0, gamma0_meV: 39, b_m1_1e-3muN2: 9, error_1e-3muN2: 3}
+- {ex_keV: 10227.1, gamma0_meV: 23, b_m1_1e-3muN2: 6, error_1e-3muN2: 2}
+- {ex_keV: 10275.8, gamma0_meV: 49, b_m1_1e-3muN2: 12, error_1e-3muN2: 3}
