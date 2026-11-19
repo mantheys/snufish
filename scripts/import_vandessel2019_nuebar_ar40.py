@@ -65,19 +65,18 @@ HEADER = """\
 # vector magnetic multipoles (not quenched) and the axial-vector interference (which scales as g_A, not g_A^2), and
 # natural parity holds axial magnetic multipoles (left unquenched); whether the quenching found for allowed
 # Gamow-Teller transitions applies to forbidden ones at finite momentum transfer is open. At 100 MeV sigma_q is
-# {quenched_100:.2f} of the total. It shows the size of the effect;
-# it is not a quenched HF+CRPA result.
+# {quenched_100:.2f} of the total. It shows the size of the effect; it is not a quenched HF+CRPA result.
 """
 
 
-def _figure(source):
+def _figure(source, figure=FIGURE):
     """(tarball bytes or None, figure PDF bytes) from the arXiv e-print tarball or an unpacked directory."""
     source = Path(source)
     if source.is_dir():
-        return None, (source / FIGURE).read_bytes()
+        return None, (source / figure).read_bytes()
     raw = source.read_bytes()
     with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
-        return raw, tar.extractfile(FIGURE).read()
+        return raw, tar.extractfile(figure).read()
 
 
 def _segments(drawing):
