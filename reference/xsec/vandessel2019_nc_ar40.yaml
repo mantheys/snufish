@@ -1,0 +1,45 @@
+# nu + 40Ar -> nu + 40Ar* neutral-current inelastic total cross section (cm^2 per 40Ar nucleus), neutrinos, HF+CRPA:
+# N. Van Dessel, N. Jachowicz and A. Nikolakopoulos, "Forbidden transitions in neutral and charged current interactions
+# between low-energy neutrinos and Argon", Phys. Rev. C 100, 055503 (2019), arXiv:1903.07726 (v3, 2019-10-22), fig. 8,
+# bottom panel ("sigma_J,total"), curve "Total". Retrieved 2026-11-19 from the arXiv source (e-print sha256
+# 9eceab61da78c1e0...), figure file argtotnc.pdf (sha256 a3ed7bcefdf5a559...). Written by scripts/import_vandessel2019_nc_ar40.py.
+#
+# METHOD: digitised from the vector figure, as reference/xsec/vandessel2019_nuebar_ar40.yaml (same paper): the paper
+# publishes no table. The "Total" curve is a single gnuplot polyline of 46 vertices, the plotted data points:
+# E = 10, 12, 14, ..., 100 MeV (2 MeV steps; abscissae within 0.012 MeV of these values, rounded to them). Axis
+# calibration, a straight-line fit of the major ticks to their labels: E = -38.0676 +0.440889 x/pt MeV (max
+# residual 1.9e-02 pt), sigma = +53.1047 -0.077149 y/pt 1e-40 cm^2 (max residual 1.5e-02 pt).
+# UNCERTAINTY: gnuplot writes coordinates to 0.05 pt, i.e. +-1.9e-43 cm^2 in sigma (half a step; the panel runs to
+# 1.4e-39 cm^2), absolute: 43 % at 12 MeV, 10 % at 16 MeV, 4 % at 20 MeV, 1.1 % at
+# 30 MeV, 0.17 % at 50 MeV. Below about 20 MeV, the solar range, the curve rests on 1-11 plotting steps. The
+# paper quotes no model uncertainty.
+#
+# MODEL: Hartree-Fock (Skyrme) + continuum RPA, self-consistent residual interaction, all computed multipoles,
+# FREE g_A = 1.27 (sec. II). NC: no Coulomb factor (zeta^2 = 1), lepton prefactor (G_F/2pi)^2. Flavour-blind for
+# neutrinos (nu_e, nu_mu, nu_tau alike); the antineutrino curve (fig. 10) is smaller and is not stored here.
+#
+# CAVEAT, DISCRETE STATES: "within the CRPA, discrete excitations are not taken into account" (the paper, sec. III,
+# on why its strength is low at low energies). For NC on 40Ar the measured isovector M1 (spin-flip, GT0-like) strength
+# lies in bound 1+ levels, mostly at 9.7-10.0 MeV (Tornow et al., PLB 835, 137576 (2022)), below or at the neutron
+# separation energy (about 9.9 MeV). That strength is missing from this curve; Tornow et al.'s shell-model estimate of
+# the 0+ -> 1+ cross section from it is about 3e-44 cm^2 at 10 MeV and 1.4e-43 cm^2 at 15 MeV (+-43 %), a tenth of
+# this curve at 15 MeV but all of the cross section below 12 MeV.
+#
+# THRESHOLD: NC has no Q value; any excited level can be reached (the first, 2+, at 1.46 MeV). The published curve is
+# zero (below 1.9e-43 cm^2, half a plotting step) at its first vertex, 10 MeV, and positive from 12 MeV. SNUfish does
+# not invent strength below the curve: threshold_MeV = 10.0, sigma = 0 below it, and between 10 and 12 MeV the first
+# segment of log(sigma) in log(E - 10 MeV) is continued to zero.
+source: Phys. Rev. C 100, 055503 (2019), arXiv:1903.07726, fig. 8 (bottom panel, Total)
+retrieved: '2026-11-19'
+method: digitised (vector PDF of the figure, arXiv source)
+model: HF (Skyrme) + CRPA, all multipoles, continuum only (no discrete excitations)
+g_A: 1.27
+flavours: nu_e, nu_mu, nu_tau identical; antineutrinos not stored (fig. 10)
+uncertainty_cm2: 1.9e-43
+threshold_MeV: 10.0
+energy_MeV: [10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0, 28.0, 30.0, 32.0, 34.0, 36.0, 38.0, 40.0, 42.0, 44.0,
+  46.0, 48.0, 50.0, 52.0, 54.0, 56.0, 58.0, 60.0, 62.0, 64.0, 66.0, 68.0, 70.0, 72.0, 74.0, 76.0, 78.0, 80.0, 82.0, 84.0,
+  86.0, 88.0, 90.0, 92.0, 94.0, 96.0, 98.0, 100.0]
+total_1e-40cm2: [0.0, 0.004498, 0.00836, 0.01993, 0.02765, 0.04307, 0.06236, 0.08165, 0.1087, 0.1395, 0.1781, 0.2205, 0.2745,
+  0.3362, 0.4057, 0.4944, 0.5908, 0.7027, 0.8261, 0.9727, 1.131, 1.304, 1.497, 1.709, 1.941, 2.188, 2.458, 2.751, 3.06,
+  3.391, 3.762, 4.151, 4.552, 4.984, 5.436, 5.914, 6.412, 6.94, 7.492, 8.067, 8.668, 9.324, 9.988, 10.68, 11.4, 12.15]
