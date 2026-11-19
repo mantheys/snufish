@@ -6,7 +6,7 @@
     {"name": "Manthey, Sergio", "orcid": "0000-0002-9368-9120"}
   ],
   "license": "MIT",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "keywords": ["solar neutrinos", "neutrino oscillations", "MSW effect", "day-night asymmetry", "benchmark", "SNOwGLoBES", "MARLEY", "DUNE"],
   "related_identifiers": [
     {"identifier": "https://github.com/mantheys/snufish", "relation": "isSupplementTo", "scheme": "url"},
