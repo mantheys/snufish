@@ -14,9 +14,11 @@ Prepared: **v0.3.0** (steps 2 done, 3 and 4 to do). Release notes below.
 
 SNUfish 0.3.0 adds the exports that make the theory inputs of the DUNE
 low-energy reconstruction paper and the DUNE solar Phase I paper, and
-replaces the last SNOwGLoBES cross section those figures used. Every rate of
-0.2.0 is unchanged: `scripts/dune_phase1_rates.py` gives the same numbers
-(B16-GS98 8B + hep, CC above E_ν = 5 MeV: 2420 per kt-yr).
+replaces the SNOwGLoBES cross sections on argon that had no published source
+(ν̄e CC and NC). CC and ES rates are those of 0.2.0; the NC rate changes with
+the new NC model: `scripts/dune_phase1_rates.py` (B16-GS98 8B + hep) gives CC
+2420 and ES 1080 per kt-yr above E_ν = 5 MeV as before, and NC 105.7 (was
+28.8 with SNOwGLoBES's table, still available as `--nc-model snowglobes`).
 
 - `snufish export-pkl` (#24): the solar neutrino spectrum (per component, at
   the detector, by period and site) as a plotipus pickle.
@@ -27,8 +29,17 @@ replaces the last SNOwGLoBES cross section those figures used. Every rate of
   calculation of Van Dessel, Jachowicz & Nikolakopoulos, PRC 100, 055503
   (2019) (`reference/xsec/vandessel2019_nuebar_ar40.yaml`, free g_A = 1.27;
   `--nuebar_model vandessel2019_quenched` gives a legacy g_A = 1.00 variant,
-  SNUfish's estimate), no longer SNOwGLoBES's undocumented table. NC is still
-  SNOwGLoBES's table (`reference/xsec/snowglobes_nc_ar40.yaml`).
+  SNUfish's estimate), no longer SNOwGLoBES's undocumented table.
+- NC inelastic on 40Ar (#29), the new default of the engine, the calculator,
+  `export-xsec` (`--nc_model`) and the DUNE scripts: the measured spin-flip
+  1+ levels of Tornow et al., PRC 112, 054320 (2025) (9.3 to 10.3 MeV,
+  ΣB(M1) = 1.31(18) μN², allowed approximation with MARLEY 2's form factors)
+  plus the HF+CRPA continuum of Van Dessel et al. 2019 (fig. 8), the
+  combination MARLEY's authors propose (arXiv:2604.26801). Each part and
+  SNOwGLoBES's table (legacy) stay selectable. The rate is uncertain: 93 % of
+  it comes from the continuum's onset at E_ν = 10 to 12 MeV, read from a
+  figure (61 to 156 per kt-yr within half a plotting step), and the continuum
+  may overlap the measured levels above 9.9 MeV (docs/status-of-inputs.md).
 - PEANUTS v1.7 (#26): B2 and B3 rerun, bit-for-bit unchanged.
 - Web page (#21 to #23): Zenodo DOI badge and citation, the eighth Home
   finding (one or two inputs limit each prediction), B5 tab in physics order,
