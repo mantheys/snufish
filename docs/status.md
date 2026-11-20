@@ -156,6 +156,8 @@ From [crosschecks.md](crosschecks.md):
 
 ## Open questions before freezing the specs
 
+Each is decided (for 1.0, or out of scope) in [roadmap-1.0.md](roadmap-1.0.md).
+
 - **B3**: extend the energy grid down to 0.1 MeV for pp and ⁷Be (Earth
   effects are tiny there)? Add `prem_crust1` per site as a variant? And
   `prem_crust1_3d`, which needs the chords written out per site (a
