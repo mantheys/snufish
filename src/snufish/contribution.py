@@ -200,6 +200,7 @@ def _check_b4(df, spec):
 
 RESPONSE_COLUMNS = ["detector", "channel", "kind", "true_axis", "true_low", "true_high", "observed_low",
                     "observed_high", "value"]
+FLAVOURS = ("nue", "numu", "nutau")
 
 
 def load_response(path):
@@ -227,9 +228,15 @@ def _check_b5_response(contribution, spec):
     if missing:
         return [f"response.parquet: missing columns {missing}"]
     problems = []
+    if "flavour" not in table.columns:
+        table = table.assign(flavour="")
+    table = table.assign(flavour=table.flavour.fillna("").astype(str))
     for case in sorted({q.rsplit("/", 1)[0] for q in observed["quantity"]}):
         detector, channel = case.split("/")
         sub = table[(table.detector == detector) & (table.channel == channel)]
+        if set(sub.flavour) - {"", *FLAVOURS}:
+            problems.append(f"response.parquet: flavour of {case} must be one of {', '.join(FLAVOURS)} or empty")
+            continue
         for kind in ("efficiency", "smearing"):
             part = sub[sub.kind == kind]
             if part.empty:
@@ -238,14 +245,36 @@ def _check_b5_response(contribution, spec):
                 problems.append(f"response.parquet: {kind} of {case} outside [0, 1]")
         smearing = sub[sub.kind == "smearing"]
         if not smearing.empty:
-            if set(smearing.true_axis) - {"observed", "neutrino"}:
-                problems.append(f"response.parquet: true_axis of {case} must be 'observed' or 'neutrino'")
-            elif (smearing.true_axis == "neutrino").any() and not channel.startswith("cc_"):
-                problems.append(f"response.parquet: a matrix in neutrino energy applies to CC channels only ({case})")
-            rows = smearing.groupby(["true_low", "true_high"])["value"].sum()
-            if (rows > 1 + 1e-6).any():
-                problems.append(f"response.parquet: smearing rows of {case} sum to more than 1")
+            problems += _check_smearing(smearing, case, channel)
     return problems
+
+
+def _check_smearing(smearing, case, channel):
+    """One detector/channel's smearing rows: one true axis; per flavour only for ES in neutrino energy (nue and
+    numu, nutau equal to numu); every row summing to at most 1."""
+    axes = set(smearing.true_axis)
+    if axes - {"observed", "neutrino"} or len(axes) > 1:
+        return [f"response.parquet: true_axis of {case} must be one of 'observed' or 'neutrino'"]
+    neutrino = axes == {"neutrino"}
+    if neutrino and channel.startswith("nc_"):
+        return [f"response.parquet: a matrix in neutrino energy applies to CC and ES channels only ({case})"]
+    flavours = set(smearing.flavour)
+    if channel == "es" and neutrino:
+        if not {"nue", "numu"} <= flavours or "" in flavours:
+            return [f"response.parquet: an ES matrix in neutrino energy of {case} needs flavour nue and numu rows"]
+        if "nutau" in flavours:
+            key = ["true_low", "true_high", "observed_low", "observed_high"]
+            pair = smearing[smearing.flavour == "numu"].merge(smearing[smearing.flavour == "nutau"], on=key,
+                                                               how="outer", suffixes=("_mu", "_tau"))
+            if not np.allclose(pair.value_mu.fillna(0), pair.value_tau.fillna(0), rtol=1e-6, atol=1e-12):
+                return [f"response.parquet: the nutau matrix of {case} differs from numu's (SNUfish's ES cross "
+                        "sections of the two are equal)"]
+    elif flavours != {""}:
+        return [f"response.parquet: flavour applies to ES matrices in neutrino energy only ({case})"]
+    rows = smearing.groupby(["flavour", "true_low", "true_high"])["value"].sum()
+    if (rows > 1 + 1e-6).any():
+        return [f"response.parquet: smearing rows of {case} sum to more than 1"]
+    return []
 
 
 BENCHMARK_CHECKS = {"B3_earth": _check_b3, "B2_sun": _check_b2, "B4_xsec": _check_b4}

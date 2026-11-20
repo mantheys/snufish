@@ -18,7 +18,7 @@ is set by [compatibility.md](compatibility.md).
 | B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth, peanuts |
 | B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth, peanuts (`prem_prob3`), nusquids |
 | B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
-| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.5.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water), marley (argon) (full chain, part 1); SNUfish folds every B4 model and every published response |
+| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.6.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water), marley (argon) (full chain, part 1); SNUfish folds every B4 model and every published response |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
@@ -231,7 +231,10 @@ response into observed energy. A contribution may give either part or both
 the SNOwGLoBES contribution was rerun against it (bit-identical numbers).
 Version 0.5.0 continues the ⁸B shape above 15.2 MeV, where Winter et al.'s
 table ends, with Bahcall et al. 1996 (1.1 × 10⁻⁵ of the flux); the
-SNOwGLoBES and MARLEY contributions were rerun against it.
+SNOwGLoBES and MARLEY contributions were rerun against it. Version 0.6.0
+adds JUNO's detector (`scintillator_lab`) and its response, and lets a
+tool's own response give ES matrices in neutrino energy per flavour; it is
+additive, so 0.5.0 contributions stay valid (`compatible`).
 
 ### Part 1: interaction rates
 
@@ -251,7 +254,7 @@ inputs.
 |---|---|
 | Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes); ⁸B: Winter et al. 2006, above 15.2 MeV Bahcall et al. 1996); normalisations from the B2 solar model |
 | Exposure | 1 kton-year, Julian year (3.15576 × 10⁷ s) |
-| Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`); `heavy_water` (3.007 × 10³² e⁻, 6.014 × 10³¹ d per kt; `es`, `cc_nue_d`); `scintillator_pc` (3.307 × 10³² e⁻ per kt; `es`) |
+| Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`); `heavy_water` (3.007 × 10³² e⁻, 6.014 × 10³¹ d per kt; `es`, `cc_nue_d`); `scintillator_pc` (3.307 × 10³² e⁻ per kt; `es`); `scintillator_lab` (3.38 × 10³² e⁻ per kt; `es`) |
 | Channels | `es` sums the three ES channels weighted with P<sub>eα</sub>; CC uses P<sub>ee</sub>. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV, d 1.442 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
 | Spectra | `linear` (0–20 MeV, 0.1 MeV) and `log` (0.05–20 MeV, 40 per decade) binnings, per MeV of neutrino energy |
 | Totals | all energies and E<sub>ν</sub> > 5 MeV |
@@ -310,6 +313,7 @@ numbers and sources in [sources.md](sources.md#detector-responses)):
 | `water` | Super-K IV (arXiv:2312.12907) | −0.05525 + 0.3162√E + 0.04572E, E = T + m<sub>e</sub> | fig. 28 curve | 3.49 MeV | scale 0.48 %, σ 3 %, rate 1.1 % |
 | `heavy_water` | SNO salt (nucl-ex/0502021) | −0.131 + 0.383√T + 0.03731T | 1 (none published) | 5.5 MeV | scale 1.15 %, σ 3.4 % |
 | `scintillator_pc` | Borexino Phase-II (arXiv:1707.09279) | 0.05√E | 0.999 | 0.05 MeV | — |
+| `scintillator_lab` | JUNO (arXiv:2006.11760) | 0.03√T | 1 | 2 MeV | scale 0.3 %, rate 1 % |
 | `argon` | DUNE far detector (arXiv:2008.06647) | 20 % | 1 | 5 MeV | — |
 
 The response applies to every channel of the detector, in observed energy:
@@ -323,7 +327,7 @@ efficiency in observed energy; the threshold is not part of it.
 | Cross sections (SNUfish's folding) | ES: BKS (`snufish-reference` `es_bks`); ⁴⁰Ar: `ar40_marley2_bhattacharya2009`; ¹⁶O: SNOwGLoBES; d: Nakamura et al. 2002 down to threshold |
 | Grid `observed` | `threshold` = 0–20 MeV of observed energy, step 0.01 (2001 points): the value is the rate above it, so the spectrum is its difference and every preset threshold is a grid point |
 | Quantities | `<detector>/<channel>/<component>` as in part 1, including `all` |
-| Response of a contribution | `settings.response` in meta.yaml: `spec` (the responses above), or `own`, with `response.parquet` next to the data (per detector and channel: efficiency per observed bin and a smearing matrix P(observed bin \| true bin), true axis the observed energy or, CC only, E<sub>ν</sub>). `snufish validate` checks both |
+| Response of a contribution | `settings.response` in meta.yaml: `spec` (the responses above), or `own`, with `response.parquet` next to the data (per detector and channel: efficiency per observed bin and a smearing matrix P(observed bin \| true bin), true axis the observed energy or E<sub>ν</sub>; an ES matrix in E<sub>ν</sub> is given per flavour, column `flavour`: `nue` and `numu`, with `nutau`, if given, equal to `numu`). `snufish validate` checks both |
 
 SNUfish's folding (`B5_Observed`, B16-GS98, per kt·yr by day):
 
@@ -333,6 +337,7 @@ SNUfish's folding (`B5_Observed`, B16-GS98, per kt·yr by day):
 | heavy water CC (> 5.5 MeV) | 4403 | 3638 | 3508 | 0.964 |
 | heavy water ES (> 5.5 MeV) | 6.24 × 10⁵ | 337.9 | 337.9 | 1.000 |
 | scintillator ES (> 0.05 MeV) | 6.86 × 10⁵ | 4.88 × 10⁵ | 4.84 × 10⁵ | 0.992 |
+| JUNO scintillator ES (> 2 MeV) | 7.01 × 10⁵ | 1087 | 1086 | 1.000 |
 | argon CC (> 5 MeV) | 2333 | 2235 | 2136 | 0.956 |
 | argon ES (> 5 MeV) | 5.63 × 10⁵ | 366.6 | 356.4 | 0.972 |
 
