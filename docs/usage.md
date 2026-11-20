@@ -155,9 +155,9 @@ selects SNUfish's legacy variant, the unnatural-parity strength quenched to g<su
 snufish export-sections --tables build/app   # a few seconds; writes build/app/sections.json
 ```
 
-The data of `benchmarks.html`, one page per benchmark. For five reference
+The data of `benchmarks.html`, one page per benchmark. For six reference
 observables (⁸B ES in water, ⁸B and hep CC on ⁴⁰Ar, ⁷Be ES in scintillator,
-the ES day-night asymmetry; `sections.OBSERVABLES`) it runs the error budget
+the ES day-night asymmetry, ⁸B + hep NC on ⁴⁰Ar; `sections.OBSERVABLES`) it runs the error budget
 on the app tables and assigns every source to the benchmark it comes from:
 B1 the oscillation parameters, B2 the fluxes (sampled, and the range between
 models with the production profiles fixed) and the density and production

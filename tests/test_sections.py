@@ -108,3 +108,25 @@ def test_nc_reading_variants_bracket_the_default():
         elif "+" in name:
             assert np.all(sigma >= nominal) and sigma[0] > nominal[0]
     assert variants["onset at 11 MeV"](np.array([10.5]))[0] == 0.0
+
+
+def test_nc_observable_carries_the_figure_reading_in_b4():
+    import json
+    from pathlib import Path
+
+    import pytest
+
+    path = Path(__file__).resolve().parents[1] / "build" / "app" / "sections.json"
+    if not path.exists():
+        pytest.skip("run snufish export-sections")
+    from snufish.sections import NC_LEGACY, NC_READING, NC_STRENGTH
+
+    o = json.loads(path.read_text())["observables"]["argon_nc_b8"]
+    rows = {r["source"]: r for r in o["rows"]}
+    reading = rows[NC_READING]
+    assert reading["section"] == "B4" and reading["low"] < o["central"] < reading["high"]
+    assert 0.3 < 1 - reading["low"] / o["central"] < 0.6 and 0.5 < reading["high"] / o["central"] - 1 < 0.8
+    assert rows[NC_STRENGTH]["sigma"] < 0.05 * o["central"]   # the measured levels are a small part of the rate
+    assert rows[NC_LEGACY]["kind"] == "legacy" and rows[NC_LEGACY]["shift"] < 0  # SNOwGLoBES: about a quarter
+    assert rows["oscillation parameters"]["sigma"] == 0  # flavour-blind
+    assert not any(r["section"] == "B2" and r["kind"] == "approximation" for r in o["rows"])

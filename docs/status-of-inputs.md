@@ -77,7 +77,7 @@ SNUfish reports as model ranges.
    models without a crust), +6.5 % on the ⁸B flux (B16's older nuclear
    rates).
 8. **One or two inputs limit each prediction.** The largest state-of-the-art
-   contribution of each step (B1 to B5) to the five reference observables of
+   contribution of each step (B1 to B5) to five reference observables of
    the benchmark pages (JUNO 2025, B23-MB22m, 100 kt·yr through each
    detector's published response): the solar model for ES rates (−15.9 % for
    ⁸B, −7.8 % for ⁷Be; with the SNO NC ⁸B flux, 4.0 %), the ⁴⁰Ar nuclear model

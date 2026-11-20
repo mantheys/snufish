@@ -1,5 +1,5 @@
 // SNUfish benchmark pages (benchmarks.html): what each benchmark varies, how well tools agree on it, and how
-// much it moves five reference observables. Reads data/sections.json (snufish export-sections) and data/inputs.json;
+// much it moves six reference observables. Reads data/sections.json (snufish export-sections) and data/inputs.json;
 // the discrepancies tab recomputes the calculator's result templates (checks.js) on its tables.
 import * as engine from "./engine.js";
 import { DATA, loadTable } from "./load.js";
@@ -12,7 +12,7 @@ const ORDER = ["pp", "pep", "hep", "Be7", "B8", "N13", "O15", "F17"];
 const SECTIONS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
 const SECTION_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 }; // --series-N of each step
 const SHORT = { water_es_b8: "⁸B ES, water", argon_cc_b8: "⁸B CC, ⁴⁰Ar", argon_cc_hep: "hep CC, ⁴⁰Ar",
-                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water" };
+                scint_es_be7: "⁷Be ES, scintillator", water_es_adn: "A<sub>DN</sub>, water", argon_nc_b8: "⁸B + hep NC, ⁴⁰Ar" };
 const EARTH = { prem_crust1: "PREM + local crust (CRUST1.0)", prem_crust1_3d: "PREM + CRUST1.0 along each chord (3D crust)", prem_full: "PREM, ten regions", prem_four: "PREM, four regions", prem_prob3: "Four shells (Prob3++)",
                 native: "The tool's own Earth model" };
 const MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"; // as export.MARLEY_DEFAULT
