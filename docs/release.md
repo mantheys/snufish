@@ -1,5 +1,7 @@
 # Releasing a citable version
 
+Next: **v0.4.0** (notes below), to tag once its release commit is on `main`
+with CI green; its version DOI goes in with step 4.
 Released: **v0.3.0** is tagged (2026-11-20) and archived on Zenodo, version
 DOI [10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275).
 **v0.2.0** has version DOI
@@ -9,6 +11,33 @@ concept DOI (resolves to the latest version) is
 the untagged development version; 0.2.0 adds the DUNE table options
 (`night_fraction`, `nu_threshold`, `nc_ar40`, the SOLAR night). The steps
 below are what it took; repeat 2 to 4 for the next one.
+
+## v0.4.0 release notes
+
+SNUfish 0.4.0 adds a second full-chain rate tool in argon and a consistency
+pass of the web page. No rate changes: the engine is that of 0.3.0, and
+`scripts/dune_phase1_rates.py` (B16-GS98 8B + hep, per kt-yr above
+E_ν = 5 MeV, annual) gives CC 2416, ES 1081 and NC 105.7 as before.
+
+- B5: MARLEY's full chain in argon (#34), `contributions/marley/scripts/run_b5.py`:
+  MARLEY 2 integrates its own cross sections (CC: HF-CRPA continuum + the
+  Bhattacharya 2009 bound levels; ES: tree level) over the oscillated B2
+  spectra of every solar model, for CC and ES at E_ν > 0 and > 5 MeV. It
+  agrees with SNUfish's folding of MARLEY's B4 tables to 0.03 %. MARLEY's B4
+  contribution now has ES too (CC unchanged). B5 plots and the B5 tab show
+  every full-chain tool, a symbol per tool.
+- B4 (#32): the 8B + hep NC rate on 40Ar is a reference observable of the
+  impact chart, with the figure reading of the continuum (−43 %/+66 %), the
+  measured strength (B(M1) ±14 %, ~1 %) and SNOwGLoBES's legacy table (−73 %).
+  The Home finding on cross sections shows ES, CC and NC against each
+  channel's default.
+- Web (#33): the impact charts have one panel per detection channel, each
+  with the legend of its own sources; every plot has its full frame at any
+  screen scaling; B1 sets have one colour each; B5's observed spectra are
+  split into ES and CC plots; numbers in the text checked against the data.
+
+Cite the version DOI of 0.4.0 once minted, or the concept DOI
+10.5281/zenodo.24045166.
 
 ## v0.3.0 release notes
 
@@ -59,9 +88,9 @@ concept DOI 10.5281/zenodo.24045166.
 
 | File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.3.0: `version`, `date-released` 2026-11-20 (the tag date), version DOI 10.5281/zenodo.24383275 |
-| `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.3.0 (ORCID included) |
-| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.3.0 (plotipus pinned to its `v0.1.0` release) |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.4.0: `version`, `date-released` 2026-11-20 (set to the tag date if it differs); `doi` the concept DOI until step 4 puts in the v0.4.0 version DOI |
+| `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.4.0 (ORCID included) |
+| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.4.0 (plotipus pinned to its `v0.1.0` release) |
 | `catalogue/tools/snufish-reference.yaml` | `reference` | the concept DOI (cites every version); the comment lists the version DOIs |
 
 ## Steps
