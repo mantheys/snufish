@@ -131,7 +131,7 @@
         regions, Prob3++'s four shells), averaged over each site's night. On constant shells NuFast-Earth, nuSQuIDS and
         PEANUTS agree with the reference to 9 × 10⁻⁸, 4 × 10⁻⁸ and 9 × 10⁻⁶ (PEANUTS's matter potential is rounded); on
         PREM's continuous regions nuSQuIDS integrates the
-        polynomials and agrees with the reference to 10⁻⁶, while NuFast-Earth, which computes the calculator's night,
+        polynomials and agrees with the reference to 1.5 × 10⁻⁶, while NuFast-Earth, which computes the calculator's night,
         takes each crossing's mean density, off by up to 2 % in the ⁸B A<sub>DN</sub> at 10–15 MeV against the reference
         (fourth-order Magnus, converged). The calculator's night therefore cuts those regions into 50 km shells (within
         0.05 %); the bar "mean density per region crossing" is what NuFast-Earth's own treatment would shift. The state
@@ -140,7 +140,7 @@
         A<sub>DN</sub> by −2.5 to +3.7 %; against each other by at most 0.2 %, B3's model range: the far side of a chord
         averages out. The range covers one crust model only: Han et al.'s 3D Earth (LITHO1.0 on the SAW642AN mantle)
         differs from it by ~0.05 pp, 3–4 % of A<sub>DN</sub>, at LNGS and SURF. A second crust model and a 3D mantle are
-        not included yet. The crustless models are 20–40 % high; the other bars are approximations, signed shifts
+        not included yet. The crustless models are 17–42 % high; the other bars are approximations, signed shifts
         against the default.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b3-impact" class="plot"></div></section>
@@ -158,16 +158,16 @@
     <section class="hero">
       <h2><span class="bench-id">B4</span> Interaction · cross sections: ν–e scattering, CC and NC</h2>
       <p>Elastic scattering on electrons is known to well under 1 %: radiative corrections (Bahcall, Kamionkowski &amp;
-        Sirlin) and SNOwGLoBES's tables differ by a per mille or less on the rates (up to 0.5 % point by point, ν<sub>μ</sub>
+        Sirlin) and SNOwGLoBES's tables differ by 0.1–0.2 % on the rates (0.12 % on ⁸B ES in water, 0.22 % on its A<sub>DN</sub>; up to 0.5 % point by point, ν<sub>μ</sub>
         and ν<sub>τ</sub> in opposite directions); tree level, an approximation, is 2–4 % high.
         ν<sub>e</sub> CC on ⁴⁰Ar is not. MARLEY 2, with each of the three sets of measured Gamow–Teller
         strengths, and the shell model of Suzuki &amp; Honma agree within 11 %; the shell model of Kostensalo, Suhonen
-        &amp; Zuber, which quenches the strength (g<sub>A</sub> = 1.00), is 27–35 % lower. That 37 % range is the
+        &amp; Zuber, which quenches the strength (g<sub>A</sub> = 1.00), is 27–35 % lower (its published values; 29–37 % in SNUfish's tables). That 36 % range on the ⁸B rate is the
         largest model uncertainty of argon CC. The older tables (KLMV, SNOwGLoBES's, MARLEY v1) are legacy:
         plotted for reference, not counted.</p>
       <p><b>NC on ⁴⁰Ar is known far worse.</b> The default is now the measured spin-flip 1⁺ levels of ⁴⁰Ar (Tornow et
         al. 2025) plus the HF+CRPA continuum of Van Dessel, Jachowicz &amp; Nikolakopoulos (2019), the combination
-        MARLEY's authors plan; SNOwGLoBES's unpublished table is legacy. It quadruples the ⁸B NC rate, and the figure
+        MARLEY's authors plan; SNOwGLoBES's unpublished table is legacy. It raises the ⁸B NC rate 3.7 times, and the figure
         it is read from leaves that rate uncertain from −43 % to +66 % (the NC panel of the chart below,
         and the NC cards); the measured strength of the levels (±14 %) adds about 1 %. ν̄<sub>e</sub> CC on ⁴⁰Ar
         (export-xsec only, it has no solar rate) now comes from the same HF+CRPA paper.</p>
@@ -193,7 +193,7 @@
         published response (resolution, efficiency, threshold) into observed spectra and rates above threshold:
         Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II for scintillator and DUNE's far
         detector for argon. Tools that fold the whole chain themselves (SNOwGLoBES) are compared with SNUfish's folding
-        of exactly the same inputs: 0.4 % on ⁸B and hep, but 2–21 % low below 2 MeV, where GLoBES evaluates
+        of exactly the same inputs: 0.4 % on ⁸B and hep (ES and ⁴⁰Ar CC; 1.6 % on the tiny hep CC on ¹⁶O), but 2–21 % low below 2 MeV, where GLoBES evaluates
         flux × σ once per sampling bin at its midpoint. The response matters where the spectrum rises:
         Super-K IV's efficiency halves the rate above its threshold, DUNE's and SNO's resolutions take 4.4 % and
         3.6 % off their CC rates above threshold, and under 3 % off the falling ES recoil spectra. Its entry in the
@@ -202,8 +202,11 @@
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
     <section class="card"><h3 class="plot-title">Full-chain rates over SNUfish's folding</h3><div id="b5-tools"></div></section>
-    <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-observed" class="plot tall"></div>
-      <label class="inline">Component <select id="b5-component"></select></label></section>
+    <section class="card"><label class="inline">Component <select id="b5-component"></select></label>
+      <div class="trio">
+        <div><h3 class="plot-title"></h3><div id="plot-b5-observed-es" class="plot tall"></div></div>
+        <div><h3 class="plot-title"></h3><div id="plot-b5-observed-cc" class="plot tall"></div></div>
+      </div></section>
     <section class="card"><h3 class="plot-title">Rates above each preset's threshold, B16-GS98, per kt·yr by day</h3><div id="b5-observed"></div></section>
   </section>
 
