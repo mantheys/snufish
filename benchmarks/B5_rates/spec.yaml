@@ -255,3 +255,13 @@ response:
   #     observed_low, observed_high (MeV), value (efficiency 0-1, or P(observed bin | true bin)). SNUfish
   #     folds the same inputs through that response, so the comparison tests the chain, and shows the
   #     tool's response against the spec's.
+
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+changelog:
+  - {version: 0.1.0, date: 2026-10-28, kind: initial, changes: "SNUfish's folding of every B4 model (no contributions)."}
+  - {version: 0.2.0, date: 2026-10-28, kind: major, changes: "Flux normalisations from the solar-model registry; rates for every solar model with its own B2 oscillations."}
+  - {version: 0.3.0, date: 2026-10-28, kind: minor, changes: "Contribution format for full-chain tools: grid totals, variants b16_gs98, bs05_op, b16_gs98_point_lines, native."}
+  - {version: 0.4.0, date: 2026-11-07, kind: minor, changes: "Part 2, the detector response: optional grid observed, response block, settings.response and response.parquet; heavy water and scintillator detectors."}
+# Earlier versions whose contributions are still exact under this one.
+compatible: [0.3.0]

@@ -45,6 +45,32 @@ class Spec:
     def variants(self):
         return self.data["variants"]
 
+    @property
+    def compatible(self):
+        """Earlier versions whose contributions are still exact under this one (``compatible`` in the spec)."""
+        return [str(v) for v in self.data.get("compatible", [])]
+
+    def accepts(self, version):
+        """Whether a contribution computed with spec ``version`` is valid under this spec (docs/compatibility.md):
+        the same version; a version the spec lists in ``compatible``; or, from 1.0.0 on, the same major and a
+        version no newer than this one (minor and patch changes are additive)."""
+        try:
+            given = parse_version(version)
+        except ValueError:
+            return False
+        current = parse_version(self.version)
+        if given == current or str(version) in self.compatible:
+            return True
+        return current[0] >= 1 and given[0] == current[0] and given <= current
+
+
+def parse_version(text):
+    """``"1.2.3"`` -> ``(1, 2, 3)``; anything else raises ValueError."""
+    parts = str(text).split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        raise ValueError(f"not a MAJOR.MINOR.PATCH version: {text!r}")
+    return tuple(int(p) for p in parts)
+
 
 def _numeric_strings(data, where=""):
     """Paths of string values that look like numbers: YAML 1.1 reads 1e23

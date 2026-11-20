@@ -85,8 +85,9 @@ def validate(contribution, spec=None):
     tool_dir, bench_dir, version_dir = contribution.path.parts[-3:]
     if (tool_dir, bench_dir, version_dir) != (meta["tool"], meta["benchmark"], str(meta["tool_version"])):
         problems.append(f"directory {tool_dir}/{bench_dir}/{version_dir} does not match meta.yaml")
-    if str(meta["benchmark_version"]) != spec.version:
-        problems.append(f"computed with spec {meta['benchmark_version']}, current spec is {spec.version}")
+    if not spec.accepts(meta["benchmark_version"]):
+        problems.append(f"computed with spec {meta['benchmark_version']}, which spec {spec.version} does not accept "
+                        "(docs/compatibility.md)")
 
     columns = ["grid", "variant", "quantity", *spec.grid_names, "value"]
     missing = [c for c in columns if c not in df.columns]

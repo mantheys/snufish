@@ -9,7 +9,8 @@ inputs in
 **variants** carry model alternatives (solar model, Earth model, nuclear
 model) so that the spread between models shows next to the spread between
 tools. All specs are drafts: they may still change, and any change bumps
-their `version`.
+their `version` and adds a `changelog` entry; which contributions stay valid
+is set by [compatibility.md](compatibility.md).
 
 | Step | id | Version | Link of the chain | Contributed by |
 |---|---|---|---|---|
