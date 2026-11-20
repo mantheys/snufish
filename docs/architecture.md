@@ -33,9 +33,10 @@ grids, oscillation parameters, physical constants, matter models, variants
 (model alternatives a tool may also run), the long-format columns and the
 checks. `snufish.spec.load_spec` reads it (guarding against YAML 1.1
 reading numbers such as `1e23` as strings) and `snufish.spec.pmns` builds
-the PMNS matrix from its `oscillation` block. A spec has a `version`; once
-frozen, any change bumps it and old contributions keep the version they
-were computed with.
+the PMNS matrix from its `oscillation` block. A spec has a `version` and a
+`changelog`; any change bumps the version, contributions keep the version
+they were computed with, and the validator accepts the versions the spec
+is compatible with ([compatibility.md](compatibility.md)).
 
 ## Contributions
 
@@ -60,7 +61,8 @@ contribution against its spec:
 
 - `meta.yaml` has every required key and no unknown one, matches its
   directory (`<tool>/<benchmark>/<tool_version>`), and was computed with
-  the current spec version;
+  a spec version the current spec accepts
+  ([compatibility.md](compatibility.md));
 - the columns, variants, grids and quantities are the spec's; required
   variants are present; every grid point appears exactly once, on the
   spec's axes;

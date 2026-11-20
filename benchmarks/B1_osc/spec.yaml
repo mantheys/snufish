@@ -22,3 +22,8 @@ reference_set: juno_2025                # the benchmark pages' reference (state 
 
 checks:
   required: [dm2_21_eV2, sin2_theta12]  # every set gives these, each with value and [minus, plus] error
+
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+changelog:
+  - {version: 0.1.0, date: 2026-11-07, kind: initial, changes: "Registry of oscillation parameter sets (reference/oscillation/parameter_sets.yaml); the former B1_ssm moved to B2 part 1."}
