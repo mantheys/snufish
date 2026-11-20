@@ -12,7 +12,7 @@ repository-code: "https://github.com/mantheys/snufish"
 url: "https://mantheys.github.io/snufish/"
 license: MIT
 version: 0.3.0
-date-released: "2026-11-19"   # the tag date; change it if v0.3.0 is tagged later
+date-released: "2026-11-20"
 doi: 10.5281/zenodo.24045166   # concept DOI (every version) until Zenodo mints v0.3.0's version DOI (docs/release.md, step 4); v0.2.0 is 10.5281/zenodo.24045167
 keywords:
   - solar neutrinos

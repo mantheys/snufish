@@ -44,6 +44,9 @@ the new NC model: `scripts/dune_phase1_rates.py` (B16-GS98 8B + hep) gives CC
 - Web page (#21 to #23): Zenodo DOI badge and citation, the eighth Home
   finding (one or two inputs limit each prediction), B5 tab in physics order,
   observed-rates table scrolls on mobile.
+- B4 tab (#30): NC on 40Ar card: the default model, its parts and
+  SNOwGLoBES's table, the band of the figure reading, where the 8B + hep NC
+  rate comes from (E_ν cut), and the rates of each variant.
 
 Submodules (Zenodo archives the repository without them): NuFast-Earth at
 `327586d` (v1.2.0-3), PEANUTS at `1783f9f` (v1.7).
@@ -55,7 +58,7 @@ DOI 10.5281/zenodo.24045166.
 
 | File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.3.0: `version`, `date-released` 2026-11-19 (the tag date), concept DOI until step 4 |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.3.0: `version`, `date-released` 2026-11-20 (the tag date), concept DOI until step 4 |
 | `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.3.0 (ORCID included) |
 | `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.3.0 (plotipus pinned to its `v0.1.0` release) |
 | `catalogue/tools/snufish-reference.yaml` | `reference` | unchanged (the concept DOI, cites every version) |
