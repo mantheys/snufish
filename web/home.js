@@ -23,8 +23,9 @@ const series = (n) => css(`--series-${n}`);
 const STEPS = { B1: "B1 Oscillation parameters", B2: "B2 Sun", B3: "B3 Earth", B4: "B4 Interaction", B5: "B5 Detector" };
 const STEP_SERIES = { B1: 9, B2: 2, B3: 6, B4: 5, B5: 1 };
 const LIMIT_LABELS = { water_es_b8: "⁸B ES, water", scint_es_be7: "⁷Be ES, scintillator", argon_cc_b8: "⁸B CC, ⁴⁰Ar",
-                       argon_cc_hep: "hep CC, ⁴⁰Ar", water_es_adn: `${ADN}, water` };
+                       argon_cc_hep: "hep CC, ⁴⁰Ar", water_es_adn: `${ADN}, water`, argon_nc_b8: "⁸B + hep NC, ⁴⁰Ar" };
 const page = { sections: null, inputs: null, tab: "overview", adn: null };
+const NC_READING = "NC continuum read from its figure (Van Dessel 2019, fig. 8)"; // as sections.NC_READING
 
 // ------------------------------------------------------------------ helpers
 
@@ -63,13 +64,16 @@ function toolsVsInputs() {
     ["B1 osc. parameters, ⁸B ES", row("water_es_b8", "oscillation parameters"), "inputs"],
     ["B2 composition, ⁸B ES", row("water_es_b8", "solar model fluxes (production profiles fixed)"), "inputs"],
     ["B4 ⁴⁰Ar model, ⁸B CC", row("argon_cc_b8", "40Ar nuclear model"), "inputs"],
+    ["B4 NC continuum reading, ⁸B NC", row("argon_nc_b8", NC_READING), "reading"],
   ].filter(([, v]) => v !== null && v > 0);
-  const colour = { tools: c.sampled, inputs: c.range };
+  const colour = { tools: c.sampled, inputs: c.range, reading: series(5) };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]),
                   marker: { color: bars.map((b) => colour[b[2]]) }, text: bars.map((b) => (b[1] < 0.01 ? `${b[1].toExponential(0)} %` : pct(b[1]).slice(1))),
                   textposition: "outside", cliponaxis: false, textfont: { size: 11, color: c.secondary }, hovertemplate: "%{y}: %{text}<extra></extra>" };
   htmlLegend(node, [{ label: "different tools, same inputs", colour: c.sampled, fill: true },
-                    { label: "competing state-of-the-art inputs", colour: c.range, fill: true }]);
+                    { label: "competing state-of-the-art inputs", colour: c.range, fill: true },
+                    { label: "one input read off a figure (NC continuum)", colour: series(5), fill: true }],
+             "B2 and B3 tools: the largest |ΔP| × 100; the rest: relative differences of the rates");
   return Plotly.react(node, [trace], layout(c, node, "Tools agree, inputs do not", "Largest difference (%), log scale", "",
     { showlegend: false, margin: { l: 20, r: 56, t: 16, b: 48 }, xaxis: { type: "log", range: [-6, 2.3], exponentformat: "power" },
       yaxis: { autorange: "reversed", automargin: true } }), CONFIG);
@@ -90,13 +94,15 @@ function outdated() {
   }
   const m = d.solar_models;
   if (m.b16_gs98 && m.b23_mb22m) bars.push(["B2 B16 ⁸B flux", 100 * (m.b16_gs98.fluxes.B8 / m.b23_mb22m.fluxes.B8 - 1), "legacy", "⁸B flux of B16-GS98"]);
+  const nc = page.sections.observables.argon_nc_b8, ncLegacy = nc?.rows.find((r) => r.section === "B4" && r.kind === "legacy");
+  if (ncLegacy) bars.push(["B4 SNOwGLoBES NC", 100 * ncLegacy.shift / nc.central, "legacy", "⁸B + hep NC rate on ⁴⁰Ar with SNOwGLoBES's unpublished table"]);
   bars.sort((a, b) => a[0].slice(0, 2).localeCompare(b[0].slice(0, 2))); // B2, B3, B4: the calculator's order
   const colour = { legacy: css("--series-7"), approximation: c.muted };
   const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[2]]) },
                   text: bars.map((b) => pct(b[1])), textposition: "outside", cliponaxis: false, textfont: { size: 11, color: c.secondary },
                   customdata: bars.map((b) => b[3]), hovertemplate: "%{customdata}: %{text}<extra></extra>" };
   htmlLegend(node, [{ label: "legacy input", colour: colour.legacy, fill: true }, { label: "approximation", colour: colour.approximation, fill: true }],
-             `B2: ⁸B flux against B23 MB22m; B3: ⁸B ${ADN} against PREM + local crust${page.adn ? "" : " (computing…)"}; B4: ⁴⁰Ar σ at 5 MeV against MARLEY 2`);
+             `B2: ⁸B flux against B23 MB22m; B3: ⁸B ${ADN} against PREM + local crust${page.adn ? "" : " (computing…)"}; B4: ⁴⁰Ar CC σ at 5 MeV against MARLEY 2, NC the ⁸B + hep rate against the default`);
   const lo = Math.min(0, ...bars.map((b) => b[1])), hi = Math.max(0, ...bars.map((b) => b[1])), span = hi - lo;
   return Plotly.react(node, [trace], layout(c, node, "Legacy inputs and approximations: shifts, not uncertainties", "Shift from the state of the art (%)", "",
     { showlegend: false, margin: { l: 20, r: 56, t: 16, b: 48 }, xaxis: { range: [lo - 0.3 * span, hi + 0.25 * span], zeroline: true, zerolinecolor: c.muted },
@@ -128,8 +134,10 @@ const PUBLISHED_AR40 = [
 ];
 
 function argon() {
-  // 4. (B4) the state-of-the-art 40Ar cross sections folded over the 8B spectrum, over MARLEY 2 (p,n); the shell model of
-  // Suzuki & Honma, which publishes one folded value only, and Kostensalo's with the free g_A, from the papers
+  // 4. (B4) each channel's cross sections over its default, ⁸B-folded: ES (SNOwGLoBES's radiative corrections against
+  // BKS, on the ⁸B ES rate in water), νₑ CC on ⁴⁰Ar (the state-of-the-art tables folded over the ⁸B spectrum, and the
+  // shell models that publish one folded value only), NC on ⁴⁰Ar (the ⁸B + hep rate of each model, the default's
+  // error bar the reading of the HF+CRPA figure)
   const c = colours(), node = $("plot-f4"), d = page.inputs, xs = d.xsec.cc_nue_ar40, status = d.status?.xsec_model?.cc_nue_ar40 || {};
   const b8 = d.components.B8, folded = (n) => {
     let t = 0;
@@ -139,20 +147,39 @@ function argon() {
     }
     return t;
   };
+  const bars = []; // [label, ratio, minus, plus, kind, hover]
+  const es = page.sections.observables.water_es_b8, esRow = es?.rows.find((r) => r.source === "ES radiative corrections");
+  if (esRow) {
+    const other = Math.abs(esRow.low - es.central) > Math.abs(esRow.high - es.central) ? esRow.low : esRow.high;
+    bars.push(["ES · BKS radiative corrections", 1, 0, 0, "table", "the default"],
+              ["ES · SNOwGLoBES (Marciano & Parsa)", other / es.central, 0, 0, "table", "⁸B ES rate in water, Super-K IV response"]);
+  }
   const ref = folded(MARLEY);
-  const bars = Object.keys(xs).filter((n) => !n.includes("#") && status[n]?.status === "current")
-    .map((n) => [XSEC[n] || n, folded(n) / ref, n === "ar40_ksz2018" ? 0.23 / 1.78 * folded(n) / ref : 0, "table", "⁸B-folded, SNUfish tables"]).sort((a, b) => b[1] - a[1]);
-  bars.push(...PUBLISHED_AR40.map(([name, v, e, how]) => [name, v, e, "published", how]));
-  const colour = { table: c.range, published: series(5) };
-  const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[3]]) },
-                  error_x: { type: "data", array: bars.map((b) => b[2]), color: c.text, thickness: 1.2, width: 3 },
-                  customdata: bars.map((b) => b[4]), text: bars.map((b) => b[1].toFixed(2)), textposition: "inside", insidetextanchor: "end",
-                  textfont: { size: 11, color: "#fff" }, hovertemplate: "%{y}: %{x:.3f}<extra>%{customdata}</extra>" };
-  htmlLegend(node, [{ label: "folded over the ⁸B spectrum (SNUfish tables)", colour: colour.table, fill: true },
-                    { label: "published value only", colour: colour.published, fill: true }],
-             "Error bar: the published error of Kostensalo, g<sub>A</sub> = 1.00");
-  return Plotly.react(node, [trace], layout(c, node, "νₑ CC on ⁴⁰Ar, ⁸B-folded, against MARLEY 2", "σ / σ(MARLEY 2, B(GT) (p,n) 2009)", "",
-    { showlegend: false, margin: { l: 20, r: 20, t: 16, b: 48 }, xaxis: { range: [0, 1.15] },
+  bars.push(...Object.keys(xs).filter((n) => !n.includes("#") && status[n]?.status === "current")
+    .map((n) => [`CC · ${XSEC[n] || n}`, folded(n) / ref, 0, n === "ar40_ksz2018" ? 0.23 / 1.78 * folded(n) / ref : 0, "table", "⁸B-folded, SNUfish tables"])
+    .sort((a, b) => b[1] - a[1]));
+  bars.forEach((b) => { if (b[3]) b[2] = b[3]; }); // Kostensalo's published error, symmetric
+  bars.push(...PUBLISHED_AR40.map(([name, v, e, how]) => [`CC · ${name}`, v, e, e, "published", how]));
+  const nc = page.sections.nc_ar40;
+  if (nc) {
+    const sm = nc.solar_models[1], rate = (m) => nc.rates[m][sm], def = rate("default");
+    const reading = Object.keys(nc.rates).filter((m) => !["default", "tornow2025", "vandessel2019", "snowglobes"].includes(m)).map(rate);
+    bars.push(["NC · 1⁺ levels + HF+CRPA continuum", 1, 1 - Math.min(...reading) / def, Math.max(...reading) / def - 1, "table",
+               "the default; error bar: reading the continuum off its figure"],
+              ["NC · SNOwGLoBES table (unpublished)", rate("snowglobes") / def, 0, 0, "legacy", "⁸B + hep NC rate, E<sub>ν</sub> > 5 MeV"]);
+  }
+  const colour = { table: c.range, published: series(5), legacy: css("--series-7") }; // legacy as in figure 7
+  const trace = { type: "bar", orientation: "h", y: bars.map((b) => b[0]), x: bars.map((b) => b[1]), marker: { color: bars.map((b) => colour[b[4]]) },
+                  error_x: { type: "data", symmetric: false, array: bars.map((b) => b[3]), arrayminus: bars.map((b) => b[2]), color: c.text, thickness: 1.2, width: 3 },
+                  customdata: bars.map((b) => b[5]), text: bars.map((b) => b[1].toFixed(b[1] > 0.99 && b[1] < 1.01 && b[1] !== 1 ? 3 : 2)),
+                  textposition: "inside", insidetextanchor: "start", textfont: { size: 11, color: "#fff" }, hovertemplate: "%{y}: %{x:.3f}<extra>%{customdata}</extra>" };
+  htmlLegend(node, [{ label: "SNUfish tables, ⁸B-folded (NC: ⁸B + hep)", colour: colour.table, fill: true },
+                    { label: "published value only", colour: colour.published, fill: true },
+                    { label: "legacy", colour: colour.legacy, fill: true }],
+             "Error bars: Kostensalo's published error (g<sub>A</sub> = 1.00); NC, the reading of the HF+CRPA figure");
+  node.style.height = `${Math.max(360, 30 * bars.length + 90)}px`;
+  return Plotly.react(node, [trace], layout(c, node, "⁸B cross sections over each channel's default", "σ / σ(default)", "",
+    { showlegend: false, margin: { l: 20, r: 20, t: 16, b: 48 }, xaxis: { range: [0, 1.8] },
       yaxis: { autorange: "reversed", automargin: true },
       shapes: [{ type: "line", yref: "paper", y0: 0, y1: 1, x0: 1, x1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);
 }
@@ -246,7 +273,7 @@ function limits() {
   // 8. per reference observable, the largest state-of-the-art contribution of each step (sampled σ or the reach of a
   // range over current models; approximations and legacy inputs left out, as the benchmark overview)
   const c = colours(), node = $("plot-f8"), obs = page.sections.observables;
-  const ids = ["water_es_b8", "scint_es_be7", "argon_cc_b8", "argon_cc_hep", "water_es_adn"].filter((id) => obs[id]);
+  const ids = ["water_es_b8", "scint_es_be7", "argon_cc_b8", "argon_cc_hep", "argon_nc_b8", "water_es_adn"].filter((id) => obs[id]);
   const traces = Object.entries(STEPS).map(([step, name]) => {
     const best = ids.map((id) => {
       const o = obs[id], rows = o.rows.filter((r) => r.section === step && (r.kind === "sampled" || r.kind === "model range"));
@@ -259,7 +286,7 @@ function limits() {
              hovertemplate: `%{y}, ${name}: %{customdata}<extra></extra>` };
   });
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })),
-             `JUNO 2025 parameters, B23 MB22m, 100 kt·yr through each detector's published response`);
+             `JUNO 2025 parameters, B23 MB22m, 100 kt·yr through each detector's published response (NC on ⁴⁰Ar: none, E<sub>ν</sub> > 5 MeV)`);
   node.style.height = "420px";
   return Plotly.react(node, traces, layout(c, node, "The largest uncertainty from each step", "Relative to the central value (%), log scale", "",
     { showlegend: false, barmode: "group", bargap: 0.2, margin: { l: 20, r: 20, t: 16, b: 48 },

@@ -42,7 +42,12 @@ export const tex = (s) => String(s ?? "").replace(/<sub>(.*?)<\/sub><sup>(.*?)<\
 
 export function layout(c, node, title, xTitle, yTitle, extra = {}) {
   node.previousElementSibling.innerHTML = title; // the card's heading: Plotly's toolbar would cover a title in the plot
-  const axis = { showline: true, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
+  // the frame is a paper-referenced rectangle, not the axes' lines: Plotly snaps each axis line to the pixel grid and
+  // clips it to the plot area, so on a short plot or at a fractional device pixel ratio (125 %, 150 % zoom) a top or
+  // bottom line could fall half a pixel outside and vanish. The ticks stay on all four sides (mirror).
+  const frame = { type: "rect", xref: "paper", yref: "paper", x0: 0, x1: 1, y0: 0, y1: 1, layer: "above",
+                  line: { color: c.axis, width: 1 }, fillcolor: "rgba(0,0,0,0)" };
+  const axis = { showline: false, linecolor: c.axis, linewidth: 1, mirror: "allticks", ticks: "inside", ticklen: 6,
                  tickwidth: 1, tickcolor: c.axis, minor: { ticks: "inside", ticklen: 3, tickcolor: c.axis, showgrid: false },
                  showgrid: false, zeroline: false, tickfont: { color: c.secondary, size: 12 },
                  title: { font: { color: c.text, size: 13 } }, automargin: true };
@@ -51,6 +56,7 @@ export function layout(c, node, title, xTitle, yTitle, extra = {}) {
     margin: { l: 60, r: 16, t: 24, b: 48 }, hoverlabel: { bgcolor: c.surface, bordercolor: c.axis, font: { color: c.text, family: FONT } },
     legend: { orientation: "h", y: -0.22, x: 0, font: { color: c.text } },
     ...extra,
+    shapes: [frame, ...(extra.shapes || [])],
     xaxis: { ...axis, ...extra.xaxis, title: { ...axis.title, text: xTitle } },
     yaxis: { ...axis, ...extra.yaxis, title: { ...axis.title, text: yTitle } },
   };

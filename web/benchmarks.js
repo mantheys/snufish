@@ -105,36 +105,72 @@ const seriesColour = (section) => getComputedStyle(document.documentElement).get
 
 // ------------------------------------------------------------------ impact of one step
 
+// the detection channel of each reference observable, which names its panel
+const CHANNEL_OF = { water_es_b8: "ES on electrons", scint_es_be7: "ES on electrons", water_es_adn: "ES on electrons",
+                     argon_cc_b8: "CC on ⁴⁰Ar", argon_cc_hep: "CC on ⁴⁰Ar", argon_nc_b8: "NC on ⁴⁰Ar" };
+
+// the flux uncertainty of each observable is that of its own components (B2: "8B flux (solar model)", "hep flux ...",
+// "solar fluxes" for several): one bar and one legend entry, the observable's own source in its hover label
+const FLUX_ROW = /^(solar fluxes|\S+ flux \(solar model\))$/;
+const FLUX_LABEL = "solar fluxes of the observable's components";
+
 function impactPlot(node, section) {
-  // per observable: one bar per source of this step, the oscillation parameters in grey for scale
-  const c = colours(), obs = page.sections.observables, ids = Object.keys(obs).reverse();
+  // per observable: one bar per source of this step that moves it, the oscillation parameters in grey for scale.
+  // One panel if every observable the step moves has the same sources (B1, B3), else one per detection channel
+  // (B2's fluxes, B4's cross sections), each with a legend of its own sources; the panels share the log axis and the
+  // colours. Observables the step does not move are listed under the panels.
+  const c = colours(), obs = page.sections.observables, ids = Object.keys(obs);
   const rank = { sampled: 0, "model range": 1, approximation: 2, legacy: 3 }; // inputs first, then the approximations
-  const rows = Object.values(obs).flatMap((o) => o.rows.filter((r) => r.section === section));
-  const sources = [...new Set(rows.map((r) => r.source))]
-    .sort((a, b) => rank[rows.find((r) => r.source === a).kind] - rank[rows.find((r) => r.source === b).kind]); // stable
-  const colourOf = palette();
-  const trace = (source, colour, opacity = 1) => {
-    const x = [], text = [];
-    ids.forEach((id) => {
-      const o = obs[id], r = o.rows.find((row) => row.source === source);
-      const v = r ? size(r, o.central) : null;
-      x.push(v === null ? null : Math.max(Math.abs(v), FLOOR)); text.push(v === null ? "" : pct(v));
-    });
-    return { type: "bar", orientation: "h", name: sup(source), y: ids.map((id) => SHORT[id]), x, text, textposition: "outside",
-             cliponaxis: false, textfont: { size: 10, color: c.secondary }, marker: { color: alpha(colour, opacity) },
-             hovertemplate: `%{y}: %{text}<extra>${sup(source)}</extra>` };
-  };
-  // B1's own sampled spread, in grey for scale on the other steps' pages
-  const scale = section === "B1" ? [] : [trace("oscillation parameters", c.muted, 0.6)];
-  const traces = [...scale, ...sources.map((s, i) => trace(s, section === "B1" ? seriesColour("B1") : colourOf[i % colourOf.length]))];
-  const kindOf = (s) => Object.values(obs).flatMap((o) => o.rows).find((r) => r.source === s).kind;
-  htmlLegend(node, traces.map((t, i) => ({ label: i >= scale.length ? `${t.name} <span class="kind">(${kindOf(sources[i - scale.length])})</span>` : "B1 oscillation parameters (sampled, for scale)",
-                                           colour: t.marker.color, fill: true })));
-  node.style.height = `${Math.max(380, ids.length * (traces.length * 14 + 18) + 80)}px`;
-  return Plotly.react(node, [...traces].reverse(), layout(c, node, `Effect of ${SECTIONS[section]} on the reference observables`,
-    "Relative to the central value (%), log scale", "",
-    { showlegend: false, barmode: "group", bargap: 0.25, margin: { l: 20, r: 70, t: 24, b: 48 },
-      xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(200)], exponentformat: "power" } }), CONFIG);
+  const SCALE = "oscillation parameters";
+  const own = Object.fromEntries(ids.map((id) => [id, obs[id].rows
+    .filter((r) => r.section === section && size(r, obs[id].central) !== 0)
+    .map((r) => ({ ...r, label: FLUX_ROW.test(r.source) ? FLUX_LABEL : r.source }))]));
+  const all = Object.values(own).flat(), kindOf = (label) => all.find((r) => r.label === label).kind;
+  const labels = [...new Set(all.map((r) => r.label))].sort((a, b) => rank[kindOf(a)] - rank[kindOf(b)]); // stable
+  const colourOf = Object.fromEntries(labels.map((l, i) => [l, section === "B1" ? seriesColour("B1") : palette()[i % palette().length]]));
+  const scaleOf = (id) => (section === "B1" ? 0 : Math.abs(size(obs[id].rows.find((r) => r.source === SCALE) || { kind: "sampled", sigma: 0 }, obs[id].central)));
+  const ownLabels = (id) => labels.filter((l) => own[id].some((r) => r.label === l));
+  const moved = ids.filter((id) => own[id].length), still = ids.filter((id) => !own[id].length);
+  const same = new Set(moved.map((id) => ownLabels(id).join("|"))).size <= 1;
+  const panels = [];
+  moved.forEach((id) => {
+    const key = same ? "all" : CHANNEL_OF[id] || id, panel = panels.find((p) => p.key === key);
+    if (panel) panel.ids.push(id); else panels.push({ key, ids: [id] });
+  });
+  panels.forEach((p) => { p.labels = labels.filter((l) => p.ids.some((id) => ownLabels(id).includes(l))); });
+  node.previousElementSibling.innerHTML = `Effect of ${SECTIONS[section]} on the reference observables`;
+  node.classList.remove("plot");
+  node.classList.add("impact-panels");
+  node.innerHTML = panels.map(() => `<div class="impact-panel"><h4 class="plot-title"></h4><div class="plot"></div></div>`).join("")
+    + (still.length ? `<p class="hint">Not moved by ${SECTIONS[section]}: ${still.map((id) => SHORT[id]).join(", ")}${
+      still.includes("argon_nc_b8") && section === "B1" ? " (NC is flavour-blind)" : ""}.</p>` : "");
+  const plots = [...node.querySelectorAll(".impact-panel .plot")];
+  return Promise.all(panels.map((panel, k) => {
+    const plot = plots[k], rows = panel.ids.slice().reverse(); // Plotly draws categories bottom up
+    const trace = (label, colour, opacity = 1) => {
+      const x = [], text = [], source = [];
+      rows.forEach((id) => {
+        const o = obs[id], r = label === SCALE ? o.rows.find((row) => row.source === SCALE) : own[id].find((row) => row.label === label);
+        const v = r ? size(r, o.central) : null;
+        x.push(v === null ? null : Math.max(Math.abs(v), FLOOR)); text.push(v === null ? "" : pct(v)); source.push(sup(r?.source ?? label));
+      });
+      return { type: "bar", orientation: "h", name: sup(label), y: rows.map((id) => SHORT[id]), x, text, customdata: source,
+               textposition: "outside", cliponaxis: false, textfont: { size: 10, color: c.secondary }, marker: { color: alpha(colour, opacity) },
+               hovertemplate: "%{y}: %{text}<extra>%{customdata}</extra>" };
+    };
+    // the oscillation parameters' own spread, in grey for scale, where they move the observables (not NC)
+    const scale = panel.ids.some((id) => scaleOf(id) > 0) ? [trace(SCALE, c.muted, 0.6)] : [];
+    const traces = [...scale, ...panel.labels.map((l) => trace(l, colourOf[l]))];
+    htmlLegend(plot, traces.map((t, i) => ({ label: i >= scale.length ? `${t.name} <span class="kind">(${kindOf(panel.labels[i - scale.length])})</span>` : "B1 oscillation parameters (sampled, for scale)",
+                                             colour: t.marker.color, fill: true })));
+    plot.style.height = `${Math.max(150, panel.ids.length * (traces.length * 14 + 18) + 80)}px`;
+    const channels = [...new Set(panel.ids.map((id) => CHANNEL_OF[id] || id))];
+    return Plotly.react(plot, [...traces].reverse(), layout(c, plot, channels.join(" · "),
+      k === panels.length - 1 ? "Relative to the central value (%), log scale" : "", "",
+      { showlegend: false, barmode: "group", bargap: 0.25, margin: { l: 150, r: 70, t: 14, b: k === panels.length - 1 ? 48 : 28 },
+        xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(200)], exponentformat: "power" },
+        yaxis: { automargin: false } }), CONFIG); // a fixed left margin keeps the panels' axes aligned
+  }));
 }
 
 // ------------------------------------------------------------------ B1
@@ -144,16 +180,18 @@ function b1() {
   impactPlot($("plot-b1-impact"), "B1");
   const c = colours(), sets = page.inputs.parameter_sets.sets, status = page.inputs.status?.parameter_set || {};
   const ref = page.sections.set, current = Object.keys(sets).filter((k) => status[k]?.status === "current");
-  const colourOf = { reactor: palette()[0], global: palette()[1], solar: palette()[2] }, symbol = { reactor: "square", global: "diamond", solar: "circle" };
+  // a colour per set, as the home page's figure (SK + SNO and all solar share a kind and a point); the symbol is the kind
+  const symbol = { reactor: "square", global: "diamond", solar: "circle" };
   const seen = new Set();
-  const traces = current.map((k) => {
+  const traces = current.map((k, i) => {
+    const colour = palette()[i % 8];
     const p = sets[k], dm = p.dm2_21_eV2, s12 = p.sin2_theta12, key = `${s12.value}|${dm.value}`;
     const x = s12.value + (seen.has(key) ? 0.0015 : 0); // two sets on one point: the second a hair to the right
     seen.add(key);
     return { x: [x], y: [1e5 * dm.value], mode: "markers", name: p.label,
-             marker: { color: colourOf[p.kind] || palette()[3], size: k === ref ? 12 : 10, symbol: symbol[p.kind] || "circle" },
-             error_x: { type: "data", symmetric: false, array: [s12.error[1]], arrayminus: [s12.error[0]], color: colourOf[p.kind], thickness: 1.4, width: 3 },
-             error_y: { type: "data", symmetric: false, array: [1e5 * dm.error[1]], arrayminus: [1e5 * dm.error[0]], color: colourOf[p.kind], thickness: 1.4, width: 3 },
+             marker: { color: colour, size: k === ref ? 12 : 10, symbol: symbol[p.kind] || "circle" },
+             error_x: { type: "data", symmetric: false, array: [s12.error[1]], arrayminus: [s12.error[0]], color: colour, thickness: 1.4, width: 3 },
+             error_y: { type: "data", symmetric: false, array: [1e5 * dm.error[1]], arrayminus: [1e5 * dm.error[0]], color: colour, thickness: 1.4, width: 3 },
              hovertemplate: `sin²θ₁₂ = ${s12.value}, Δm²₂₁ = %{y:.2f} × 10⁻⁵ eV²<extra>${p.label}</extra>` };
   });
   const node = $("plot-b1-sets");
@@ -443,8 +481,9 @@ const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visi
                      cc_nue_o16: "CC: visible energy E<sub>ν</sub> − 15.42 MeV", cc_nue_d: "CC: visible energy E<sub>ν</sub> − 1.442 MeV" };
 
 function b5Observed() {
-  // observed spectra through each detector's published response (B5_Observed), one line per detector and channel
-  const c = colours(), data = page.sections.observed, node = $("plot-b5-observed");
+  // observed spectra through each detector's published response (B5_Observed), one plot per channel (ES on
+  // electrons, CC on nuclei: different observed energies), one line per detector
+  const c = colours(), data = page.sections.observed;
   if (!data || !data.cases) { $("b5-observed").innerHTML = `<p class="hint">Run snufish build and export-sections for the observed spectra.</p>`; return; }
   const select = $("b5-component");
   if (!select.options.length) {
@@ -454,19 +493,25 @@ function b5Observed() {
   const comp = select.value || "all";
   // not CC on 16O (hep only, 4e-5 per kt yr); a component that does not reach a detector has no spectrum (sections.json)
   const cases = data.cases.filter((k) => k.totals.all.interactions > 1e-3 && k.spectra[comp]);
-  const traces = cases.map((k, i) => {
-    // the last bin also holds what the resolution moves above 20 MeV: not drawn
-    const x = k.edges.slice(0, -2).map((e, b) => 0.5 * (e + k.edges[b + 1])), y = k.spectra[comp].slice(0, -1).map((v) => (v > 0 ? v : null));
-    const name = `${DETECTOR_LABEL[k.detector]} ${CHANNELS[k.channel] || k.channel} (${k.preset})`;
-    return { x, y, mode: "lines", line: { shape: "hvh", color: palette()[i % 8], width: 2, dash: k.channel === "es" ? "solid" : "dash" }, name,
-             hovertemplate: `%{x:.2f} MeV: %{y:.4g} /(kt·yr·MeV)<extra>${name}</extra>` };
-  });
-  const shapes = cases.map((k, i) => ({ type: "line", x0: k.threshold, x1: k.threshold, yref: "paper", y0: 0, y1: 1,
-                                         line: { color: palette()[i % 8], dash: "dot", width: 1 } }));
-  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })));
-  Plotly.react(node, traces, layout(c, node, `Observed spectra, ${comp === "all" ? "all components" : DISPLAY[comp]} (B16-GS98, by day)`,
-    "Observed energy (MeV)", "Interactions / (kt·yr·MeV)",
-    { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: [-3, 7] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
+  const what = comp === "all" ? "all components" : DISPLAY[comp];
+  for (const [id, es, title, xTitle] of [["plot-b5-observed-es", true, `ES on electrons, ${what}`, "Electron kinetic energy T (MeV)"],
+                                         ["plot-b5-observed-cc", false, `CC on nuclei, ${what}`, "Visible energy E<sub>ν</sub> − Q (MeV)"]]) {
+    const node = $(id), mine = cases.filter((k) => (k.channel === "es") === es);
+    // a detector keeps its colour in both plots
+    const colourOf = (k) => palette()[Object.keys(DETECTOR_LABEL).indexOf(k.detector) % 8];
+    const traces = mine.map((k) => {
+      // the last bin also holds what the resolution moves above 20 MeV: not drawn
+      const x = k.edges.slice(0, -2).map((e, b) => 0.5 * (e + k.edges[b + 1])), y = k.spectra[comp].slice(0, -1).map((v) => (v > 0 ? v : null));
+      const name = `${DETECTOR_LABEL[k.detector]} ${CHANNELS[k.channel] || k.channel} (${k.preset})`;
+      return { x, y, mode: "lines", line: { shape: "hvh", color: colourOf(k), width: 2 }, name,
+               hovertemplate: `%{x:.2f} MeV: %{y:.4g} /(kt·yr·MeV)<extra>${name}</extra>` };
+    });
+    const shapes = mine.map((k) => ({ type: "line", x0: k.threshold, x1: k.threshold, yref: "paper", y0: 0, y1: 1,
+                                      line: { color: colourOf(k), dash: "dot", width: 1 } }));
+    htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })), mine.length ? "Dotted: the thresholds" : "No case for this component");
+    Plotly.react(node, traces, layout(c, node, `${title} (B16-GS98, by day)`, xTitle, "Interactions / (kt·yr·MeV)",
+      { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: es ? [-3, 7] : [-3, 3.5] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
+  }
   const fmt = (v) => (v >= 100 ? v.toFixed(0) : v.toPrecision(3));
   $("b5-observed").innerHTML = `<table><thead><tr><th>Detector</th><th>Response</th><th>Channel</th><th class="num">Threshold (MeV)</th>
     <th class="num">Interactions</th><th class="num">Above threshold, perfect detector</th><th class="num">Observed above threshold</th><th class="num">Ratio</th></tr></thead><tbody>${
@@ -475,7 +520,7 @@ function b5Observed() {
       <td class="num">${t.true_above > 0 ? (t.above / t.true_above).toFixed(3) : "—"}</td></tr>`; }).join("")
   }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for the response (BKS for ES,
     MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Observed energy: for ES the electron's kinetic energy T, for CC
-    E<sub>ν</sub> − Q. Solid lines ES, dashed CC; dotted lines: the thresholds. The ratio is the response's effect above the threshold:
+    E<sub>ν</sub> − Q; dotted lines: the thresholds. The ratio is the response's effect above the threshold:
     resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>`;
 }
 
@@ -726,8 +771,8 @@ async function main() {
   for (const m of Object.keys(XSEC)) XSEC[m] += tag(status.xsec_model?.cc_nue_ar40?.[m]);
   const s = page.sections, set = page.inputs.parameter_sets.sets[s.set];
   $("reference-note").textContent = `Reference: ${set?.label || s.set} oscillation parameters, ${page.inputs.solar_models[s.solar_model].label} `
-    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar, BKS radiative corrections for ES; rates are annual averages through `
-    + `each detector's published response (B5), ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
+    + `fluxes and profiles, PREM with the local crust (CRUST1.0), MARLEY 2 for ⁴⁰Ar CC, the measured 1⁺ levels (Tornow 2025) and HF+CRPA continuum (Van Dessel 2019) for ⁴⁰Ar NC, `
+    + `BKS radiative corrections for ES; rates are annual averages through each detector's published response (B5; NC: none, E_ν > 5 MeV), ${s.draws} draws for the sampled sources. The full budget for any setup is in the calculator.`;
   fill($("overview-observable"), Object.entries(s.observables).map(([id, o]) => [id, sup(o.label)]), "argon_cc_hep");
   fill($("b2-model"), Object.entries(page.inputs.solar_models).map(([m, info]) => [m, info.label]), s.solar_model);
   fill($("b2-component"), ORDER.map((comp) => [comp, DISPLAY[comp]]), "hep");
