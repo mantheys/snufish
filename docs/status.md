@@ -11,7 +11,7 @@ an issue.
 
 | Item | Where | Notes |
 |---|---|---|
-| **Part 2 contributions to B5** | B5 spec | The spec takes observed rates with the published responses or a tool's own (`response.parquet`), and SNUfish folds every published response (`B5_Observed`), but no tool has contributed yet. SNOwGLoBES's smeared output would be the first, with its own detector configurations (matrices in neutrino energy, also for ES, which the engine's imported matrices take for CC only). |
+| **Part 2 contributions to B5** | B5 spec | The spec takes observed rates with the published responses or a tool's own (`response.parquet`), and SNUfish folds every published response (`B5_Observed`), but no tool has contributed yet. SNOwGLoBES's smeared output would be the first, with its own detector configurations (matrices in neutrino energy, per flavour for ES, which the spec and the engine take since B5 0.6.0). |
 | **Night and A<sub>DN</sub> in B5 part 2** | B5 spec | Observed spectra are daytime; the engine has night and A<sub>DN</sub> through any response, the benchmark does not. |
 | **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
@@ -107,7 +107,8 @@ contributions ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)):
 | Borexino resolution | "~50 keV at 1 MeV" scaled with √E (photostatistics); its analysis uses a full response model (scaled Poisson in N_p, quenching, Cherenkov light) not reduced to σ(E) | B5 spec |
 | DUNE response | 20 % at every energy and no efficiency below or above the 5 MeV step: no solar-neutrino response is published | B5 spec, calculator preset |
 | Super-K IV efficiency on CC ¹⁶O | the fig. 28 curve (⁸B ES) applied to every channel of water, CC ¹⁶O included (4 × 10⁻⁵ per kt·yr: hep only) | B5 spec |
-| JUNO preset | no energy-dependent fiducial volume, muon-veto dead time or non-linearity | calculator preset |
+| JUNO response | 3 %/√T, no light-output nonlinearity (JUNO applies Daya Bay's; under 1 % above 2 MeV, sec. 4), no energy-dependent fiducial volume or muon-veto dead time (exposure, not response) | B5 spec, calculator preset |
+| One response per detector | no second published response: SNO+'s water-phase ⁸B paper (arXiv:1812.03355) gives only the uncertainties of its resolution (0.018√T) and scale (2 %), not the resolution; Hyper-K publishes none (its preset borrows Super-K IV's). A second one would be added by name, a minor spec change | B5 spec |
 
 ## Data to check
 
@@ -163,8 +164,9 @@ Each is decided (for 1.0, or out of scope) in [roadmap-1.0.md](roadmap-1.0.md).
   `prem_crust1_3d`, which needs the chords written out per site (a
   trajectories grid) and a tool that solves single trajectories?
 - **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
-- **B5**: night and annual quantities in contributions; a second response
-  per detector (Hyper-K, JUNO, SNO+) as variants of part 2.
+- **B5**: night and annual quantities in contributions (out of 1.0). A
+  second response per detector: none is published (JUNO is a detector of
+  its own since B5 0.6.0; SNO+ and Hyper-K give no resolution function).
 - **B2 (solar models)**: shape variants; use the B23 correlations in B5 rate
   uncertainties.
 - **B2**: a non-adiabatic solver; radial path against the true line of

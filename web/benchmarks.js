@@ -476,7 +476,8 @@ function esTable(rows) {
 
 // ------------------------------------------------------------------ B5
 
-const DETECTOR_LABEL = { water: "Water", heavy_water: "Heavy water", scintillator_pc: "Scintillator", argon: "Argon" };
+const DETECTOR_LABEL = { water: "Water", heavy_water: "Heavy water", scintillator_pc: "Scintillator (PC)", argon: "Argon",
+                         scintillator_lab: "Scintillator (LAB)" };   // in this order: a detector keeps its colour
 const OBSERVABLE = { es: "ES: electron kinetic energy T", cc_nue_ar40: "CC: visible energy E<sub>ν</sub> − 1.504 MeV",
                      cc_nue_o16: "CC: visible energy E<sub>ν</sub> − 15.42 MeV", cc_nue_d: "CC: visible energy E<sub>ν</sub> − 1.442 MeV" };
 

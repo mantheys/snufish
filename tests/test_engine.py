@@ -280,8 +280,10 @@ def test_imported_response(inputs):
     cc = dict(detector="argon", channel="cc_nue_ar40")
     shifted = engine.Table("nu", tuple(grid + 1.504), tuple(grid), tuple(map(tuple, np.eye(len(grid) - 1))), "neutrino")
     assert rate(**cc, smearing_table=shifted) == pytest.approx(rate(**cc), rel=1e-9)
-    with pytest.raises(ValueError, match="CC channels only"):
+    with pytest.raises(ValueError, match="one matrix for nue and one for numu"):   # ES: one matrix per flavour
         engine.check(inputs, engine.Setup(smearing_table=shifted))
+    with pytest.raises(ValueError, match="CC and ES channels only"):
+        engine.check(inputs, engine.Setup(detector="argon", channel="nc_ar40", smearing_table=shifted))
 
 
 def test_electron_alone_drops_the_level_energy(inputs):

@@ -5,6 +5,7 @@ plotipus wants one row per series with whole arrays in the cells; the
 builders below pivot the long-format contributions into those rows.
 """
 
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -269,13 +270,22 @@ def response_tables(table, detector, channel):
     smear = sub[sub.kind == "smearing"]
     true_edges = np.unique(np.concatenate([smear.true_low, smear.true_high]))
     obs_edges = np.unique(np.concatenate([smear.observed_low, smear.observed_high]))
-    matrix = np.zeros((len(true_edges) - 1, len(obs_edges) - 1))
-    for r in smear.itertuples():
-        matrix[np.searchsorted(true_edges, r.true_low), np.searchsorted(obs_edges, r.observed_low)] += r.value
-    tag = f"{detector}:{channel}:{len(sub)}:{float(sub.value.sum()):.12g}"
+
+    def matrix_of(rows):
+        matrix = np.zeros((len(true_edges) - 1, len(obs_edges) - 1))
+        for r in rows.itertuples():
+            matrix[np.searchsorted(true_edges, r.true_low), np.searchsorted(obs_edges, r.observed_low)] += r.value
+        return tuple(map(tuple, matrix))
+
+    axis = smear.true_axis.iloc[0]
+    if channel == "es" and axis == "neutrino":  # one matrix per flavour; nu_tau shares nu_mu's (the validator checks)
+        matrix, flavours = (), tuple((f, matrix_of(smear[smear.flavour == f])) for f in ("nue", "numu"))
+    else:
+        matrix, flavours = matrix_of(smear), ()
+    digest = hashlib.sha1(pd.util.hash_pandas_object(sub.reset_index(drop=True), index=False).to_numpy()).hexdigest()
+    tag = f"{detector}:{channel}:{digest[:16]}"  # by content: the engine caches by id
     return dict(efficiency_table=Table(f"own-eff:{tag}", tuple(x), tuple(y)),
-                smearing_table=Table(f"own-smear:{tag}", tuple(true_edges), tuple(obs_edges), tuple(map(tuple, matrix)),
-                                     smear.true_axis.iloc[0]),
+                smearing_table=Table(f"own-smear:{tag}", tuple(true_edges), tuple(obs_edges), matrix, axis, flavours),
                 resolution_a=0.0, resolution_b=0.0, resolution_poly=(), efficiency=1.0, efficiency_e50=0.0)
 
 

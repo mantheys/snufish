@@ -33,7 +33,7 @@ contribute them are declared out of scope for 1.0, with the way back noted.
 | # | Item | Decision | Effort | Rates that change |
 |---|---|---|---|---|
 | 1a | B5: ⁸B tail above 15.2 MeV | 1.0 (done: B5 0.5.0) | M | ⁸B above 5 MeV: CC +8 × 10⁻⁵, ES +1 × 10⁻⁵, NC on ⁴⁰Ar +4 × 10⁻⁴; the DUNE Phase I numbers do not move at the paper's precision; above 15 MeV +5–7 % |
-| 1a | B5: named responses, second responses as part-2 variants | 1.0 (structure; JUNO; SNO+ if a published response exists); Hyper-K out | M | none (new rows only) |
+| 1a | B5: JUNO's response; second responses per detector | 1.0: JUNO as detector `scintillator_lab` (done: B5 0.6.0); named second responses deferred (none published: SNO+ and Hyper-K give no resolution), additive when one is | M | none (new JUNO rows only) |
 | 1a | B5: night and annual quantities in contributions | out | — | — |
 | 1a | B3: `prem_crust1` per site as variants | 1.0 | L (CPU) | B5 night gains `prem_crust1` rows; existing rows unchanged |
 | 1a | B3: `prem_crust1_3d` (trajectory grids) | out | — | — |
@@ -85,27 +85,38 @@ would be a major change: it went in first.
 - Reruns: the SNOwGLoBES and MARLEY B5 contributions; only ⁸B and `all`
   rows moved (3–8 × 10⁻⁵), every other row is bit-identical.
 
-#### B5: second responses per detector (structure 1.0; JUNO; SNO+ if published; Hyper-K out; M)
+#### B5: JUNO's response and second responses per detector (1.0, M; done in B5 0.6.0)
 
 Part 2 has one response per detector (`response.detectors.<detector>`), and
-a contribution says `settings.response: spec`. A second response per
-detector would need a name for each, which changes that structure: as no
-part-2 contribution exists yet, the change is free now and expensive later.
+a contribution says `settings.response: spec` or `own`.
 
-- Structure: `response.responses.<name>` (`detector`, `preset`, `source`,
-  resolution, efficiency, threshold, uncertainties), with
-  `response.default.<detector>` naming the response of today's tables.
-  `settings.response` becomes `spec` (the defaults), `{<detector>: <name>}`
-  or `own`. `B5_Observed` gains a `Response` column.
-- New responses, only where an experiment publishes one:
-  - JUNO (arXiv:2006.11760: 3 %/√E, 2 MeV): needs a `scintillator_lab`
-    detector in B5 (the engine has its targets, 3.38 × 10³² e⁻ per kt).
-  - SNO+: only if its water-phase ⁸B paper (PRD 99, 012012) gives a
-    resolution function; otherwise out, stated in `status.md`.
-  - Hyper-K: **out**. It publishes no solar response; the calculator's
-    Hyper-K preset uses Super-K IV's resolution as a stand-in, and a copy of
-    Super-K IV is not a second response.
-- Rates: none change; new rows in `B5_Observed`.
+- JUNO (arXiv:2006.11760) is a detector of its own: its liquid scintillator
+  is LAB, not Borexino's pseudocumene, so it is not a second response of
+  `scintillator_pc`. B5 0.6.0 adds the detector `scintillator_lab`
+  (3.38 × 10³² e⁻ per kt, until then on the page only) and its response:
+  3 %/√T on the recoil kinetic energy, a 2 MeV threshold, efficiency 1, energy
+  scale ±0.3 % and rate ±1 % (table 5). JUNO's light-output nonlinearity is
+  not modelled (under 1 % above 2 MeV); `status.md` lists it.
+- SNO+: **out**. Its water-phase ⁸B paper (arXiv:1812.03355, PRD 99,
+  012012) gives the uncertainty of its resolution (0.018√T) and of its
+  energy scale (2 %), but not the resolution itself.
+- Hyper-K: **out**. It publishes no solar response; the calculator's
+  Hyper-K preset uses Super-K IV's resolution as a stand-in, and a copy of
+  Super-K IV is not a second response.
+- Named responses: **deferred**. With no second published response, the
+  renamed structure planned here (`response.responses.<name>`,
+  `response.default`) would be machinery without data, and a major change.
+  The additive form costs as little later: `response.alternatives.<name>`
+  (with `detector`), `settings.response: {<detector>: <name>}` and a
+  `Response` column in `B5_Observed`, all minor changes
+  ([compatibility.md](compatibility.md)).
+- The format points of item 2 that belong to the response were settled
+  here too: `response.parquet` takes an optional `flavour` column, and an ES
+  matrix in neutrino energy, per flavour (`nue`, `numu`; `nutau` equal to
+  `numu`). The engine folds it per flavour (σ<sub>α</sub>(E<sub>ν</sub>) times the row of
+  the true bin holding E<sub>ν</sub>).
+- Rates: none change; `B5_Observed`, `B5_Totals` and the B5 tab gain JUNO
+  rows (by day, B16-GS98: 1086 per kt·yr above T = 2 MeV).
 
 #### B5: night and annual quantities in contributions (out)
 
@@ -250,10 +261,11 @@ configurations it already runs (`ar40kt`, `wc100kt30prct`).
   and `effic/<config>/effic_*.dat`; `settings.response: own`.
 - Two format points to settle while the format is still open (both in 1b):
   - SNOwGLoBES's ES matrices map neutrino energy to detected energy, and
-    differ per flavour (`nue_e`, `numu_e`, `nutau_e`). `response.parquet`
+    differ per flavour (`nue_e`, `numu_e`, `nutau_e`; the last two are
+    identical in both configurations). `response.parquet`
     gains an optional `flavour` column, and `true_axis: neutrino` is allowed
     for ES. SNUfish's folding of an own response (build `B5_ObservedChain`,
-    engine `_imported_matrix`) takes both.
+    engine `_imported_matrix`) takes both. (Done in B5 0.6.0, item 4.)
   - SNOwGLoBES's detected energy comes in ~0.5 MeV bins, while the `observed`
     grid has 0.01 MeV steps. The wrapper interpolates the cumulative rate
     linearly within a bin (stated in `settings`), and `B5_ObservedChain`
@@ -349,7 +361,8 @@ and you say so.
    spec changelogs (versions not bumped yet).
 3. B5 ⁸B tail, with the reruns and the new DUNE numbers (done: no quoted rate moves).
 4. B5 named responses, the `flavour` column and ES in neutrino energy, JUNO
-   (and SNO+ if sourced).
+   (and SNO+ if sourced) (done: JUNO, `flavour`, ES in neutrino energy;
+   SNO+ out, named responses deferred).
 5. SNOwGLoBES part 2.
 6. B4 thresholded ES.
 7. B3 `prem_crust1` variants and the finer reference step; B5 night on

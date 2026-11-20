@@ -52,13 +52,6 @@ VISIBLE_FIXED = {"nc_d": 6.25}
 # Tables that are zero below 5 MeV (SNOwGLoBES's MARLEY tables): selectable, but kept out of the model range.
 XSEC_INCOMPLETE = {"cc_nue_ar40": ["ar40_marley", "ar40_marley1"]}
 MARLEY_DEFAULT = "ar40_marley2_bhattacharya2009"
-# Targets of the web page beyond the B5 spec's detectors, with the electron densities their experiments quote.
-APP_DETECTORS = {
-    "scintillator_lab": {
-        "description": "linear alkylbenzene (JUNO): 3.38 x 10^32 electrons per kt, arXiv:2006.11760",
-        "targets": {"electron": 3.38e32}, "channels": {"es": "electron"}},
-}
-
 S12_GRID = (0.24, 0.38, 0.01)
 DM21_GRID = (3.0, 11.0, 0.2)   # 1e-5 eV^2; 0.1 is no closer to the exact solvers
 DAY_ENERGIES = np.geomspace(0.1, 20.0, 72)
@@ -148,7 +141,7 @@ def collect_inputs():
     # legacy: SNOwGLoBES's table (QRPA, unpublished; see the file), its small negative values set to zero
     xsec["nc_ar40"]["snowglobes"] = {"energy": nc_ar40["energy_MeV"],
                                      "sigma": np.clip(nc_ar40["sigma_cm2"], 0.0, None).tolist()}
-    detectors = {**b5["detectors"], **APP_DETECTORS}
+    detectors = dict(b5["detectors"])
     # NC channels have no B4 benchmark: the page adds them to the spec's detectors
     detectors["argon"] = {**detectors["argon"], "channels": {**detectors["argon"]["channels"], "nc_ar40": "ar40"}}
     detectors["heavy_water"] = {**detectors["heavy_water"],
