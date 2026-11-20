@@ -1,5 +1,7 @@
 """MARLEY contribution to SNUfish B4: nu_e CC on 40Ar from MARLEY's own
-`marley xsec` (total cross section against neutrino energy).
+`marley xsec` (total cross section against neutrino energy), and in the default variant
+ES on electrons (ES.react, tree level) for the three flavours, which B5 needs to fold
+MARLEY's full chain (run_b5.py) with the same cross sections.
 
     git clone --branch v2.0.0 https://github.com/MARLEY-MC/marley.git
     cd marley && make IGNORE_ROOT=1 IGNORE_HEPMC3=1     # needs GSL; ROOT is not used
@@ -57,6 +59,8 @@ LEVELS = {  # variant: (reaction file with measured B(GT) uncertainties, the oth
     DEFAULT: (DISCRETE, ["ve40ArCC_HF-CRPA.react"]),
     "ar40_marley1_allowed": ("v1/ve40ArCC_Bhattacharya2009.react", []),
 }
+ES_FLAVOURS = (("es_nue", "ve", 12), ("es_numu", "vu", 14), ("es_nutau", "vt", 16))  # B4 quantity, MARLEY name, pdg
+ARGON_Z = 18  # MARLEY's ES cross section is per atom
 LEVEL = re.compile(r"^\s*([0-9.]+)\s+([0-9.eE+-]+)\s+([01])\s+([0-9.eE+-]+)\s*$")  # Ex, B, type, sigma(B)
 
 
@@ -103,6 +107,11 @@ def main():
         for variant, reactions in CONFIGS.items():
             print(f"marley xsec: {variant}")
             tables[variant] = xsec(marley, checkout, reactions, work, energies, OPTIONS.get(variant))
+        # ES on electrons (MARLEY's ES.react, tree level), in the default variant only: per atom / Z for 40Ar
+        es = {quantity: xsec(marley, checkout, ["ES.react"], work, energies, neutrino=nu, pdg=pdg) / ARGON_Z
+              for quantity, nu, pdg in ES_FLAVOURS}
+        for quantity in es:
+            print(f"marley xsec: {quantity}")
         levels = []
         for variant, (react, others) in LEVELS.items():
             lines = (checkout / "data" / "react" / react).read_text().splitlines()
@@ -120,6 +129,8 @@ def main():
     for variant, sigma in tables.items():
         records += [("map", variant, "cc_nue_ar40", e, s) for e, s in zip(energies, sigma)]
     records += [("map", "default", "cc_nue_ar40", e, s) for e, s in zip(energies, tables[DEFAULT])]
+    for quantity, sigma in es.items():
+        records += [("map", "default", quantity, e, s) for e, s in zip(energies, sigma)]
     version = (checkout / ".VERSION").read_text().strip() if (checkout / ".VERSION").exists() else "2.0.0"
     commit = subprocess.run(["git", "-C", str(checkout), "rev-parse", "--short", "HEAD"], capture_output=True,
                             text=True).stdout.strip() or None
@@ -136,6 +147,7 @@ def main():
             "reactions": {v: r for v, r in CONFIGS.items()},
             "options": OPTIONS,
             "xsec": "marley xsec, KE 0 to 20 MeV on the B4 step, 1e-42 cm^2/atom converted to cm^2",
+            "es": "default variant only: ES.react (tree level) for nu_e, nu_mu, nu_tau, per 40Ar atom / 18 = per electron",
             "default": DEFAULT,
             "bgt_levels": "bgt_levels.parquet: a variant with each measured level of its reaction file raised by "
                           "its 1 sigma (one row per variant and level): "

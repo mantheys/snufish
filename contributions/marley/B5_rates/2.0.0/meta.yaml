@@ -1,0 +1,25 @@
+tool: marley
+tool_version: 2.0.0
+tool_commit: 435f083
+benchmark: B5_rates
+benchmark_version: 0.4.0
+contributor: SNUfish maintainers (wrapper)
+date: '2026-11-20'
+command: snufish build && python contributions/marley/scripts/run_b5.py --marley <built
+  MARLEY checkout>
+settings:
+  detector: 'argon only (MARLEY''s 40Ar target): es and cc_nue_ar40'
+  cross_sections:
+    cc_nue_ar40: ve40ArCC_HF-CRPA.react + ve40ArCC_Bhattacharya2009-Discrete.react
+      (MARLEY 2 recommended; B4 variant ar40_marley2_bhattacharya2009)
+    es: ES.react (tree level), per atom / 18
+  sources: 'grid (linlin) of s(E) P_ea(E) per flavour on the shape table, the B2 grid
+    and every 0.1 MeV; mono for lines; E_nu > 5 MeV: the grid from a node at 5 MeV'
+  rates: N_targets x Phi x MARLEY's logged flux-averaged total cross section x integral
+    of the source (trapezoid on the same nodes) x seconds per year
+  targets: the B5 spec's argon targets (electrons, 40Ar) per kt
+  oscillations: B2 snufish-reference, daytime, production-averaged per component
+license: CC-BY-4.0
+notes: 'MARLEY''s own cross sections, integrated by MARLEY over the source spectrum:
+  independent of SNUfish''s folding of its B4 tables. Cite Gardiner, PRC 103, 044604
+  (2021) and CPC (arXiv:2101.11867).'

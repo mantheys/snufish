@@ -328,7 +328,8 @@ def tool_agreement():
     if chain.exists():
         frame = pd.read_parquet(chain)
         frame = frame[(frame.Rate > 0) & frame.Ratio.notna() & (frame.Component != "all")]
-        out["B5_rates"] = [dict(tool=r.Tool, variant=r.Variant, solar_model=r.SolarModel, detector=r.Detector, channel=r.Channel,
+        out["B5_rates"] = [dict(tool=r.Tool, name=_tool_name(r.Tool), variant=r.Variant, solar_model=r.SolarModel,
+                                detector=r.Detector, channel=r.Channel,
                                 component=r.Component, threshold=r.Threshold, rate=r.Rate, folded=r.Folded,
                                 ratio=r.Ratio) for r in frame.itertuples()]
     return out

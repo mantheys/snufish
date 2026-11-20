@@ -539,26 +539,32 @@ function b5() {
   b5Observed();
   const rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98");
   const node = $("plot-b5-chain");
-  const cases = [...new Set(rows.map((r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`))];
-  const key = (r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`;
-  const title = "SNOwGLoBES full chain over SNUfish's folding (B16-GS98)";
+  const name = (r) => r.name || r.tool;
+  const where = (r) => `${r.detector} ${CHANNELS[r.channel] || r.channel}, ${r.threshold > 0 ? `E > ${r.threshold} MeV` : "all energies"}`;
+  const key = (r) => `${name(r)}: ${where(r)}`;
+  const cases = [...new Set(rows.map(key))];
+  const tools = [...new Set(rows.map(name))];
+  const title = `Full-chain tools over SNUfish's folding (B16-GS98): ${tools.join(", ")}`;
   node.previousElementSibling.innerHTML = title;
-  whenVisible(node, () => b5Chain(node, rows, cases, key, title));
+  whenVisible(node, () => b5Chain(node, rows, cases, key, title, tools, name, where));
   $("b5-tools").innerHTML = rows.length ? `<table><thead><tr><th>Tool</th><th>Case</th><th>Component</th><th class="num">Tool (/kt·yr)</th><th class="num">SNUfish (/kt·yr)</th><th class="num">Ratio</th></tr></thead><tbody>${
-    rows.map((r) => `<tr><td>${r.tool}</td><td>${key(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
-  }</tbody></table><p class="hint">Same fluxes, oscillations and cross-section tables in both; the rates are daytime, in true neutrino energy, before the detector response. Below 2 MeV SNOwGLoBES is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md).</p>`
+    rows.map((r) => `<tr><td>${name(r)}</td><td>${where(r)}</td><td>${DISPLAY[r.component]}</td><td class="num">${r.rate.toPrecision(5)}</td><td class="num">${r.folded.toPrecision(5)}</td><td class="num">${r.ratio.toFixed(4)}</td></tr>`).join("")
+  }</tbody></table><p class="hint">Same fluxes and oscillations in both, and each tool's own cross sections (its B4 contribution) in SNUfish's folding; the rates are daytime, in true neutrino energy, before the detector response. SNOwGLoBES (argon and water): below 2 MeV it is low because GLoBES evaluates flux × σ once per 0.4975 MeV sampling bin, at its midpoint (docs/crosschecks.md). MARLEY (argon): its logged flux-averaged cross section of each oscillated component spectrum, from MARLEY 2's recommended CC model and its tree-level ES; the 0.02 % left is SNUfish interpolating MARLEY's 0.02 MeV tables.</p>`
     : `<p class="hint">No full-chain tool has contributed yet.</p>`;
 }
 
-function b5Chain(node, rows, cases, key, title) {
-  const c = colours();
-  const traces = cases.map((name, i) => {
-    const mine = rows.filter((r) => key(r) === name).sort((a, b) => ORDER.indexOf(a.component) - ORDER.indexOf(b.component));
-    return { x: mine.map((r) => ORDER.indexOf(r.component) + 0.08 * (i - (cases.length - 1) / 2)), y: mine.map((r) => r.ratio), mode: "markers", name,
-             text: mine.map((r) => DISPLAY[r.component]), marker: { color: palette()[i % 8], size: 8, symbol: ["circle", "square", "diamond", "triangle-up"][i % 4] },
-             hovertemplate: `%{text}: %{y:.4f}<extra>${name}</extra>` };
+function b5Chain(node, rows, cases, key, title, tools, name, where) {
+  // a colour per case (detector, channel, threshold), a symbol per tool
+  const c = colours(), places = [...new Set(rows.map(where))], symbols = ["circle", "diamond", "square", "triangle-up"];
+  const traces = cases.map((label, i) => {
+    const mine = rows.filter((r) => key(r) === label).sort((a, b) => ORDER.indexOf(a.component) - ORDER.indexOf(b.component));
+    const place = places.indexOf(where(mine[0])), tool = tools.indexOf(name(mine[0]));
+    return { x: mine.map((r) => ORDER.indexOf(r.component) + 0.07 * (i - (cases.length - 1) / 2)), y: mine.map((r) => r.ratio), mode: "markers", name: label,
+             text: mine.map((r) => DISPLAY[r.component]), marker: { color: palette()[place % 8], size: 8, symbol: symbols[tool % 4], line: { width: 0 } },
+             hovertemplate: `%{text}: %{y:.5f}<extra>${label}</extra>` };
   });
-  htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })));
+  htmlLegend(node, [...places.map((p, i) => ({ label: p, colour: palette()[i % 8], fill: true }))],
+             tools.map((t, i) => `${["●", "◆", "■", "▲"][i % 4]} ${t}`).join(" · "));
   Plotly.react(node, traces, layout(c, node, title, "Component", "Rate ratio",
     { showlegend: false, hovermode: "closest", xaxis: { tickvals: ORDER.map((_, i) => i), ticktext: ORDER.map((x) => DISPLAY[x]), range: [-0.5, ORDER.length - 0.5], minor: { ticks: "" } },
       shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: c.muted, dash: "dot", width: 1 } }] }), CONFIG);

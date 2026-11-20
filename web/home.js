@@ -251,20 +251,21 @@ function oscillations() {
 }
 
 function folding() {
-  // 5. (B5) SNOwGLoBES's full chain over SNUfish's folding of the same fluxes and cross sections, per component
+  // 5. (B5) the full chains of SNOwGLoBES and MARLEY over SNUfish's folding of the same fluxes and cross sections, per component
   const c = colours(), node = $("plot-f5");
   const rows = (page.sections.tools.B5_rates || []).filter((r) => r.variant === "b16_gs98" && r.threshold === 0);
-  const groups = [["water", "es", "ES in water", series(1)], ["argon", "es", "ES in argon", series(2)],
-                  ["argon", "cc_nue_ar40", "CC on ⁴⁰Ar", series(5)]];
-  const traces = groups.map(([detector, channel, name, colour]) => {
-    const mine = ORDER.map((k) => rows.find((r) => r.detector === detector && r.channel === channel && r.component === k))
+  const groups = [["snowglobes", "water", "es", "SNOwGLoBES, ES in water", series(1)], ["snowglobes", "argon", "es", "SNOwGLoBES, ES in argon", series(2)],
+                  ["snowglobes", "argon", "cc_nue_ar40", "SNOwGLoBES, CC on ⁴⁰Ar", series(5)],
+                  ["marley", "argon", "es", "MARLEY, ES in argon", series(3)], ["marley", "argon", "cc_nue_ar40", "MARLEY, CC on ⁴⁰Ar", series(6)]];
+  const traces = groups.map(([tool, detector, channel, name, colour]) => {
+    const mine = ORDER.map((k) => rows.find((r) => r.tool === tool && r.detector === detector && r.channel === channel && r.component === k))
       .filter(Boolean);
     return { type: "bar", name, x: mine.map((r) => DISPLAY[r.component]), y: mine.map((r) => 100 * (r.ratio - 1)),
              marker: { color: colour }, hovertemplate: `%{x}, ${name}: %{y:+.2f} %<extra></extra>` };
   }).filter((t) => t.x.length);
   htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.marker.color, fill: true })),
-             "B16-GS98, all energies, before any detector response");
-  return Plotly.react(node, traces, layout(c, node, "SNOwGLoBES full chain against SNUfish's folding", "", "Tool ÷ SNUfish − 1 (%)",
+             "B16-GS98, all energies, before any detector response; MARLEY within 0.03 % (bars too short to see)");
+  return Plotly.react(node, traces, layout(c, node, "Full-chain tools against SNUfish's folding", "", "Tool ÷ SNUfish − 1 (%)",
     { showlegend: false, barmode: "group", margin: { l: 20, r: 20, t: 16, b: 40 },
       xaxis: { categoryorder: "array", categoryarray: ORDER.map((k) => DISPLAY[k]) }, yaxis: { automargin: true } }), CONFIG);
 }
