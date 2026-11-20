@@ -62,10 +62,20 @@ OBSERVABLES = {
                                     period="annual")),
     "water_es_adn": dict(label="8B + hep ES day-night asymmetry, Super-K IV response, Kamioka", quantity="adn",
                          setup=dict(detector="water", channel="es", components=("B8", "hep"), site="Kamioka")),
+    # NC has no visible-energy model (a cut in E_nu only) and no published DUNE response: a perfect detector
+    "argon_nc_b8": dict(label="8B + hep NC on 40Ar, E_nu > 5 MeV, no detector response, SURF", quantity="rate",
+                        response=False,
+                        setup=dict(detector="argon", channel="nc_ar40", components=("B8", "hep"), site="SURF",
+                                   xsec_model="default", period="annual", nu_threshold=5.0)),
 }
+NC_READING = "NC continuum read from its figure (Van Dessel 2019, fig. 8)"
+NC_LEGACY = "SNOwGLoBES's NC table (unpublished)"
+NC_STRENGTH = "measured B(M1) of the 1⁺ levels (Tornow 2025, ±14 %)"
+NC_STRENGTH_ERROR = 0.18 / 1.31
 RESPONSE = True  # False: a perfect detector (the threshold of the response only)
 SECTION_OF = {"oscillation parameters": "B1", "solar model": "B2", "Earth model": "B3",
-              "40Ar nuclear model": "B4", "cross-section model": "B4", "ES radiative corrections": "B4"}
+              "40Ar nuclear model": "B4", "cross-section model": "B4", "ES radiative corrections": "B4",
+              NC_READING: "B4", NC_LEGACY: "B4", NC_STRENGTH: "B4"}
 # NuFast-Earth's examples set one solar density for every component: rhoYe = 100 x 2/3 g/cm^3
 SINGLE_DENSITY = 100 * 2 / 3
 TREATMENTS = {"B8": "every component on the 8B production profile",
@@ -120,7 +130,7 @@ def impacts(inputs, tables, params):
     osc = engine.oscillation(params)
     models = list(inputs["solar_models"])
     for name, o in OBSERVABLES.items():
-        response = engine.published_response(inputs, o["setup"]["detector"])
+        response = engine.published_response(inputs, o["setup"]["detector"]) if o.get("response", True) else {}
         if not RESPONSE:
             response = dict(threshold=response.get("threshold", 0.0))
         setup = engine.Setup(solar_model=SOLAR_MODEL, exposure=EXPOSURE, **response, **o["setup"])
@@ -141,10 +151,24 @@ def impacts(inputs, tables, params):
                 row["source"] = "solar model fluxes (production profiles fixed)"
             rows.append(row)
 
-        def value(probabilities, s=setup):
-            per = engine.component_totals(inputs, probabilities, s, osc, night)
+        def value(probabilities, s=setup, data=inputs):
+            per = engine.component_totals(data, probabilities, s, osc, night)
             return engine.quantity_value(q, s.period, *engine.combine(per, list(s.components)),
                                          night_fraction=s.night_fraction)
+
+        if setup.channel == "nc_ar40":
+            # flavour-blind: no B2 profiles or production treatments; B4 is the figure reading of the default's
+            # continuum (nc_reading_variants) and, for context, SNOwGLoBES's table
+            nc_inputs, variants = _nc_inputs(inputs)
+            reading = [value(tables, setup.replace(xsec_model=v), nc_inputs) for v in variants]
+            rows.append(dict(section="B4", source=NC_READING, kind="model range", low=min(reading), high=max(reading)))
+            # the measured strength of the discrete levels, 1.31(18) mu_N^2: their part of the rate scales with it
+            levels = value(tables, setup.replace(xsec_model="tornow2025"), nc_inputs)
+            rows.append(dict(section="B4", source=NC_STRENGTH, kind="sampled", sigma=levels * NC_STRENGTH_ERROR))
+            rows.append(dict(section="B4", source=NC_LEGACY, kind="legacy",
+                             shift=value(tables, setup.replace(xsec_model="snowglobes"), nc_inputs) - central))
+            out[name] = dict(label=o["label"], quantity=q, central=central, rows=rows)
+            continue
 
         # the solar model's density and production profiles, its fluxes fixed
         profiles = [value(tables, setup.replace(profile_model=m)) for m in models if engine.is_current(inputs, "solar_model", m)]
@@ -335,17 +359,29 @@ def nc_reading_variants():
     return out
 
 
-def nc_ar40(inputs, tables, params):
-    """Cross sections, figure-reading band and rates of NC on 40Ar for B4's NC card."""
-    table = export._yaml("reference/xsec/vandessel2019_nc_ar40.yaml")
-    variants = nc_reading_variants()
-    grid = np.unique(np.round(np.concatenate([np.arange(8.0, 30.0001, 0.05), np.arange(9.30, 12.0, 0.01),
+def _nc_grid():
+    return np.unique(np.round(np.concatenate([np.arange(8.0, 30.0001, 0.05), np.arange(9.30, 12.0, 0.01),
                                               nc_ar40_reference.levels()[0]]), 6))
+
+
+def _nc_inputs(inputs):
+    """(inputs with the figure-reading variants of the default NC model as extra nc_ar40 models, their names).
+    engine.Inputs reads the cross sections once, so the variants go into the data before it is built."""
+    grid, variants = _nc_grid(), nc_reading_variants()
     discrete = nc_ar40_reference.discrete(grid)
     with_variants = {**inputs.data, "xsec": {**inputs.data["xsec"], "nc_ar40": {
         **inputs.data["xsec"]["nc_ar40"],
         **{k: {"energy": grid.tolist(), "sigma": (discrete + f(grid)).tolist()} for k, f in variants.items()}}}}
-    nc_inputs = engine.Inputs(with_variants)
+    return engine.Inputs(with_variants), list(variants)
+
+
+def nc_ar40(inputs, tables, params):
+    """Cross sections, figure-reading band and rates of NC on 40Ar for B4's NC card."""
+    table = export._yaml("reference/xsec/vandessel2019_nc_ar40.yaml")
+    variants = nc_reading_variants()
+    grid = _nc_grid()
+    discrete = nc_ar40_reference.discrete(grid)
+    nc_inputs, _ = _nc_inputs(inputs)
     osc = engine.oscillation(params)
 
     def rate(model, solar_model="b16_gs98", threshold=5.0):

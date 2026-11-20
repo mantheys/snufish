@@ -25,7 +25,7 @@ an issue.
 |---|---|
 | PEANUTS | B2 (every solar model) and B3 `prem_prob3`. Not `prem_four`, `prem_full`: its Earth models are even polynomials in r and PREM's have odd powers. Not `native`: on non-constant shells its analytical evolutor is first order and breaks unitarity by up to 10⁻³. Its hard-coded matter potential is 3.6 × 10⁻⁴ (Sun) and 1.8 × 10⁻⁵ (Earth) above the specs' constants ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)) |
 | nuSQuIDS | B3 `prem_prob3`, `prem_four`, `prem_full`; `native` (its own spline PREM) is in the wrapper but not yet run. No B2: no production-profile or phase averaging (a pointwise numerical solution from r₀, about 60 CPU-hours per solar model on the B2 grid) |
-| SNUfish reference | repository URL in its catalogue entry; no DOI yet: the release files (CITATION.cff, .zenodo.json, docs/release.md) are prepared, no version is tagged or archived |
+| SNUfish reference | concept DOI 10.5281/zenodo.24045166 in its catalogue entry; versions v0.2.0 (10.5281/zenodo.24045167) and v0.3.0 (10.5281/zenodo.24383275) on Zenodo (docs/release.md) |
 | Full-chain rate tools other than SNOwGLoBES | none yet: B5 is the only benchmark with a single tool besides SNUfish (see the follow-ups below) |
 | Other cross-section models | no alternatives for ¹⁶O (SNOwGLoBES only); ¹³C CC is in B4 but no detector or engine channel uses it; NC on ⁴⁰Ar: measured discrete strength + HF+CRPA continuum read from a figure (a table from the Ghent group would remove the digitisation and the possible double counting near 10 MeV); no visible-energy model (cut in E<sub>ν</sub> only); no NC on ¹⁶O |
 | More ⁴⁰Ar shell-model tables | Kostensalo, Suhonen & Zuber (2018) is in (a published table, 5 MeV steps); Suzuki & Honma (2013) / Suzuki & Shimizu (2023) publish no σ(E) table, only a folded value (reproduced by MARLEY 2 to 3 %). A finer KSZ table, or σ(E) from the Suzuki group, would remove the 3 % interpolation error and add a calculation ([status-of-inputs.md](status-of-inputs.md)) |
@@ -185,4 +185,4 @@ From [crosschecks.md](crosschecks.md):
 - Pushes to `main` publish the page (`web/deploy.sh`) once lint and tests
   pass. plotipus is pinned to a commit in `pyproject.toml`; the page serves
   the wheel of that commit.
-- No release on PyPI. Citable releases on Zenodo (docs/release.md): v0.2.0 (10.5281/zenodo.24045167); v0.3.0 is prepared, not tagged.
+- No release on PyPI. Citable releases on Zenodo (docs/release.md): v0.2.0 (10.5281/zenodo.24045167), v0.3.0 (10.5281/zenodo.24383275).

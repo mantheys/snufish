@@ -1,14 +1,14 @@
 # Releasing a citable version
 
-Released: **v0.2.0** is tagged and archived on Zenodo, version DOI
-[10.5281/zenodo.24045167](https://doi.org/10.5281/zenodo.24045167), concept
-DOI (resolves to the latest version)
-[10.5281/zenodo.24045166](https://doi.org/10.5281/zenodo.24045166). It is
-the first release: 0.1.0 is the untagged development version; 0.2.0 adds the
-DUNE table options (`night_fraction`, `nu_threshold`, `nc_ar40`, the SOLAR
-night). The steps below are what it took; repeat 2 to 4 for the next one.
-
-Prepared: **v0.3.0** (steps 2 done, 3 and 4 to do). Release notes below.
+Released: **v0.3.0** is tagged (2026-11-20) and archived on Zenodo, version
+DOI [10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275).
+**v0.2.0** has version DOI
+[10.5281/zenodo.24045167](https://doi.org/10.5281/zenodo.24045167). The
+concept DOI (resolves to the latest version) is
+[10.5281/zenodo.24045166](https://doi.org/10.5281/zenodo.24045166). 0.1.0 is
+the untagged development version; 0.2.0 adds the DUNE table options
+(`night_fraction`, `nu_threshold`, `nc_ar40`, the SOLAR night). The steps
+below are what it took; repeat 2 to 4 for the next one.
 
 ## v0.3.0 release notes
 
@@ -51,17 +51,18 @@ the new NC model: `scripts/dune_phase1_rates.py` (B16-GS98 8B + hep) gives CC
 Submodules (Zenodo archives the repository without them): NuFast-Earth at
 `327586d` (v1.2.0-3), PEANUTS at `1783f9f` (v1.7).
 
-Cite the version DOI of 0.3.0 (Zenodo mints it at the release) or the concept
-DOI 10.5281/zenodo.24045166.
+Cite the version DOI of 0.3.0,
+[10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275), or the
+concept DOI 10.5281/zenodo.24045166.
 
 ## Files
 
 | File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.3.0: `version`, `date-released` 2026-11-20 (the tag date), concept DOI until step 4 |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.3.0: `version`, `date-released` 2026-11-20 (the tag date), version DOI 10.5281/zenodo.24383275 |
 | `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.3.0 (ORCID included) |
 | `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.3.0 (plotipus pinned to its `v0.1.0` release) |
-| `catalogue/tools/snufish-reference.yaml` | `reference` | unchanged (the concept DOI, cites every version) |
+| `catalogue/tools/snufish-reference.yaml` | `reference` | the concept DOI (cites every version); the comment lists the version DOIs |
 
 ## Steps
 
