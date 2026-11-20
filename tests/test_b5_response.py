@@ -126,3 +126,22 @@ def test_own_response_is_folded_for_the_comparison(tmp_path):
     _, true = build.observed_spectra(SPEC, inputs, provider, perfect)
     k = 500  # 5 MeV
     assert 0.85 < expected[k] / build.above(true["B8"])[k] < 0.95
+
+
+def test_marley_full_chain_matches_the_folding_of_its_tables():
+    # MARLEY integrates its own cross sections over each oscillated spectrum; SNUfish folds its B4 tables (0.02 MeV)
+    import numpy as np
+    import pandas as pd
+    import pytest
+
+    from snufish.paths import build_dir
+
+    path = build_dir() / "B5_Chain.parquet"
+    if not path.exists():
+        pytest.skip("run snufish build")
+    chain = pd.read_parquet(path)
+    marley = chain[(chain.Tool == "marley") & (chain.Rate > 0)]
+    if marley.empty:
+        pytest.skip("no MARLEY B5 contribution")
+    assert set(marley.Channel) == {"es", "cc_nue_ar40"} and set(marley.Detector) == {"argon"}
+    assert np.all(np.abs(marley.Ratio - 1) < 5e-4)

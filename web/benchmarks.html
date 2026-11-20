@@ -192,9 +192,11 @@
         kiloton-year in true neutrino energy, the input of every detector, and passes them through each detector's
         published response (resolution, efficiency, threshold) into observed spectra and rates above threshold:
         Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II for scintillator and DUNE's far
-        detector for argon. Tools that fold the whole chain themselves (SNOwGLoBES) are compared with SNUfish's folding
-        of exactly the same inputs: 0.4 % on ⁸B and hep (ES and ⁴⁰Ar CC; 1.6 % on the tiny hep CC on ¹⁶O), but 2–21 % low below 2 MeV, where GLoBES evaluates
-        flux × σ once per sampling bin at its midpoint. The response matters where the spectrum rises:
+        detector for argon. Tools that fold the whole chain themselves are compared with SNUfish's folding of exactly the
+        same inputs and their own cross sections. MARLEY (argon: CC with its recommended model, ES at tree level)
+        integrates over each oscillated spectrum itself and agrees to 0.03 % for every component. SNOwGLoBES (argon
+        and water) agrees to 0.4 % on ⁸B and hep (ES and ⁴⁰Ar CC; 1.6 % on the tiny hep CC on ¹⁶O), but is 2–21 % low
+        below 2 MeV, where GLoBES evaluates flux × σ once per sampling bin at its midpoint. The response matters where the spectrum rises:
         Super-K IV's efficiency halves the rate above its threshold, DUNE's and SNO's resolutions take 4.4 % and
         3.6 % off their CC rates above threshold, and under 3 % off the falling ES recoil spectra. Its entry in the
         overview is the statistics of 100 kt·yr and the published detector uncertainties; a tool may also

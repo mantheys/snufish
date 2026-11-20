@@ -1,14 +1,14 @@
 id: marley
 name: MARLEY
-description: Monte Carlo event generator for tens-of-MeV neutrino interactions (Model of Argon Reaction Low Energy Yields); computes inclusive nu_e-40Ar charged-current cross sections, HF-CRPA for the continuum and measured B(GT) for bound levels in version 2.
+description: Monte Carlo event generator for tens-of-MeV neutrino interactions (Model of Argon Reaction Low Energy Yields); computes inclusive nu_e-40Ar charged-current cross sections, HF-CRPA for the continuum and measured B(GT) for bound levels in version 2, and ES on electrons; folds a user-given neutrino spectrum (flux-averaged cross section).
 language: C++
 license: GPL-3.0
 repository: https://github.com/MARLEY-MC/marley
 documentation: https://www.marleygen.org
 reference: arXiv:2101.11867   # with Gardiner, Phys. Rev. C 103, 044604 (2021)
 maintainers: null
-benchmarks: [B4_xsec]
-status: verified          # B4: contributions/marley/B4_xsec/2.0.0 from contributions/marley/scripts/run_b4.py
+benchmarks: [B4_xsec, B5_rates]
+status: verified          # B4: contributions/marley/B4_xsec/2.0.0 (run_b4.py); B5: contributions/marley/B5_rates/2.0.0 (run_b5.py)
 notes: >
   Version 2.0.0 (31 July 2026, Zenodo 10.5281/zenodo.21880925). Its discrete reaction files carry the
   measured B(GT) uncertainties (added 18 July 2026); the wrapper turns them into one shifted cross-section

@@ -17,7 +17,7 @@ their `version`.
 | B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth, peanuts |
 | B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth, peanuts (`prem_prob3`), nusquids |
 | B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
-| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.4.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (full chain, part 1); SNUfish folds every B4 model and every published response |
+| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.4.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water), marley (argon) (full chain, part 1); SNUfish folds every B4 model and every published response |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
@@ -270,7 +270,14 @@ fraction of the spectrum the cross-section table covers), `B5_DayNight`
 and Earth model) and `B5_Chain` (tool totals, SNUfish's folding of the
 same inputs, their ratio). Plots: `plotipus run b45`.
 
-Part 1 contributions with SNOwGLoBES: 0.4 % for ⁸B and hep; below 2 MeV its
+Part 1 contributions with MARLEY (argon; `contributions/marley/scripts/run_b5.py`): MARLEY integrates its
+own cross sections (CC: its recommended HF-CRPA + Bhattacharya 2009 model; ES: `ES.react`, tree level) over each
+oscillated component spectrum, given as a `grid` source (`mono` for lines), and logs the flux-averaged cross
+section; the wrapper multiplies it by the targets, the flux and the integral of the source. It agrees with SNUfish's
+folding of MARLEY's B4 tables to 0.03 % for every component (pp ES −0.025 %, ⁸B CC +0.015 %: SNUfish interpolating
+the 0.02 MeV tables). ¹⁵O and ¹⁷F give no CC: they end below the first allowed ⁴⁰K level.
+
+With SNOwGLoBES: 0.4 % for ⁸B and hep; below 2 MeV its
 full chain is 2–21 % low, and its lines move by −52 % to +55 % with how they
 are written into its flux table. Both come from GLoBES evaluating flux × σ
 once per 0.4975 MeV sampling bin, at its midpoint; an emulation of that

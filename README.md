@@ -204,7 +204,7 @@ asymmetry. Tools so far: the SNUfish reference solvers,
 [PEANUTS](https://github.com/michelelucente/PEANUTS) (B2, B3),
 [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) (B3),
 [SNOwGLoBES](https://github.com/SNOwGLoBES/snowglobes) (B4, B5) and
-[MARLEY](https://github.com/MARLEY-MC/marley) (B4); see
+[MARLEY](https://github.com/MARLEY-MC/marley) (B4, B5); see
 [catalogue/tools](catalogue/tools). Details of every benchmark:
 [docs/benchmarks.md](docs/benchmarks.md).
 

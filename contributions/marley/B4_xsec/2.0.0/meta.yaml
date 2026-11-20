@@ -4,7 +4,7 @@ tool_commit: 435f083
 benchmark: B4_xsec
 benchmark_version: 0.1.0
 contributor: SNUfish maintainers (wrapper)
-date: '2026-11-02'
+date: '2026-11-20'
 command: python contributions/marley/scripts/run_b4.py --marley <built MARLEY checkout>
 settings:
   reactions:
@@ -25,6 +25,8 @@ settings:
     ar40_marley1_allowed:
       form_factors: allowed
   xsec: marley xsec, KE 0 to 20 MeV on the B4 step, 1e-42 cm^2/atom converted to cm^2
+  es: 'default variant only: ES.react (tree level) for nu_e, nu_mu, nu_tau, per 40Ar
+    atom / 18 = per electron'
   default: ar40_marley2_bhattacharya2009
   bgt_levels: 'bgt_levels.parquet: a variant with each measured level of its reaction
     file raised by its 1 sigma (one row per variant and level): ar40_marley2_bhattacharya2009
