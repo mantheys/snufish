@@ -9,7 +9,8 @@
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/mantheys)
 
 **Calculator: [mantheys.github.io/snufish](https://mantheys.github.io/snufish/)** ·
-**Documentation: [docs/](docs/README.md)**
+**Documentation: [docs/](docs/README.md)** ·
+**Cite: v0.3.0, [10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275)** (every version: [10.5281/zenodo.24045166](https://doi.org/10.5281/zenodo.24045166))
 
 Community benchmarks of solar neutrino tools. Every tool computes the same
 fixed problem; SNUfish validates the outputs and plots them side by side
