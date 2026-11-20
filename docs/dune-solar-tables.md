@@ -33,24 +33,25 @@ Per kt-yr, annual, ⁸B + hep, `--earth prem_full`, SOLAR's night:
 
 | Channel | above | 5 MeV | 8 MeV | 10 MeV | 15 MeV |
 |---|---|---|---|---|---|
-| CC `ar40_marley` (SNOwGLoBES 2018 table) | E<sub>ν</sub> | 1552 | 1331 | 818 | 2.61 |
-| CC `ar40_marley1_allowed` (MARLEY v1.2.1, DUNE's samples, SOLAR) | E<sub>ν</sub> | 2416 | 2041 | 1253 | 3.95 |
-| CC `ar40_marley1_allowed` | T<sub>e</sub> | 1210 | 144 | 12.6 | 0 |
-| CC `ar40_marley1_bhattacharya2009` (v1 file, MARLEY 2's form factors) | E<sub>ν</sub> | 2306 | 1942 | 1186 | 3.61 |
-| CC `ar40_marley2_bhattacharya2009` (MARLEY 2) | E<sub>ν</sub> | 2267 | 1903 | 1151 | 3.46 |
-| CC `ar40_marley2_bhattacharya2009` | T<sub>e</sub> | 1140 | 132 | 11.4 | 0 |
-| ES (BKS) | E<sub>ν</sub> | 1081 | 610 | 276 | 0.387 |
-| ES (BKS) | T<sub>e</sub> | 360 | 93.0 | 22.6 | 0.0174 |
-| NC (default: measured discrete 1⁺ + HF+CRPA continuum) | E<sub>ν</sub> | 105.7 | 105.7 | 105.7 | 0.705 |
-| NC `snowglobes` (SNOwGLoBES table, legacy) | E<sub>ν</sub> | 28.8 | 28.8 | 26.5 | 0.161 |
+| CC `ar40_marley` (SNOwGLoBES 2018 table) | E<sub>ν</sub> | 1552 | 1331 | 819 | 2.76 |
+| CC `ar40_marley1_allowed` (MARLEY v1.2.1, DUNE's samples, SOLAR) | E<sub>ν</sub> | 2416 | 2041 | 1254 | 4.17 |
+| CC `ar40_marley1_allowed` | T<sub>e</sub> | 1211 | 144 | 12.7 | 0 |
+| CC `ar40_marley1_bhattacharya2009` (v1 file, MARLEY 2's form factors) | E<sub>ν</sub> | 2306 | 1943 | 1186 | 3.81 |
+| CC `ar40_marley2_bhattacharya2009` (MARLEY 2) | E<sub>ν</sub> | 2267 | 1903 | 1151 | 3.65 |
+| CC `ar40_marley2_bhattacharya2009` | T<sub>e</sub> | 1141 | 132 | 11.5 | 0 |
+| ES (BKS) | E<sub>ν</sub> | 1081 | 610 | 276 | 0.411 |
+| ES (BKS) | T<sub>e</sub> | 360 | 93.0 | 22.6 | 0.0177 |
+| NC (default: measured discrete 1⁺ + HF+CRPA continuum) | E<sub>ν</sub> | 105.7 | 105.7 | 105.7 | 0.746 |
+| NC `snowglobes` (SNOwGLoBES table, legacy) | E<sub>ν</sub> | 28.8 | 28.8 | 26.5 | 0.171 |
 | *thesis CC* | *E<sub>ν</sub>* | *2380* | *1990* | *1200* | *3.77* |
 | *thesis CC* | *T<sub>e</sub>* | *1150* | *156* | *8.36* | – |
 | *thesis ES* | *E<sub>ν</sub>* | *1080* | *599* | *265* | *0.384* |
 | *thesis ES* | *T<sub>e</sub>* | *358* | *90.9* | *21.7* | *0.0168* |
 | *thesis NC* | *E<sub>ν</sub>* | *27.7* | *27.7* | *25.3* | *0.17* |
 
-Above 15 MeV the ⁸B shape stops at 15.2 MeV ([status.md](status.md#known-approximations)): the 15 MeV
-column is hep plus the last 0.2 MeV of ⁸B: it is not a reliable comparison.
+Above 15 MeV the ⁸B spectrum is its tail: Winter et al.'s table ends at 15.2 MeV and Bahcall et al. 1996
+continues it to 16.0 MeV (B5 0.5.0; before, ⁸B stopped at 15.2 MeV and this column was 5–7 % lower). The
+column is mostly hep.
 
 **What the thesis table used.** `LOWE_RECONSTRUCTION_PUBLICATION/scripts/generate_snowglobes_solar_interactions.py`,
 model `marley2009` (the thesis's macros say so: `references/metrics/main.tex`). Every difference from SNUfish with
@@ -71,7 +72,7 @@ SNUfish's default NC model gives 3.7 times as much (see [status-of-inputs.md](st
 exposure are the same. SNOwGLoBES's NC table has negative values at 8–9 MeV, which both set to zero.
 
 **Not reproduced.** The thesis's CC T<sub>e</sub> column (1150, 156, 8.36 above 5, 8, 10 MeV) does not follow the same
-ladder: `ar40_marley1_allowed` with its own levels gives 1210, 144 and 12.6 (about 1193, 142, 12.4 with the thesis's
+ladder: `ar40_marley1_allowed` with its own levels gives 1211, 144 and 12.7 (about 1193, 142, 12.4 with the thesis's
 conventions): 4 % above the thesis above 5 MeV, 9 % below above 8 MeV, 48 % above above 10 MeV. The electron spectrum behind the
 thesis column is not known.
 
@@ -97,7 +98,7 @@ Annual, per kt-yr, ⁸B + hep, `ar40_marley1_allowed`:
 |---|---|---|---|
 | E<sub>ν</sub> > 1 MeV | 2426 | 1281 | 105.7 |
 | E<sub>ν</sub> > 5 MeV | 2416 | 1081 | 105.7 |
-| T<sub>e</sub> > 5 MeV | 1210 | 360 | – |
+| T<sub>e</sub> > 5 MeV | 1211 | 360 | – |
 
 NC is SNUfish's default model, the measured discrete 1⁺ strength plus the HF+CRPA continuum; with SNOwGLoBES's
 table (`--nc-model snowglobes`), which the paper quoted before, it is 28.8 above both cuts.

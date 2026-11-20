@@ -14,10 +14,12 @@ DRIVER = ROOT / "contributions" / "nufast-earth" / "scripts" / "b3_driver"
 
 pytestmark = pytest.mark.skipif(not DRIVER.exists(), reason="NuFast-Earth driver not built")
 
-# annual, per kt-yr: the numbers in the paper (docs/dune-solar-tables.md#phase-i-paper)
-PINNED = {("CC", "Enu", 1.0): 2425.7, ("ES", "Enu", 1.0): 1281.3, ("NC", "Enu", 1.0): 105.70,
-          ("CC", "Enu", 5.0): 2415.8, ("ES", "Enu", 5.0): 1081.3, ("NC", "Enu", 5.0): 105.70,
-          ("CC", "Te", 5.0): 1210.2, ("ES", "Te", 5.0): 359.90}
+# annual, per kt-yr: the numbers in the paper (docs/dune-solar-tables.md#phase-i-paper), to more digits. B5 0.5.0's
+# 8B tail above 15.2 MeV moved them by 1e-5 (ES) to 4e-4 (NC), none at the paper's precision (CC 2416, ES 1081,
+# NC 105.7); before it: CC 2425.7, 2415.8, 1210.2; ES 1281.3, 1081.3, 359.90; NC 105.70.
+PINNED = {("CC", "Enu", 1.0): 2426.0, ("ES", "Enu", 1.0): 1281.3, ("NC", "Enu", 1.0): 105.74,
+          ("CC", "Enu", 5.0): 2416.1, ("ES", "Enu", 5.0): 1081.3, ("NC", "Enu", 5.0): 105.74,
+          ("CC", "Te", 5.0): 1210.5, ("ES", "Te", 5.0): 359.92}
 
 
 @pytest.fixture(scope="module")

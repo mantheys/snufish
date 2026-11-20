@@ -32,7 +32,7 @@ contribute them are declared out of scope for 1.0, with the way back noted.
 
 | # | Item | Decision | Effort | Rates that change |
 |---|---|---|---|---|
-| 1a | B5: full Winter et al. ⁸B tail above 15.2 MeV | 1.0 | M | **⁸B above 5 MeV: CC +0.1–0.3 %, ES +0.05–0.1 %, NC on ⁴⁰Ar +1–3 % (estimates); the DUNE Phase I numbers move** |
+| 1a | B5: ⁸B tail above 15.2 MeV | 1.0 (done: B5 0.5.0) | M | ⁸B above 5 MeV: CC +8 × 10⁻⁵, ES +1 × 10⁻⁵, NC on ⁴⁰Ar +4 × 10⁻⁴; the DUNE Phase I numbers do not move at the paper's precision; above 15 MeV +5–7 % |
 | 1a | B5: named responses, second responses as part-2 variants | 1.0 (structure; JUNO; SNO+ if a published response exists); Hyper-K out | M | none (new rows only) |
 | 1a | B5: night and annual quantities in contributions | out | — | — |
 | 1a | B3: `prem_crust1` per site as variants | 1.0 | L (CPU) | B5 night gains `prem_crust1` rows; existing rows unchanged |
@@ -50,8 +50,9 @@ contribute them are declared out of scope for 1.0, with the way back noted.
 | 4 | A third-party contribution: sntools (water) | 1.0 if ready, not blocking; SNuDD out | M | none (new contribution) |
 | 4 | Citable write-up: JOSS paper | draft in 1.0, submitted after the tag | M | — |
 
-Only item 1a's ⁸B tail changes a SNUfish rate. Everything else adds rows,
-quantities or contributions next to unchanged ones.
+Only item 1a's ⁸B tail changes a SNUfish rate, and by less than any quoted
+digit except above 15 MeV. Everything else adds rows, quantities or
+contributions next to unchanged ones.
 
 ---
 
@@ -59,33 +60,30 @@ quantities or contributions next to unchanged ones.
 
 ### 1a. The open questions
 
-#### B5: the full ⁸B tail (1.0, M)
+#### B5: the ⁸B tail (1.0, M; done in B5 0.5.0)
 
-`reference/ssm/shapes/8B_shape_Winter_et_al.csv` ends at 15.2 MeV; the
-spectrum ends near 16.5 MeV. The truncation is a fixed input of every B5
-variant, so correcting it after 1.0 would be a major change: it goes in now.
+`reference/ssm/shapes/8B_shape_Winter_et_al.csv` ends at 15.2 MeV. The
+truncation is a fixed input of every B5 variant, so correcting it after 1.0
+would be a major change: it went in first.
 
-- Source: the full Winter et al. (PRC 73, 025503, 2006) table from its
-  supplementary material or the authors. Fallback, only if no full table
-  can be found: the tail of an allowed β⁺ shape matched to the table above
-  13 MeV, stated in `sources.md` as an approximation.
-- Estimated effect (an allowed shape fitted to the table, endpoint 16.4 to
-  17.0 MeV, the shape renormalised): 3 to 6 × 10⁻⁴ of the ⁸B flux moves above
-  15.2 MeV; for ⁸B above E<sub>ν</sub> = 5 MeV the ES rate rises by 0.05–0.1 %, CC on
-  ⁴⁰Ar by 0.1–0.3 % and NC on ⁴⁰Ar (onset at 10–12 MeV) by 1–3 %. The PR
-  gives the exact numbers.
-- **Flag: the DUNE Phase I rates change.** `scripts/dune_phase1_rates.py`
-  gives CC 2416, ES 1081, NC 105.7 per kt·yr now; expect about CC 2419–2423,
-  ES 1081–1082, NC 107–109. The PR reports the new values, and the release
-  notes of 1.0.0 list them next to the old ones. The DUNE Phase I paper, the
-  LOWE paper and the thesis keep citing the version DOI they were made with
-  (v0.3.0 or v0.4.0), which still reproduces their numbers; updating them is
-  your call, not part of this plan.
-- Reruns: the SNOwGLoBES and MARLEY B5 contributions (both tools are built
-  locally). `B5_Spectrum`, `B5_Totals`, `B5_DayNight`, `B5_Chain`,
-  `B5_Observed` change above 15 MeV; the hep panels of the `b45` plots and
-  the B5 tab of the page move with them; the `status.md` approximation row
-  goes.
+- What was found: Winter et al.'s published table IV itself ends at 15.2 MeV
+  (no fuller table exists): their β strength function (table II) starts at
+  E<sub>x</sub>(⁸Be) = 1.55 MeV, which caps E<sub>ν</sub> near 15.4 MeV. Bahcall et al.
+  1996 (PRC 54, 411, table I) tabulates the spectrum to 16.0 MeV and gives
+  the same value at 15.2 MeV (0.047 per 1000 per MeV). B5 0.5.0 takes Winter
+  to 15.2 MeV and Bahcall above
+  (`reference/ssm/shapes/8B_shape_Winter2006_tail_Bahcall1996.csv`).
+- The tail holds 1.1 × 10⁻⁵ of the ⁸B flux, not the 10⁻⁴ `status.md` stated
+  nor the 3–6 × 10⁻⁴ this plan first estimated from a single allowed β shape
+  (which ignored that the strength falls at low E<sub>x</sub>).
+- Effect, `scripts/dune_phase1_rates.py` (annual, per kt·yr, E<sub>ν</sub> > 5 MeV): CC
+  2415.9 → 2416.1, ES 1081.30 → 1081.31, NC 105.70 → 105.74. The paper's
+  numbers (CC 2416, ES 1081, NC 105.7) and its LaTeX macros are unchanged;
+  CC above T<sub>e</sub> = 5 MeV is 1210.3 → 1210.5 (1211 in the four-digit table of
+  `dune-solar-tables.md`, 1.21 × 10³ in the paper's). Above 15 MeV, where
+  the tail is the ⁸B spectrum, rates rise by 5–7 %.
+- Reruns: the SNOwGLoBES and MARLEY B5 contributions; only ⁸B and `all`
+  rows moved (3–8 × 10⁻⁵), every other row is bit-identical.
 
 #### B5: second responses per detector (structure 1.0; JUNO; SNO+ if published; Hyper-K out; M)
 
@@ -349,7 +347,7 @@ and you say so.
 1. This roadmap.
 2. Compatibility: `docs/compatibility.md`, the validator's version rule,
    spec changelogs (versions not bumped yet).
-3. B5 ⁸B tail, with the reruns and the new DUNE numbers. **Changes quoted rates.**
+3. B5 ⁸B tail, with the reruns and the new DUNE numbers (done: no quoted rate moves).
 4. B5 named responses, the `flavour` column and ES in neutrino energy, JUNO
    (and SNO+ if sourced).
 5. SNOwGLoBES part 2.

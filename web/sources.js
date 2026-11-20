@@ -25,7 +25,7 @@ export const SOURCES = {
   peanuts: S("PEANUTS (B2 and B3 contributions; B16 and BS05 tables taken from its data directory)", "arXiv:2303.15527"),
   nusquids: S("nuSQuIDS (B3 contribution)", "arXiv:2112.13804"),
   shape_pp_hep: S("pp and hep spectra: Bahcall, Phys. Rev. C 56, 3391 (1997)", "10.1103/PhysRevC.56.3391"),
-  shape_b8: S("⁸B spectrum: Winter et al., Phys. Rev. C 73, 025503 (2006)", "10.1103/PhysRevC.73.025503"),
+  shape_b8: S("⁸B spectrum: Winter et al., Phys. Rev. C 73, 025503 (2006); above 15.2 MeV, Bahcall et al., Phys. Rev. C 54, 411 (1996)", "10.1103/PhysRevC.73.025503"),
   shape_cno: S("¹³N, ¹⁵O, ¹⁷F spectra: Bahcall & Ulrich, Rev. Mod. Phys. 60, 297 (1988)", "10.1103/RevModPhys.60.297"),
   prem: S("PREM: Dziewonski & Anderson, Phys. Earth Planet. Inter. 25, 297 (1981)", "10.1016/0031-9201(81)90046-7"),
   nufast: S("NuFast-Earth (P(νᵢ → νₑ) through the Earth; the PREM variants)", "arXiv:2511.04735"),

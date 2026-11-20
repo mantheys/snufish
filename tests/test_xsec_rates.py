@@ -45,8 +45,11 @@ def test_flux_shapes_normalised():
             assert sum(branching for _, branching in flux[1]) == pytest.approx(1.0)
     # endpoints
     assert fluxes["pp"][1][fluxes["pp"][2] > 0].max() == pytest.approx(0.42, abs=0.01)
-    # the Winter table as distributed is truncated at 15.2 MeV (see reference/ssm/shapes/README.yaml)
-    assert fluxes["B8"][1][fluxes["B8"][2] > 0].max() == pytest.approx(15.2, abs=0.05)
+    # Winter et al. 2006 ends at 15.2 MeV; Bahcall et al. 1996 continues it to 16.0 (reference/ssm/shapes/README.yaml)
+    assert fluxes["B8"][1][fluxes["B8"][2] > 0].max() == pytest.approx(16.0, abs=0.05)
+    energy, shape = fluxes["B8"][1], fluxes["B8"][2]
+    tail = np.trapezoid(shape[energy >= 15.2], energy[energy >= 15.2])
+    assert tail == pytest.approx(1.1e-5, rel=0.05)
 
 
 def test_pp_es_rate_by_hand(constants):

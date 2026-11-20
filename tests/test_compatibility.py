@@ -68,7 +68,7 @@ def test_validator_takes_a_compatible_version_and_rejects_others(tmp_path):
     shutil.copytree(source, target)
     contribution = load_contribution(target)
     assert validate(contribution, spec) == []
-    contribution.meta["benchmark_version"] = "0.3.0"   # listed in B5's `compatible`
-    assert validate(contribution, spec) == []
-    contribution.meta["benchmark_version"] = "0.2.0"
+    contribution.meta["benchmark_version"] = "0.4.0"   # before B5's major change of 0.5.0 (the 8B tail)
     assert any("does not accept" in p for p in validate(contribution, spec))
+    listed = Spec(id=spec.id, version=spec.version, data={**spec.data, "compatible": ["0.4.0"]}, path=spec.path)
+    assert validate(contribution, listed) == []

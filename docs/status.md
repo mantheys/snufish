@@ -93,7 +93,7 @@ contributions ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)):
 | `prem_crust1_3d`: the crust of the ~130 chords in each of the 1001 nadir cells averaged before solving; chords in pieces of near-constant density | ≤ 1.3 × 10⁻⁴ in P₂ₑ (≤ 0.25 % of the regeneration); A<sub>DN</sub> within 0.07 % of 10 km pieces | `earth3d` |
 | `prem_crust1_3d`: every CRUST1.0 cell's surface at the Earth's radius (no topography, as `prem_crust1` under the detector), Yₑ = 0.494 in every layer (water and ice too: 0.555 for water), one year of Sun positions (2026) | not measured; the far side, where oceans and topography sit, contributes ≤ 0.2 % of A<sub>DN</sub> in all | `earth3d` |
 | θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A<sub>DN</sub> over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
-| ⁸B shape truncated at 15.2 MeV (true endpoint ~16.5 MeV) | ~10⁻⁴ of the flux; matters above 15 MeV (⁸B background to hep) | `reference/ssm/shapes/` |
+| ⁸B shape above 15.2 MeV, where Winter et al.'s table ends (its strength function starts at E<sub>x</sub>(⁸Be) = 1.55 MeV), from Bahcall et al. 1996 | the tail holds 1.1 × 10⁻⁵ of the flux; the two tables agree at 15.2 MeV | `reference/ssm/shapes/` |
 | B16 and BS05 density beyond 0.5 R<sub>☉</sub> | exponential tail fit, residual ≤ 0.0033 in log₁₀ n<sub>e</sub> | `models.yaml` `tail` |
 | Cross sections below the B4 grid (0.02 MeV) | < 0.01 % of any rate | B5 spec |
 | NaN in a cross-section table counted as zero | a lower bound; `Coverage` reports the covered fraction | build, engine |
@@ -163,8 +163,7 @@ Each is decided (for 1.0, or out of scope) in [roadmap-1.0.md](roadmap-1.0.md).
   `prem_crust1_3d`, which needs the chords written out per site (a
   trajectories grid) and a tool that solves single trajectories?
 - **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
-- **B5**: take the full Winter et al. ⁸B tail before using rates above
-  15 MeV; night and annual quantities in contributions; a second response
+- **B5**: night and annual quantities in contributions; a second response
   per detector (Hyper-K, JUNO, SNO+) as variants of part 2.
 - **B2 (solar models)**: shape variants; use the B23 correlations in B5 rate
   uncertainties.
