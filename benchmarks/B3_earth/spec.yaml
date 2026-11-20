@@ -143,3 +143,9 @@ checks:
 # - Comparison reference: the SNUfish reference solver for prem_prob3; for the
 #   continuous models, a converged sliced solution (to be added)?
 # - Energy grid down to 0.1 MeV for pp/7Be (Earth effects tiny there)?
+
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+changelog:
+  - {version: 0.2.0, date: 2026-10-28, kind: initial, changes: "P1e, P2e, P3e on one grid (E 1-20 MeV every 0.1, cos nadir every 0.01); prem_prob3, prem_four, prem_full, native."}
+  - {version: 0.3.0, date: 2026-10-28, kind: major, changes: "Two required grids, map and exposure (cos nadir every 0.001 for night averages); detector sites. Contributions recomputed."}

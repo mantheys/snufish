@@ -27,6 +27,9 @@ that needs a contributor is listed in [status.md](status.md).
    ```
 
    `snufish.contribution.write_contribution` writes both from Python.
+   `benchmark_version` is the spec version you ran (`spec.version`); a
+   later spec still accepts it as long as the change was additive
+   ([compatibility.md](compatibility.md)).
 4. `snufish validate contributions/<tool>/<benchmark>/<version>` must pass:
    grid, required variants, value ranges and the benchmark's physics checks
    (for B3: unitarity and the vacuum limit at the horizon).

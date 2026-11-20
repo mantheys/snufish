@@ -102,3 +102,8 @@ checks:
 # Open questions:
 # - Electron-recoil thresholds: add sigma(E; T > T_min) for the detectors' ES thresholds?
 # - Radiative corrections for ES (Bahcall, Kamionkowski, Sirlin 1995) in the reference.
+
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+changelog:
+  - {version: 0.1.0, date: 2026-10-28, kind: initial, changes: "ES and CC channels on one energy grid. Optional variants added later without a bump (additive): the MARLEY 2 40Ar variants and ar40_marley1_bhattacharya2009 (2026-10-29), es_bks (2026-10-31), ar40_marley1_allowed (2026-11-07)."}

@@ -144,3 +144,9 @@ checks:
 #   phase averaging) to measure the O(1/gamma^2) corrections directly.
 # - Radial path vs the true line of sight for off-centre production
 #   (irrelevant while propagation is adiabatic; the reference measures it).
+
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+changelog:
+  - {version: 0.1.0, date: 2026-10-28, kind: initial, changes: "F1, F2, F3 on the map grid for B16-GS98 and the exponential profile."}
+  - {version: 0.2.0, date: 2026-10-28, kind: minor, changes: "One optional variant per solar model of the registry. On 2026-11-07 the registry itself (the former B1_ssm) became part 1 without a bump: it adds no grid or quantity."}
