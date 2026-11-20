@@ -17,7 +17,7 @@
 # Status: DRAFT.
 
 id: B5_rates
-version: 0.4.0   # part 2 (detector response, grid `observed`) is optional: part-1 contributions stay valid
+version: 0.5.0
 status: draft
 title: "Detector: interaction rates and the detector response"
 
@@ -28,7 +28,7 @@ fluxes:
   pep: {lines: [[1.442, 1.0]]}
   hep: {shape: reference/ssm/shapes/hep_shape.csv}
   Be7: {lines: [[0.8613, 0.8956], [0.3843, 0.1044]]}
-  B8:  {shape: reference/ssm/shapes/8B_shape_Winter_et_al.csv}
+  B8:  {shape: reference/ssm/shapes/8B_shape_Winter2006_tail_Bahcall1996.csv}   # Winter et al. 2006 to 15.2 MeV, Bahcall et al. 1996 above
   N13: {shape: reference/ssm/shapes/n13_shape.csv}
   O15: {shape: reference/ssm/shapes/o15_shape.csv}
   F17: {shape: reference/ssm/shapes/f17_shape.csv}
@@ -93,8 +93,6 @@ spectrum_bins:
 thresholds_MeV: [0.0, 5.0]
 
 # Open questions:
-# - The 8B shape table is truncated at 15.2 MeV (true endpoint ~16.5 MeV):
-#   take the full Winter et al. tail before using rates above 15 MeV.
 # - Part 2: the CC visible energy is E_nu - Q (no recoil, binding or quenching
 #   losses); for d(nu_e, e-)pp the electron shares E_nu - Q with the two protons.
 
@@ -263,5 +261,4 @@ changelog:
   - {version: 0.2.0, date: 2026-10-28, kind: major, changes: "Flux normalisations from the solar-model registry; rates for every solar model with its own B2 oscillations."}
   - {version: 0.3.0, date: 2026-10-28, kind: minor, changes: "Contribution format for full-chain tools: grid totals, variants b16_gs98, bs05_op, b16_gs98_point_lines, native."}
   - {version: 0.4.0, date: 2026-11-07, kind: minor, changes: "Part 2, the detector response: optional grid observed, response block, settings.response and response.parquet; heavy water and scintillator detectors."}
-# Earlier versions whose contributions are still exact under this one.
-compatible: [0.3.0]
+  - {version: 0.5.0, date: 2026-11-20, kind: major, changes: "The 8B shape continues above 15.2 MeV, where Winter et al.'s table ends, with Bahcall et al. 1996 up to 16.0 MeV (1.1e-5 of the flux; reference/ssm/shapes/8B_shape_Winter2006_tail_Bahcall1996.csv). Contributions rerun."}

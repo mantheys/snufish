@@ -18,7 +18,7 @@ is set by [compatibility.md](compatibility.md).
 | B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth, peanuts |
 | B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth, peanuts (`prem_prob3`), nusquids |
 | B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
-| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.4.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water), marley (argon) (full chain, part 1); SNUfish folds every B4 model and every published response |
+| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.5.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water), marley (argon) (full chain, part 1); SNUfish folds every B4 model and every published response |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
@@ -229,6 +229,9 @@ neutrino energy, part 2 passes them through each detector's published
 response into observed energy. A contribution may give either part or both
 (`optional_grids`); version 0.4.0 added part 2 without changing part 1, and
 the SNOwGLoBES contribution was rerun against it (bit-identical numbers).
+Version 0.5.0 continues the ⁸B shape above 15.2 MeV, where Winter et al.'s
+table ends, with Bahcall et al. 1996 (1.1 × 10⁻⁵ of the flux); the
+SNOwGLoBES and MARLEY contributions were rerun against it.
 
 ### Part 1: interaction rates
 
@@ -246,7 +249,7 @@ inputs.
 
 | Setting | Value |
 |---|---|
-| Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes)); normalisations from the B2 solar model |
+| Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes); ⁸B: Winter et al. 2006, above 15.2 MeV Bahcall et al. 1996); normalisations from the B2 solar model |
 | Exposure | 1 kton-year, Julian year (3.15576 × 10⁷ s) |
 | Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`); `heavy_water` (3.007 × 10³² e⁻, 6.014 × 10³¹ d per kt; `es`, `cc_nue_d`); `scintillator_pc` (3.307 × 10³² e⁻ per kt; `es`) |
 | Channels | `es` sums the three ES channels weighted with P<sub>eα</sub>; CC uses P<sub>ee</sub>. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV, d 1.442 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |

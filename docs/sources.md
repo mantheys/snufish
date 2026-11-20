@@ -58,7 +58,7 @@ uncertainties only; BS05 neither.
 |---|---|---|
 | pp | J. N. Bahcall, Phys. Rev. C 56, 3391 (1997) | 0.42341 MeV |
 | hep | J. N. Bahcall, Phys. Rev. C 56, 3391 (1997) | 18.784 MeV |
-| ⁸B | W. T. Winter et al., Phys. Rev. C 73, 025503 (2006), with shape uncertainty | table truncated at 15.2–15.3 MeV (true ~16.5 MeV) |
+| ⁸B | W. T. Winter et al., Phys. Rev. C 73, 025503 (2006), table IV, with shape uncertainty; above 15.2 MeV, J. N. Bahcall et al., Phys. Rev. C 54, 411 (1996), table I | Winter's table ends at 15.2 MeV (its strength function starts at E<sub>x</sub> = 1.55 MeV); Bahcall's continues it to 16.0 MeV (1.1 × 10⁻⁵ of the flux) and agrees at 15.2 |
 | ¹³N | Bahcall & Ulrich, Rev. Mod. Phys. 60, 297 (1988) | 1.199 MeV |
 | ¹⁵O | Bahcall & Ulrich (1988) (file header says N13: a copy slip in PEANUTS) | 1.732 MeV |
 | ¹⁷F | Bahcall & Ulrich (1988) | 1.740 MeV |
