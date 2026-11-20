@@ -127,6 +127,11 @@ select:disabled { opacity: 0.45; }
 .plot-legend sub { font-size: 0.8em; line-height: 0; }
 .plot-legend .key i:first-child { margin-left: 0; }
 .plot-title { margin: 2px 4px 0; font: 600 0.9rem/1.3 "DejaVu Sans", Verdana, sans-serif; text-align: center; color: var(--plot-ink); }
+/* the impact chart of a benchmark: one panel per group of observables with the same sources, each with its legend */
+.impact-panel + .impact-panel { margin-top: 6px; border-top: 1px solid var(--plot-axis-faint, rgba(127,127,127,0.25)); padding-top: 6px; }
+.impact-panel .plot { width: 100%; }
+h4.plot-title { font-size: 0.82rem; font-weight: 600; }
+.impact-panels > .hint { margin: 4px 8px 8px; }
 
 .headline { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: grid; gap: 10px; }
 .headline .what { color: var(--text-secondary); font-size: 0.88rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }

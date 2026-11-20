@@ -105,36 +105,72 @@ const seriesColour = (section) => getComputedStyle(document.documentElement).get
 
 // ------------------------------------------------------------------ impact of one step
 
+// the detection channel of each reference observable, which names its panel
+const CHANNEL_OF = { water_es_b8: "ES on electrons", scint_es_be7: "ES on electrons", water_es_adn: "ES on electrons",
+                     argon_cc_b8: "CC on ⁴⁰Ar", argon_cc_hep: "CC on ⁴⁰Ar", argon_nc_b8: "NC on ⁴⁰Ar" };
+
+// the flux uncertainty of each observable is that of its own components (B2: "8B flux (solar model)", "hep flux ...",
+// "solar fluxes" for several): one bar and one legend entry, the observable's own source in its hover label
+const FLUX_ROW = /^(solar fluxes|\S+ flux \(solar model\))$/;
+const FLUX_LABEL = "solar fluxes of the observable's components";
+
 function impactPlot(node, section) {
-  // per observable: one bar per source of this step, the oscillation parameters in grey for scale
-  const c = colours(), obs = page.sections.observables, ids = Object.keys(obs).reverse();
+  // per observable: one bar per source of this step that moves it, the oscillation parameters in grey for scale.
+  // One panel if every observable the step moves has the same sources (B1, B3), else one per detection channel
+  // (B2's fluxes, B4's cross sections), each with a legend of its own sources; the panels share the log axis and the
+  // colours. Observables the step does not move are listed under the panels.
+  const c = colours(), obs = page.sections.observables, ids = Object.keys(obs);
   const rank = { sampled: 0, "model range": 1, approximation: 2, legacy: 3 }; // inputs first, then the approximations
-  const rows = Object.values(obs).flatMap((o) => o.rows.filter((r) => r.section === section));
-  const sources = [...new Set(rows.map((r) => r.source))]
-    .sort((a, b) => rank[rows.find((r) => r.source === a).kind] - rank[rows.find((r) => r.source === b).kind]); // stable
-  const colourOf = palette();
-  const trace = (source, colour, opacity = 1) => {
-    const x = [], text = [];
-    ids.forEach((id) => {
-      const o = obs[id], r = o.rows.find((row) => row.source === source);
-      const v = r ? size(r, o.central) : null;
-      x.push(v === null ? null : Math.max(Math.abs(v), FLOOR)); text.push(v === null ? "" : pct(v));
-    });
-    return { type: "bar", orientation: "h", name: sup(source), y: ids.map((id) => SHORT[id]), x, text, textposition: "outside",
-             cliponaxis: false, textfont: { size: 10, color: c.secondary }, marker: { color: alpha(colour, opacity) },
-             hovertemplate: `%{y}: %{text}<extra>${sup(source)}</extra>` };
-  };
-  // B1's own sampled spread, in grey for scale on the other steps' pages
-  const scale = section === "B1" ? [] : [trace("oscillation parameters", c.muted, 0.6)];
-  const traces = [...scale, ...sources.map((s, i) => trace(s, section === "B1" ? seriesColour("B1") : colourOf[i % colourOf.length]))];
-  const kindOf = (s) => Object.values(obs).flatMap((o) => o.rows).find((r) => r.source === s).kind;
-  htmlLegend(node, traces.map((t, i) => ({ label: i >= scale.length ? `${t.name} <span class="kind">(${kindOf(sources[i - scale.length])})</span>` : "B1 oscillation parameters (sampled, for scale)",
-                                           colour: t.marker.color, fill: true })));
-  node.style.height = `${Math.max(380, ids.length * (traces.length * 14 + 18) + 80)}px`;
-  return Plotly.react(node, [...traces].reverse(), layout(c, node, `Effect of ${SECTIONS[section]} on the reference observables`,
-    "Relative to the central value (%), log scale", "",
-    { showlegend: false, barmode: "group", bargap: 0.25, margin: { l: 20, r: 70, t: 24, b: 48 },
-      xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(200)], exponentformat: "power" } }), CONFIG);
+  const SCALE = "oscillation parameters";
+  const own = Object.fromEntries(ids.map((id) => [id, obs[id].rows
+    .filter((r) => r.section === section && size(r, obs[id].central) !== 0)
+    .map((r) => ({ ...r, label: FLUX_ROW.test(r.source) ? FLUX_LABEL : r.source }))]));
+  const all = Object.values(own).flat(), kindOf = (label) => all.find((r) => r.label === label).kind;
+  const labels = [...new Set(all.map((r) => r.label))].sort((a, b) => rank[kindOf(a)] - rank[kindOf(b)]); // stable
+  const colourOf = Object.fromEntries(labels.map((l, i) => [l, section === "B1" ? seriesColour("B1") : palette()[i % palette().length]]));
+  const scaleOf = (id) => (section === "B1" ? 0 : Math.abs(size(obs[id].rows.find((r) => r.source === SCALE) || { kind: "sampled", sigma: 0 }, obs[id].central)));
+  const ownLabels = (id) => labels.filter((l) => own[id].some((r) => r.label === l));
+  const moved = ids.filter((id) => own[id].length), still = ids.filter((id) => !own[id].length);
+  const same = new Set(moved.map((id) => ownLabels(id).join("|"))).size <= 1;
+  const panels = [];
+  moved.forEach((id) => {
+    const key = same ? "all" : CHANNEL_OF[id] || id, panel = panels.find((p) => p.key === key);
+    if (panel) panel.ids.push(id); else panels.push({ key, ids: [id] });
+  });
+  panels.forEach((p) => { p.labels = labels.filter((l) => p.ids.some((id) => ownLabels(id).includes(l))); });
+  node.previousElementSibling.innerHTML = `Effect of ${SECTIONS[section]} on the reference observables`;
+  node.classList.remove("plot");
+  node.classList.add("impact-panels");
+  node.innerHTML = panels.map(() => `<div class="impact-panel"><h4 class="plot-title"></h4><div class="plot"></div></div>`).join("")
+    + (still.length ? `<p class="hint">Not moved by ${SECTIONS[section]}: ${still.map((id) => SHORT[id]).join(", ")}${
+      still.includes("argon_nc_b8") && section === "B1" ? " (NC is flavour-blind)" : ""}.</p>` : "");
+  const plots = [...node.querySelectorAll(".impact-panel .plot")];
+  return Promise.all(panels.map((panel, k) => {
+    const plot = plots[k], rows = panel.ids.slice().reverse(); // Plotly draws categories bottom up
+    const trace = (label, colour, opacity = 1) => {
+      const x = [], text = [], source = [];
+      rows.forEach((id) => {
+        const o = obs[id], r = label === SCALE ? o.rows.find((row) => row.source === SCALE) : own[id].find((row) => row.label === label);
+        const v = r ? size(r, o.central) : null;
+        x.push(v === null ? null : Math.max(Math.abs(v), FLOOR)); text.push(v === null ? "" : pct(v)); source.push(sup(r?.source ?? label));
+      });
+      return { type: "bar", orientation: "h", name: sup(label), y: rows.map((id) => SHORT[id]), x, text, customdata: source,
+               textposition: "outside", cliponaxis: false, textfont: { size: 10, color: c.secondary }, marker: { color: alpha(colour, opacity) },
+               hovertemplate: "%{y}: %{text}<extra>%{customdata}</extra>" };
+    };
+    // the oscillation parameters' own spread, in grey for scale, where they move the observables (not NC)
+    const scale = panel.ids.some((id) => scaleOf(id) > 0) ? [trace(SCALE, c.muted, 0.6)] : [];
+    const traces = [...scale, ...panel.labels.map((l) => trace(l, colourOf[l]))];
+    htmlLegend(plot, traces.map((t, i) => ({ label: i >= scale.length ? `${t.name} <span class="kind">(${kindOf(panel.labels[i - scale.length])})</span>` : "B1 oscillation parameters (sampled, for scale)",
+                                             colour: t.marker.color, fill: true })));
+    plot.style.height = `${Math.max(150, panel.ids.length * (traces.length * 14 + 18) + 80)}px`;
+    const channels = [...new Set(panel.ids.map((id) => CHANNEL_OF[id] || id))];
+    return Plotly.react(plot, [...traces].reverse(), layout(c, plot, channels.join(" · "),
+      k === panels.length - 1 ? "Relative to the central value (%), log scale" : "", "",
+      { showlegend: false, barmode: "group", bargap: 0.25, margin: { l: 150, r: 70, t: 8, b: k === panels.length - 1 ? 48 : 28 },
+        xaxis: { type: "log", range: [Math.log10(FLOOR), Math.log10(200)], exponentformat: "power" },
+        yaxis: { automargin: false } }), CONFIG); // a fixed left margin keeps the panels' axes aligned
+  }));
 }
 
 // ------------------------------------------------------------------ B1
