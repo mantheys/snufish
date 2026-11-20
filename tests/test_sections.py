@@ -128,5 +128,5 @@ def test_nc_observable_carries_the_figure_reading_in_b4():
     assert 0.3 < 1 - reading["low"] / o["central"] < 0.6 and 0.5 < reading["high"] / o["central"] - 1 < 0.8
     assert rows[NC_STRENGTH]["sigma"] < 0.05 * o["central"]   # the measured levels are a small part of the rate
     assert rows[NC_LEGACY]["kind"] == "legacy" and rows[NC_LEGACY]["shift"] < 0  # SNOwGLoBES: about a quarter
-    assert rows["oscillation parameters"]["sigma"] == 0  # flavour-blind
+    assert rows["oscillation parameters"]["sigma"] < 1e-12 * o["central"]  # flavour-blind (zero up to rounding)
     assert not any(r["section"] == "B2" and r["kind"] == "approximation" for r in o["rows"])
