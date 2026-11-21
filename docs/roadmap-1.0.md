@@ -38,7 +38,7 @@ contribute them are declared out of scope for 1.0, with the way back noted.
 | 1a | B3: `prem_crust1` per site as variants | 1.0 | L (CPU) | B5 night gains `prem_crust1` rows; existing rows unchanged |
 | 1a | B3: `prem_crust1_3d` (trajectory grids) | out | — | — |
 | 1a | B3: energy grid down to 0.1 MeV | out (bounded and documented) | S | — |
-| 1a | B4: σ(E; T > T<sub>min</sub>) at the detectors' ES thresholds | 1.0 | S | none (new quantities) |
+| 1a | B4: σ(E; T > T<sub>min</sub>) at the detectors' ES thresholds | 1.0 (done: B4 0.2.0) | S | none (new quantities) |
 | 1a | B2: spectral-shape variants (Ortiz ⁸B, ⁷Be line widths) | out | — | — |
 | 1a | B2 × B5: B23 flux correlations in B5 uncertainties | 1.0 (product only) | S | none; error of `all` rows in `B5_Totals` |
 | 1a | B2: non-adiabatic solver | out (definition frozen, bound stated) | — | — |
@@ -169,7 +169,13 @@ there is small: the PR computes the reference's night excess of pp and ⁷Be
 (0.1 to 1 MeV) at the five sites and states the bound in `benchmarks.md`
 and `status.md` (B5 sets the night excess to zero below 1 MeV).
 
-#### B4: ES above the detectors' recoil thresholds (1.0, S)
+#### B4: ES above the detectors' recoil thresholds (1.0, S; done in B4 0.2.0)
+
+Done as planned: 15 optional quantities, the reference gives them at tree level and with BKS, the variant check
+is relaxed, the ordering check runs per threshold (skipping energies below threshold, where both flavours are
+zero), and `b45` has the panel. The engine's BKS above a threshold (tree level times the interpolated ratio
+table) agrees with the reference's direct integration to 2 × 10⁻⁵ wherever T<sub>max</sub> > 1.2 T<sub>min</sub>.
+No rate changes.
 
 The engine already integrates dσ/dT above T<sub>min</sub>; B4 should carry the number.
 New quantities `es_<flavour>_T<threshold>` (σ(E; T > T<sub>min</sub>), cm² per
@@ -377,7 +383,7 @@ and you say so.
    (and SNO+ if sourced) (done: JUNO, `flavour`, ES in neutrino energy;
    SNO+ out, named responses deferred).
 5. SNOwGLoBES part 2 (done: B5 0.7.0, own response, no rate changes).
-6. B4 thresholded ES.
+6. B4 thresholded ES (done: B4 0.2.0, no rate changes).
 7. B3 `prem_crust1` variants and the finer reference step; B5 night on
    `prem_crust1`. (Reruns: hours, nuSQuIDS the longest.)
 8. B5 flux errors with the B23 correlations; the B3 low-energy bound.

@@ -144,10 +144,10 @@ def _check_grid(df, spec, variant, grid):
         if len(got) != len(expected) or not np.allclose(got, expected, atol=1e-9):
             problems.append(f"{where} {name} grid differs from the spec ({len(got)} vs {len(expected)} points)")
     quantities = set(df["quantity"])
-    expected_quantities = spec.variants[variant].get("quantities")
-    if expected_quantities is not None:
-        if quantities != set(expected_quantities):
-            problems.append(f"{where} quantities {sorted(quantities)}, expected {expected_quantities}")
+    allowed = spec.variants[variant].get("quantities")
+    if allowed is not None:  # the quantities the variant may give
+        if not quantities <= set(allowed):
+            problems.append(f"{where} quantities {sorted(quantities - set(allowed))} are not among {allowed}")
     elif spec.data.get("all_quantities_required", True):
         if quantities != set(spec.quantities):
             problems.append(f"{where} quantities {sorted(quantities)}, expected {spec.quantities}")
@@ -186,15 +186,19 @@ def _check_b2(df, spec):
 
 
 def _check_b4(df, spec):
-    # nu_e scatters on electrons through CC and NC: always above nu_mu, nu_tau
+    # nu_e scatters on electrons through CC and NC: always above nu_mu, nu_tau, at every recoil threshold
+    # (es_<flavour> and es_<flavour>_T<threshold>) where it is not zero (below threshold both are)
     wide = df[df.quantity.str.startswith("es_")].pivot_table(
         index=["grid", "variant", "energy"], columns="quantity", values="value")
     problems = []
-    for other in ("es_numu", "es_nutau"):
-        if {"es_nue", other} <= set(wide.columns):
-            bad = (wide["es_nue"] <= wide[other]) & wide["es_nue"].notna()
-            if bad.any():
-                problems.append(f"es_nue <= {other} at {bad.sum()} energies")
+    suffixes = sorted({c[len("es_nue"):] for c in wide.columns if c.startswith("es_nue")})
+    for suffix in suffixes:
+        nue = wide[f"es_nue{suffix}"]
+        for other in (f"es_numu{suffix}", f"es_nutau{suffix}"):
+            if other in wide.columns:
+                bad = (nue <= wide[other]) & nue.notna() & ~((nue == 0) & (wide[other] == 0))
+                if bad.any():
+                    problems.append(f"es_nue{suffix} <= {other} at {bad.sum()} energies")
     return problems
 
 

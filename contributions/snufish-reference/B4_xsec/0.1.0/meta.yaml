@@ -2,13 +2,14 @@ tool: snufish-reference
 tool_version: 0.1.0
 tool_commit: null
 benchmark: B4_xsec
-benchmark_version: 0.1.0
+benchmark_version: 0.2.0
 contributor: SNUfish maintainers
-date: '2026-10-30'
+date: '2026-11-21'
 command: snufish reference B4_xsec
 settings:
-  method: 'nu-e elastic scattering, all recoil energies: tree-level SM (default) and
-    with the BKS 1995 radiative corrections (es_bks)'
+  method: 'nu-e elastic scattering, all recoil energies and above each ES threshold
+    of the spec: tree-level SM (default) and with the BKS 1995 radiative corrections
+    (es_bks)'
   variants:
   - default
   - es_bks

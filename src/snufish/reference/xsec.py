@@ -42,15 +42,43 @@ def es_above(energy_mev, flavour, constants, t_min_mev):
     return 2 * G**2 * me / np.pi * (primitive(t_max) - primitive(lo)) * hbarc2
 
 
+def thresholds(spec):
+    """{quantity: (flavour, T_min in MeV)} for the spec's thresholded ES quantities, es_<flavour>_T<T_min>."""
+    out = {}
+    for name in spec.quantities:
+        head, _, t = name.partition("_T")
+        if name.startswith("es_") and t:
+            out[name] = (head[len("es_"):], float(t))
+    return out
+
+
+def bks_threshold(energy_mev, flavour, constants, t_min_mev):
+    """sigma(E; T > t_min) with the BKS 1995 radiative corrections, cm^2 per electron (zero where
+    T_max <= t_min): the end-point integration of `radiative.es_above` at u = t_min / T_max, per energy."""
+    from .radiative import es_above as bks_above
+
+    E = np.atleast_1d(np.asarray(energy_mev, dtype=float))
+    me = constants["m_e_MeV"]
+    u = t_min_mev / (2 * E**2 / (me + 2 * E))
+    return np.array([bks_above([e], flavour, constants, [f])[0, 0] if f < 1.0 else 0.0 for e, f in zip(E, u)])
+
+
 def solve_b4(spec, grid="map"):
-    """Tree level as `default`; with radiative corrections (BKS 1995, all recoil energies) as `es_bks`."""
+    """Tree level as `default`; with radiative corrections (BKS 1995) as `es_bks`: all recoil energies
+    (es_<flavour>) and above each recoil threshold of the spec (es_<flavour>_T<threshold>)."""
     from .radiative import es_above as bks_above
 
     energies = spec.axis("energy", grid)
+    c = spec["constants"]
     records = []
     for flavour in ("nue", "numu", "nutau"):
-        for e, sigma in zip(energies, es_total(energies, flavour, spec["constants"])):
+        for e, sigma in zip(energies, es_total(energies, flavour, c)):
             records.append((grid, "default", f"es_{flavour}", e, sigma))
-        for e, sigma in zip(energies, bks_above(energies, flavour, spec["constants"], [0.0])[:, 0]):
+        for e, sigma in zip(energies, bks_above(energies, flavour, c, [0.0])[:, 0]):
             records.append((grid, "es_bks", f"es_{flavour}", e, sigma))
+    for name, (flavour, t_min) in thresholds(spec).items():
+        for e, sigma in zip(energies, es_above(energies, flavour, c, t_min)):
+            records.append((grid, "default", name, e, sigma))
+        for e, sigma in zip(energies, bks_threshold(energies, flavour, c, t_min)):
+            records.append((grid, "es_bks", name, e, sigma))
     return records

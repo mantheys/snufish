@@ -17,7 +17,7 @@ is set by [compatibility.md](compatibility.md).
 | B1 Oscillation parameters | [B1_osc](#b1-oscillation-parameters-b1_osc) | 0.1.0 | the parameters of every propagation | (registry, no contributions) |
 | B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth, peanuts |
 | B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth, peanuts (`prem_prob3`), nusquids |
-| B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
+| B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.2.0 | detection cross sections | snufish-reference, snowglobes, marley |
 | B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.7.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water; full chain, parts 1 and 2 with its own response), marley (argon; full chain, part 1); SNUfish folds every B4 model and every published response |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
@@ -189,20 +189,22 @@ a fixed energy grid. B5 folds every contributed model into rates.
 | `cc_nue_o16` | νₑ + ¹⁶O → e⁻ + ¹⁶F | ¹⁶O nucleus |
 | `cc_nue_c13` | νₑ + ¹³C → e⁻ + ¹³N | ¹³C nucleus |
 | `cc_nue_d` | νₑ + d → e⁻ + p + p | deuteron |
+| `es_<flavour>_T<T_min>` | ES with electron kinetic energy T > T<sub>min</sub>, for T<sub>min</sub> = 0.05 (Borexino), 2.0 (JUNO), 3.49 (Super-K IV), 5.0 (DUNE), 5.5 MeV (SNO salt), the thresholds of the B5 responses; zero where T<sub>max</sub>(E) ≤ T<sub>min</sub> | electron |
 
 | Setting | Value |
 |---|---|
 | Grid `map` | E = 0.02–20 MeV, step 0.02 (1000 points; fine enough for pp, endpoint 0.42 MeV) |
 | Constants | m<sub>e</sub> = 0.51099895 MeV; sin²θ<sub>W</sub> = 0.23857 (PDG 2024, MS-bar at Q² → 0, for the tree-level reference) |
 | Columns | `grid, variant, quantity, energy, value` (cm² per target; NaN outside a tool's table) |
-| Checks | values in [0, 10⁻³⁰], NaN allowed, never negative; σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e) |
+| Checks | values in [0, 10⁻³⁰], NaN allowed, never negative; σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e), at every threshold where they are not zero |
 
-A tool contributes only the channels it has. Variants:
+A tool contributes only the channels it has; a variant's channels are the ones it may give. Version 0.2.0
+added the thresholded ES quantities (optional; 0.1.0 contributions stay valid). Variants:
 
 | Variant | Channel | Model |
 |---|---|---|
 | `default` (required) | all | the tool's own choice per channel |
-| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν<sub>μ,τ</sub> against its tree level) |
+| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies or above a threshold (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν<sub>μ,τ</sub> against its tree level; at 10 MeV −4.8 % and +4.9 % for all recoils, −5.3 % and +6.0 % above 5 MeV) |
 | `ar40_klmv` | ⁴⁰Ar | KLMV (Kolbe, Langanke, Martínez-Pinedo, Vogel), SNOwGLoBES table |
 | `ar40_marley` | ⁴⁰Ar | MARLEY, allowed approximation, B(GT) from ⁴⁰Ar(p,n) (Bhattacharya 2009); SNOwGLoBES table, zero below 5 MeV |
 | `ar40_marley1` | ⁴⁰Ar | MARLEY, B(GT) from ⁴⁰Ti β decay; SNOwGLoBES table, zero below 5 MeV |
