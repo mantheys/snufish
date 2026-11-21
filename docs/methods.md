@@ -260,7 +260,8 @@ detector for argon; numbers and sources in
 turns it into setup fields, and the calculator's presets take the same
 values (`tests/test_b5_response.py`). `build.combine_observed` folds the
 part 1 daytime rates (B2 reference F_i averaged over production, NuFIT 6.0,
-the cross sections the spec names) through it with `engine.observed_rates`
+the cross sections the spec names; for a contribution, those it states in
+`settings.cross_sections`, mapped to the engine's models by `build.xsec_models`) through it with `engine.observed_rates`
 on the spec's observed grid: 0–20 MeV in 0.01 MeV bins, true and observed
 bins alike, so every preset threshold is a bin edge. The threshold is not
 part of the spectrum; the rate above a threshold is the spectrum summed

@@ -73,7 +73,7 @@ def test_snowglobes_chain_contribution():
         pytest.skip("SNOwGLoBES B5 contribution not generated")
     contribution = load_contribution(path)
     assert validate(contribution, load_spec("B5_rates", root=ROOT)) == []
-    data = contribution.data.set_index(["variant", "quantity", "threshold"]).value
+    data = contribution.data[contribution.data.grid == "totals"].set_index(["variant", "quantity", "threshold"]).value
     # 8B CC on argon: within the 0.3% target-count convention of SNOwGLoBES (N_A/40 per gram)
     assert data[("b16_gs98", "argon/cc_nue_ar40/B8", 0.0)] == pytest.approx(1566, rel=0.01)
     # pp is below SNOwGLoBES's first sampling point (0.5 MeV)

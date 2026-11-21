@@ -272,8 +272,36 @@ def observed(solar_model="b16_gs98"):
             totals[r.Component] = dict(interactions=r.Interactions, true_above=r.TrueAboveThreshold,
                                        above=r.AboveThreshold)
         out.append(dict(detector=detector, channel=channel, preset=first.Preset, threshold=first.Threshold,
-                        source=responses[detector]["source"], edges=edges.tolist(), spectra=spectra, totals=totals))
+                        source=responses[detector]["source"], edges=edges.tolist(), spectra=spectra, totals=totals,
+                        tools=_observed_tools(solar_model, detector, channel, edges)))
     return dict(solar_model=solar_model, cases=out)
+
+
+def _observed_tools(solar_model, detector, channel, edges):
+    """Full-chain tools' observed rates of one case (B5_ObservedChain): per tool, the spectrum of each component in
+    the bins of ``edges`` (from its rate above each grid value), and its rate and SNUfish's folding through the same
+    response and cross sections above the preset threshold."""
+    path = build_dir() / "B5_ObservedChain.parquet"
+    if not path.exists():
+        return []
+    chain = pd.read_parquet(path)
+    chain = chain[(chain.SolarModel == solar_model) & (chain.Detector == detector) & (chain.Channel == channel)
+                  & (chain.Variant == solar_model)]
+    out = []
+    for (tool, version), group in chain.groupby(["Tool", "Version"], sort=False):
+        spectra, totals = {}, {}
+        for r in group.itertuples():
+            above = np.interp(edges, np.asarray(r.Threshold), np.asarray(r.Rate))
+            content = above[:-1] - above[1:]
+            if content.sum() <= 0:
+                continue
+            spectra[r.Component] = [float(f"{v:.4g}") for v in content / np.diff(edges)]
+            totals[r.Component] = dict(rate=r.RateAbove, folded=r.FoldedAbove)
+        first = group.iloc[0]
+        out.append(dict(tool=tool, name=_tool_name(tool), version=version, response=first.Response,
+                        cross_section=first.CrossSection, threshold=first.PresetThreshold, spectra=spectra,
+                        totals=totals))
+    return out
 
 
 def _contribution(tool, benchmark):

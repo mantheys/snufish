@@ -160,6 +160,39 @@ table itself is too coarse for its spectrum); with a 0.02 MeV table too, all wit
 writing is right at the default sampling unless the line's weight carries σ(E<sub>line</sub>)/σ(E<sub>j</sub>), which needs the cross
 section the tool is meant to supply. This is an emulation, not a SNOwGLoBES run with a finer `preamble.glb`.
 
+## SNOwGLoBES in observed energy
+
+B5 part 2 (B5 0.7.0) adds SNOwGLoBES's smeared output (`_events_smeared_unweighted.dat`, from the same runs as part
+1) with its own response.
+
+**The efficiency is not applied.** `supernova.pl` at 6fa928e builds the GLoBES file in two branches. Mode 1 (custom
+binning) sets `$chan_name_post` from the channel file and includes `effic/<config>/effic_<channel>_<config>.dat` as
+`@post_smearing_efficiencies`. Mode 0, the standard run and the wrapper's, never sets `$chan_name_post`, so it
+opens `effic/<config>/effic__<config>.dat`, which does not exist, and writes no efficiency. The smeared output is
+the unsmeared rate times the smearing matrix and nothing else: for ⁸B, every channel of both configurations agrees to 4 × 10⁻⁶ of the peak bin (the outputs' six digits),
+including below 5 MeV, where `effic_nue_e_ar40kt.dat` is zero. The efficiency files would remove everything below
+4.98 MeV in argon and in water leave a few % below 5 MeV, 13 % at 5 MeV and 95 % from 8 MeV. The contribution states what
+SNOwGLoBES produced: its matrices, and an efficiency of 1.
+
+**The matrices.** GLoBES lists a smearing matrix by detected bin, each row giving the sampling points that feed
+it. Transposed, every row sums to 1 within 3 × 10⁻⁴, which led B5 0.7.0 to accept rows up to 1 + 10⁻³. The detected
+energy is E<sub>ν</sub> − Q for CC on ⁴⁰Ar (the mean sits 0.2 MeV lower) and the recoil kinetic energy for ES. The ES
+matrices of ν<sub>μ</sub> and ν<sub>τ</sub> are identical, as the spec requires.
+
+**Agreement.** SNUfish folds the same flux through the same matrices (each neutrino energy takes the row of the
+sampling bin holding it) with SNOwGLoBES's cross sections. ⁸B agrees within 0.3 % (argon CC), 0.6 % (argon ES) and
+0.4 % (water ES) at every threshold up to 12 MeV. GLoBES's midpoint sampling (see above), computed per sampling
+bin and passed through the matrices, reproduces the contribution to 10⁻⁴ for water ES (⁸B, hep, ¹⁵O;
+`tests/test_snowglobes_part2.py`). What remains is therefore the sampling, plus the argon target counts.
+
+**Against the published responses.** SNOwGLoBES's generic configurations are not the experiments':
+
+- Water ES (⁸B above 3.49 MeV) is 2.5 times Super-K IV's.
+- With all components it is 97 times: the ⁷Be and pep lines are smeared above threshold by wc100kt30prct's
+  matrices, and no efficiency cuts them.
+- Argon CC above 5 MeV is 0.62 of DUNE's. Most of that is the cross section (SNOwGLoBES's default table against
+  MARLEY 2), not the response.
+
 ## ⁴⁰Ar: independent calculations
 
 Folded over the ⁸B spectrum (Winter et al.), no threshold, 10⁻⁴² cm²:
@@ -365,6 +398,9 @@ Mathematica or a port of the notebook.
 
 ## Found by these checks
 
+- **SNOwGLoBES's efficiencies.** In its standard run mode (0), `supernova.pl` at 6fa928e includes no
+  post-smearing efficiency: the file name it builds lacks the channel (see
+  [SNOwGLoBES in observed energy](#snowglobes-in-observed-energy)). Smeared outputs from that mode are smearing only.
 - **θ₁₃ in the app tables.** The interpolation tables are computed at the default θ₁₃ but were fed every θ₁₃ the
   budget samples: at θ₁₃ = 0 the tables gave A<sub>DN</sub> = −1.97 % against the exact −3.41 %. They now follow θ₁₃
   as ν₃ decouples (P<sub>ee</sub> = c₁₃⁴ P<sub>ee</sub><sup>(2ν)</sup> + s₁₃⁴), within 1.6 % of the exact A<sub>DN</sub> over sin²θ₁₃ = 0.015–0.03.

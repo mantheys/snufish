@@ -2,9 +2,9 @@ tool: snowglobes
 tool_version: git-6fa928e
 tool_commit: 6fa928e
 benchmark: B5_rates
-benchmark_version: 0.5.0
+benchmark_version: 0.7.0
 contributor: SNUfish maintainers (wrapper)
-date: '2026-11-20'
+date: '2026-11-21'
 command: snufish build && python contributions/snowglobes/scripts/run_b5.py --snowglobes
   <checkout>
 settings:
@@ -19,6 +19,23 @@ settings:
     x N_A protons per gram (ES x5, 16O x0.5)'
   native: fluxes/solar_bs05op_mixed.dat (BS05-OP, survival probabilities from a figure)
   oscillations: B2 snufish-reference, daytime, production-averaged per component
+  response: own
+  observed: smeared outputs (_events_smeared_unweighted.dat) x the target factor,
+    per kton-year; the rate above each grid value up to 20 MeV, each 0.4975 MeV detected
+    bin spread uniformly (the cumulative interpolated linearly within a bin)
+  response_file: 'response.parquet: smear/<config>/smear_<channel>_<config>.dat in
+    neutrino energy (ES per flavour), bins below 20 MeV; efficiency 1 (supernova.pl
+    mode 0 includes no post-smearing efficiency at 6fa928e, see run_b5.py)'
+  cross_sections:
+    es:
+      tool: snowglobes
+      variant: default
+    cc_nue_ar40:
+      tool: snowglobes
+      variant: default
+    cc_nue_o16:
+      tool: snowglobes
+      variant: default
 license: CC-BY-4.0
 notes: Weighted output files (_events.dat) were written only for the last channel
   of each channel file in our runs; the wrapper applies the target factors itself

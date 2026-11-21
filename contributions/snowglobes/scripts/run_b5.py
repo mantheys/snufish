@@ -37,18 +37,30 @@ on electrons: 0.86 MeV -> 1.55, 1.0 -> 0, 1.2 -> 2.0, 1.44 -> 0.48,
 the sampling bin that holds it, which gives its flux to that bin's sample
 (sigma taken at the bin centre); `--naive_lines` writes the single point.
 Nothing below 0.5 MeV is ever sampled (pp, the 384 keV 7Be line).
+
+Part 2 (grid observed, settings.response "own"): the same runs' smeared outputs (_events_smeared_unweighted.dat,
+0.4975 MeV bins of detected energy from 0.5 MeV) give the rate above each value of the observed grid, the
+cumulative interpolated linearly within a bin (each bin spread uniformly, as SNUfish spreads an imported bin),
+counted up to 20 MeV, the top of the grid. response.parquet holds what produced them: each channel's smearing
+matrix (smear/<config>/smear_<channel>_<config>.dat; GLoBES lists it by detected bin, each row the sampling
+points feeding that bin), in neutrino energy, per flavour for ES, and an efficiency of 1. supernova.pl at 6fa928e
+reads the post-smearing efficiencies only in its custom-binning mode (run mode 1 sets $chan_name_post, mode 0 does
+not): in mode 0, the one run here, it looks for effic/<config>/effic__<config>.dat, finds nothing, and includes no
+efficiency. The smeared output is the unsmeared rate times the matrix, to 4e-6 of the peak bin (six printed digits);
+GLoBES's sampling through these matrices reproduces the observed rates (tests/test_snowglobes_part2.py).
 """
 
 import argparse
 import datetime
 import os
+import re
 import subprocess
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from snufish.contribution import write_contribution
+from snufish.contribution import RESPONSE_COLUMNS, write_contribution
 from snufish.fluxes import components
 from snufish.paths import build_dir, contributions_dir
 from snufish.spec import load_spec, pmns
@@ -60,6 +72,62 @@ RUNS = {  # detector -> (channel file, configuration, {SNUfish channel: [SNOwGLo
 GRID_GEV = np.round(np.arange(0.0, 0.1 + 1e-9, 0.0002), 6)
 # glb/preamble.glb: 200 sampling points from 0.5 to 100 MeV; flux x sigma is evaluated once per bin.
 SAMPLING_MIN, SAMPLING_WIDTH = 0.5, (100.0 - 0.5) / 200  # MeV
+
+
+# Part 2: the response of each SNUfish channel, from these SNOwGLoBES channels' smearing matrices (ES: per flavour).
+DETECTED_EDGES = SAMPLING_MIN + np.arange(201) * SAMPLING_WIDTH   # $bins = 200 from $emin 0.5 to $emax 100 MeV
+OBSERVED_TOP = 20.0   # MeV: the top of the B5 observed grid; the response stops at the bin holding it
+
+
+def glb_matrix(path):
+    """A GLoBES smearing matrix as [sampling (true) bin, detected bin]. The file gives one row per detected bin i,
+    ``{k_low, k_high, P(i | k_low), ..., P(i | k_high)}`` over the sampling points k."""
+    rows = []
+    for m in re.finditer(r"\{(\d+),(\d+),([^}]*)\}", Path(path).read_text()):
+        low, high = int(m.group(1)), int(m.group(2))
+        values = [float(v) for v in m.group(3).split(",") if v.strip()]
+        row = np.zeros(200)
+        row[low:high + 1] = values[:high - low + 1]
+        rows.append(row)
+    return np.array(rows).T
+
+
+def kept_bins():
+    """Number of the 200 bins kept in response.parquet: those starting below the top of the observed grid."""
+    return int(np.searchsorted(DETECTED_EDGES, OBSERVED_TOP, side="left"))
+
+
+def response_rows(snowglobes, detector):
+    """response.parquet rows of one detector: each SNUfish channel's smearing matrix in neutrino energy (ES: one
+    per flavour, from nue_e, numu_e, nutau_e) and an efficiency of 1, on the bins below the top of the grid."""
+    _, config, groups = RUNS[detector]
+    n, edges = kept_bins(), DETECTED_EDGES
+    rows = []
+    for channel, sg_channels in groups.items():
+        for sg in sg_channels:
+            flavour = sg.split("_")[0] if channel == "es" else ""
+            matrix = glb_matrix(snowglobes / "smear" / config / f"smear_{sg}_{config}.dat")[:n, :n]
+            for i, j in zip(*np.nonzero(matrix)):
+                rows.append((detector, channel, "smearing", "neutrino", edges[i], edges[i + 1], edges[j], edges[j + 1],
+                             matrix[i, j], flavour))
+        rows += [(detector, channel, "efficiency", "observed", np.nan, np.nan, edges[j], edges[j + 1], 1.0, "")
+                 for j in range(n)]
+    return rows
+
+
+def above_grid(content, thresholds, top=OBSERVED_TOP):
+    """Rate above each threshold, up to ``top``, from the content of the detected bins: each bin spread uniformly
+    (the cumulative interpolated linearly within a bin)."""
+    low, high = DETECTED_EDGES[:-1], DETECTED_EDGES[1:]
+    t = np.asarray(thresholds, float)[:, None]
+    overlap = np.clip(np.minimum(high, top)[None, :] - np.maximum(low[None, :], t), 0.0, None)
+    return overlap / (high - low) @ np.asarray(content, float)
+
+
+def read_output(path):
+    """[bin, (energy GeV, rate)] of a SNOwGLoBES output file."""
+    rows = [line.split() for line in Path(path).read_text().splitlines()]
+    return np.array([[float(a), float(b)] for a, b, *_ in (r for r in rows if len(r) >= 2 and r[0][0].isdigit())])
 
 
 def channel_factors(snowglobes, channel_file):
@@ -92,13 +160,18 @@ def sampling_centres():
     return SAMPLING_MIN + (np.arange(200) + 0.5) * SAMPLING_WIDTH
 
 
-def globes_rate(flux_column, sigma):
-    """GLoBES's rate integral on one flux-file column (per 0.2 MeV, on GRID_GEV): sum over the sampling bins of the
-    flux interpolated linearly at the bin midpoint, per MeV, times ``sigma(E)`` (cm^2 per target), times the bin
-    width. Per target and second; zero outside the flux table, as glb_get_flux."""
+def globes_bins(flux_column, sigma):
+    """GLoBES's rate in each sampling bin from one flux-file column (per 0.2 MeV, on GRID_GEV): the flux interpolated
+    linearly at the bin midpoint, per MeV, times ``sigma(E)`` (cm^2 per target), times the bin width. Per target and
+    second; zero outside the flux table, as glb_get_flux."""
     energy, centres = GRID_GEV * 1e3, sampling_centres()
     flux = np.where((centres > energy[0]) & (centres <= energy[-1]), np.interp(centres, energy, flux_column), 0.0)
-    return float(np.sum(flux / 0.2 * sigma(centres)) * SAMPLING_WIDTH)
+    return flux / 0.2 * sigma(centres) * SAMPLING_WIDTH
+
+
+def globes_rate(flux_column, sigma):
+    """GLoBES's rate integral: the sum of ``globes_bins``."""
+    return float(np.sum(globes_bins(flux_column, sigma)))
 
 
 def component_flux(spec, model, component, oscillation, U2, naive_lines=False):
@@ -139,19 +212,19 @@ def run(snowglobes, flux_name, detector, env):
                    check=True, capture_output=True)
     factors, mass = channel_factors(snowglobes, channel_file), config_mass(snowglobes, config)
     seconds = load_spec("B5_rates")["exposure"]["seconds_per_year"]
-    totals = {}
+    totals, smeared = {}, {}
     for channel, sg_channels in groups.items():
-        all_e, above5 = 0.0, 0.0
+        all_e, above5, detected = 0.0, 0.0, np.zeros(200)
         for sg in sg_channels:
-            path = snowglobes / "out" / f"{flux_name}_{sg}_{config}_events_unweighted.dat"
-            rows = [line.split() for line in path.read_text().splitlines()]
-            table = np.array([[float(a), float(b)] for a, b, *_ in (r for r in rows if len(r) >= 2
-                                                                   and r[0][0].isdigit())])
+            table = read_output(snowglobes / "out" / f"{flux_name}_{sg}_{config}_events_unweighted.dat")
             rate = table[:, 1] * factors[sg] * seconds / mass  # per kton-year
             all_e += rate.sum()
             above5 += rate[table[:, 0] * 1e3 > 5.0].sum()
+            out = read_output(snowglobes / "out" / f"{flux_name}_{sg}_{config}_events_smeared_unweighted.dat")
+            detected += out[:, 1] * factors[sg] * seconds / mass
         totals[channel] = (all_e, above5)
-    return totals
+        smeared[channel] = detected
+    return totals, smeared
 
 
 def main():
@@ -170,7 +243,8 @@ def main():
     averages = pd.read_parquet(build_dir() / "B2_Average.parquet")
     averages = averages[averages.Tool == "snufish-reference"]
 
-    records = []
+    records, observed = [], {}
+    thresholds = spec.axis("threshold", "observed")
     runs = [(model, model, args.naive_lines) for model in args.models]
     if "b16_gs98" in args.models and not args.naive_lines:
         runs.append(("b16_gs98_point_lines", "b16_gs98", True))
@@ -181,18 +255,30 @@ def main():
             name = f"snufish_{variant}_{component}"
             write_flux(sg / "fluxes" / f"{name}.dat", component_flux(spec, model, component, oscillation, U2, naive))
             for detector in RUNS:
-                for channel, (all_e, above5) in run(sg, name, detector, env).items():
+                totals, smeared = run(sg, name, detector, env)
+                for channel, (all_e, above5) in totals.items():
                     for threshold, value in ((0.0, all_e), (5.0, above5)):
                         records.append(("totals", variant, f"{detector}/{channel}/{component}", threshold, value))
                         key = (detector, channel, threshold)
                         sums[key] = sums.get(key, 0.0) + value
+                    observed[(variant, detector, channel, component)] = smeared[channel]
         for (detector, channel, threshold), value in sums.items():
             records.append(("totals", variant, f"{detector}/{channel}/all", threshold, value))
 
     for detector in RUNS:  # SNOwGLoBES's own solar flux
-        for channel, (all_e, above5) in run(sg, "solar_bs05op_mixed", detector, env).items():
+        totals, smeared = run(sg, "solar_bs05op_mixed", detector, env)
+        for channel, (all_e, above5) in totals.items():
             records += [("totals", "native", f"{detector}/{channel}/all", 0.0, all_e),
                         ("totals", "native", f"{detector}/{channel}/all", 5.0, above5)]
+            observed[("native", detector, channel, "all")] = smeared[channel]
+
+    for (variant, detector, channel) in sorted({k[:3] for k in observed}):  # part 2
+        parts = {k[3]: v for k, v in observed.items() if k[:3] == (variant, detector, channel)}
+        if "all" not in parts:
+            parts["all"] = sum(parts.values())
+        for component, content in parts.items():
+            records += [("observed", variant, f"{detector}/{channel}/{component}", t, v)
+                        for t, v in zip(thresholds, above_grid(content, thresholds))]
 
     commit = subprocess.run(["git", "-C", str(sg), "rev-parse", "--short", "HEAD"], capture_output=True, text=True,
                             check=True).stdout.strip()
@@ -214,12 +300,26 @@ def main():
                        "per gram (ES x5, 16O x0.5)",
             "native": "fluxes/solar_bs05op_mixed.dat (BS05-OP, survival probabilities from a figure)",
             "oscillations": "B2 snufish-reference, daytime, production-averaged per component",
+            "response": "own",
+            "observed": "smeared outputs (_events_smeared_unweighted.dat) x the target factor, per kton-year; the "
+                        "rate above each grid value up to 20 MeV, each 0.4975 MeV detected bin spread uniformly "
+                        "(the cumulative interpolated linearly within a bin)",
+            "response_file": "response.parquet: smear/<config>/smear_<channel>_<config>.dat in neutrino energy "
+                             "(ES per flavour), bins below 20 MeV; efficiency 1 (supernova.pl mode 0 includes no "
+                             "post-smearing efficiency at 6fa928e, see run_b5.py)",
+            "cross_sections": {"es": {"tool": "snowglobes", "variant": "default"},
+                               "cc_nue_ar40": {"tool": "snowglobes", "variant": "default"},
+                               "cc_nue_o16": {"tool": "snowglobes", "variant": "default"}},
         },
         "license": "CC-BY-4.0",
         "notes": "Weighted output files (_events.dat) were written only for the last channel of each channel "
                  "file in our runs; the wrapper applies the target factors itself from the unweighted files.",
     }
     path = contributions_dir() / meta["tool"] / spec.id / meta["tool_version"]
+    response = pd.DataFrame([row for detector in RUNS for row in response_rows(sg, detector)],
+                            columns=[*RESPONSE_COLUMNS, "flavour"])
+    path.mkdir(parents=True, exist_ok=True)
+    response.to_parquet(path / "response.parquet", index=False)
     write_contribution(path, meta, records, spec)
     print(f"wrote {path} ({len(records)} rows)")
 

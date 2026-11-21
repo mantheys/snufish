@@ -11,7 +11,7 @@ an issue.
 
 | Item | Where | Notes |
 |---|---|---|
-| **Part 2 contributions to B5** | B5 spec | The spec takes observed rates with the published responses or a tool's own (`response.parquet`), and SNUfish folds every published response (`B5_Observed`), but no tool has contributed yet. SNOwGLoBES's smeared output would be the first, with its own detector configurations (matrices in neutrino energy, per flavour for ES, which the spec and the engine take since B5 0.6.0). |
+| **Part 2 contributions with the published responses** | B5 spec | SNOwGLoBES gives observed rates through its own response (B5 0.7.0: its smearing matrices, no efficiency, as its mode-0 run applies none), and agrees with SNUfish's folding through the same matrices to 0.6 % for ⁸B above 5 MeV. No tool yet gives observed rates with the spec's published responses (`settings.response: spec`); sntools (water, Super-K-like smearing) would be the first. |
 | **Night and A<sub>DN</sub> in B5 part 2** | B5 spec | Observed spectra are daytime; the engine has night and A<sub>DN</sub> through any response, the benchmark does not. |
 | **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
