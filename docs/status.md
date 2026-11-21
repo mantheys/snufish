@@ -15,7 +15,6 @@ an issue.
 | **Night and A<sub>DN</sub> in B5 part 2** | B5 spec | Observed spectra are daytime; the engine has night and A<sub>DN</sub> through any response, the benchmark does not. |
 | **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
-| **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T<sub>min</sub>) for detector thresholds is not a benchmark quantity (the engine computes it). |
 | **Spectral-shape variants** | B2 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
 | **Solar-model flux correlations in B5** | B2 spec | The B23 correlation matrices are used by `snufish budget` and the engine, not by the B5 build. |
 
@@ -163,7 +162,6 @@ Each is decided (for 1.0, or out of scope) in [roadmap-1.0.md](roadmap-1.0.md).
   effects are tiny there)? Add `prem_crust1` per site as a variant? And
   `prem_crust1_3d`, which needs the chords written out per site (a
   trajectories grid) and a tool that solves single trajectories?
-- **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
 - **B5**: night and annual quantities in contributions (out of 1.0). A
   second response per detector: none is published (JUNO is a detector of
   its own since B5 0.6.0; SNO+ and Hyper-K give no resolution function).

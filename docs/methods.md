@@ -160,7 +160,10 @@ the end point; the differential cross section is clipped at zero there
 (the last ~10⁻³ of the recoil range). The engine uses it as a ratio to the
 tree level, σ<sub>BKS</sub>(E; T > u T<sub>max</sub>)/σ<sub>tree</sub>(E; T > u T<sub>max</sub>), tabulated in E
 and u (`ratio_table`), and reproduces the paper's averaged cross sections
-([crosschecks.md](crosschecks.md)).
+([crosschecks.md](crosschecks.md)). The B4 reference integrates the same
+cross section directly above each B5 threshold (`es_<flavour>_T<T_min>`,
+`xsec.bks_threshold`); the table reproduces those values to 2 × 10⁻⁵ wherever
+T<sub>max</sub> > 1.2 T<sub>min</sub> (`tests/test_b4_thresholds.py`).
 
 The engine offers three ES models: `bks` (default), `tree`, and
 `snowglobes` (SNOwGLoBES's tables, as their ratio to tree level; BKS below
