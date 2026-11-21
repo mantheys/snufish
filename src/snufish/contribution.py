@@ -201,6 +201,7 @@ def _check_b4(df, spec):
 RESPONSE_COLUMNS = ["detector", "channel", "kind", "true_axis", "true_low", "true_high", "observed_low",
                     "observed_high", "value"]
 FLAVOURS = ("nue", "numu", "nutau")
+ROW_SUM_TOLERANCE = 1e-3   # a smearing row may sum to 1 + this (the rounding of published tables, B5 spec)
 
 
 def load_response(path):
@@ -216,9 +217,18 @@ def _check_b5_response(contribution, spec):
     observed = df[df["grid"] == "observed"]
     if observed.empty:
         return []
-    mode = (contribution.meta.get("settings") or {}).get("response")
+    from .build import xsec_models
+
+    settings = contribution.meta.get("settings") or {}
+    mode = settings.get("response")
     if mode not in ("spec", "own"):
         return ["meta.yaml: settings.response must be 'spec' or 'own' for observed-energy rates (grid observed)"]
+    stated = settings.get("cross_sections") or {}
+    for channel in sorted({q.split("/")[1] for q in observed["quantity"]} & set(stated)):
+        try:
+            xsec_models(stated[channel], channel)
+        except ValueError as error:
+            return [f"meta.yaml: settings.cross_sections: {error}"]
     if mode == "spec":
         return []
     table = load_response(contribution.path)
@@ -272,7 +282,7 @@ def _check_smearing(smearing, case, channel):
     elif flavours != {""}:
         return [f"response.parquet: flavour applies to ES matrices in neutrino energy only ({case})"]
     rows = smearing.groupby(["flavour", "true_low", "true_high"])["value"].sum()
-    if (rows > 1 + 1e-6).any():
+    if (rows > 1 + ROW_SUM_TOLERANCE).any():
         return [f"response.parquet: smearing rows of {case} sum to more than 1"]
     return []
 

@@ -507,9 +507,18 @@ function b5Observed() {
       return { x, y, mode: "lines", line: { shape: "hvh", color: colourOf(k), width: 2 }, name,
                hovertemplate: `%{x:.2f} MeV: %{y:.4g} /(kt·yr·MeV)<extra>${name}</extra>` };
     });
+    // full-chain tools in observed energy through their own response (dashed, the detector's colour)
+    const tools = mine.flatMap((k) => (k.tools || []).filter((t) => t.spectra[comp]).map((t) => {
+      const x = k.edges.slice(0, -2).map((e, b) => 0.5 * (e + k.edges[b + 1])), y = t.spectra[comp].slice(0, -1).map((v) => (v > 0 ? v : null));
+      const name = `${t.name}: ${DETECTOR_LABEL[k.detector]} ${CHANNELS[k.channel] || k.channel} (${t.response === "own" ? "its own response" : k.preset})`;
+      return { x, y, mode: "lines", line: { shape: "hvh", color: colourOf(k), width: 2, dash: "dash" }, name,
+               hovertemplate: `%{x:.2f} MeV: %{y:.4g} /(kt·yr·MeV)<extra>${name}</extra>` };
+    }));
+    traces.push(...tools);
     const shapes = mine.map((k) => ({ type: "line", x0: k.threshold, x1: k.threshold, yref: "paper", y0: 0, y1: 1,
                                       line: { color: colourOf(k), dash: "dot", width: 1 } }));
-    htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color })), mine.length ? "Dotted: the thresholds" : "No case for this component");
+    htmlLegend(node, traces.map((t) => ({ label: t.name, colour: t.line.color, dash: t.line.dash })),
+      mine.length ? `Dotted: the thresholds${tools.length ? "; dashed: full-chain tools" : ""}` : "No case for this component");
     Plotly.react(node, traces, layout(c, node, `${title} (B16-GS98, by day)`, xTitle, "Interactions / (kt·yr·MeV)",
       { showlegend: false, hovermode: "closest", yaxis: { type: "log", range: es ? [-3, 7] : [-3, 3.5] }, xaxis: { range: [0, 19.75] }, shapes }), CONFIG);
   }
@@ -522,7 +531,25 @@ function b5Observed() {
   }</tbody></table><p class="hint">Daytime, B2 reference oscillations (NuFIT 6.0), the cross sections the spec names for the response (BKS for ES,
     MARLEY 2 for ⁴⁰Ar, Nakamura et al. for deuterium). Observed energy: for ES the electron's kinetic energy T, for CC
     E<sub>ν</sub> − Q; dotted lines: the thresholds. The ratio is the response's effect above the threshold:
-    resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>`;
+    resolution and efficiency together (Super-K IV's efficiency is about half at its threshold).</p>${b5ObservedTools(data, comp, fmt)}`;
+}
+
+function b5ObservedTools(data, comp, fmt) {
+  // full-chain tools in observed energy: their rate above the preset threshold against SNUfish's folding of the
+  // same inputs through the same response and cross sections, and against the published response
+  const rows = data.cases.flatMap((k) => (k.tools || []).filter((t) => t.totals[comp]).map((t) => ({ k, t })));
+  if (!rows.length) return "";
+  return `<table><thead><tr><th>Tool</th><th>Detector</th><th>Response</th><th>Cross sections</th><th class="num">Threshold (MeV)</th>
+    <th class="num">Tool, above threshold</th><th class="num">SNUfish's folding, same response</th><th class="num">Ratio</th>
+    <th class="num">Published response (SNUfish)</th></tr></thead><tbody>${
+    rows.map(({ k, t }) => { const r = t.totals[comp], pub = k.totals[comp]; return `<tr><td>${t.name}</td>
+      <td>${DETECTOR_LABEL[k.detector]} ${CHANNELS[k.channel] || k.channel}</td><td>${t.response === "own" ? "its own" : k.preset}</td><td>${t.cross_section}</td>
+      <td class="num">${t.threshold}</td><td class="num">${fmt(r.rate)}</td><td class="num">${fmt(r.folded)}</td>
+      <td class="num">${r.folded > 0 ? (r.rate / r.folded).toFixed(4) : "—"}</td><td class="num">${pub ? fmt(pub.above) : "—"}</td></tr>`; }).join("")
+  }</tbody></table><p class="hint">SNOwGLoBES: its smeared output through its own smearing matrices (ar40kt, wc100kt30prct; in neutrino
+    energy, per flavour for ES) and no efficiency (its mode-0 run includes none), with its own cross sections; SNUfish folds the same flux through the
+    same matrices and cross sections. The last column is the published response's rate above the same threshold (other cross sections for ES and
+    ⁴⁰Ar): how far SNOwGLoBES's generic configurations are from the experiments' responses.</p>`;
 }
 
 function whenVisible(node, draw) {

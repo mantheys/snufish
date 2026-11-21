@@ -68,7 +68,8 @@ def test_published_response_fields():
     assert engine.published_response(inputs, "no_such_detector") == {}
 
 
-def _observed_contribution(tmp_path, values, response=None, mode="spec", quantity="argon/cc_nue_ar40/B8"):
+def _observed_contribution(tmp_path, values, response=None, mode="spec", quantity="argon/cc_nue_ar40/B8",
+                           cross_sections=None):
     path = tmp_path / "toy" / "B5_rates" / "1.0"
     path.mkdir(parents=True)
     thresholds = SPEC.axis("threshold", "observed")
@@ -77,7 +78,8 @@ def _observed_contribution(tmp_path, values, response=None, mode="spec", quantit
         path / "data.parquet", index=False)
     meta = dict(tool="toy", tool_version="1.0", tool_commit=None, benchmark="B5_rates", benchmark_version=SPEC.version,
                 contributor="test", date="2026-11-07", command="test", license="CC-BY-4.0",
-                settings={} if mode is None else {"response": mode})
+                settings=({} if mode is None else {"response": mode})
+                | ({"cross_sections": cross_sections} if cross_sections else {}))
     (path / "meta.yaml").write_text(yaml.safe_dump(meta))
     if response is not None:
         response.to_parquet(path / "response.parquet", index=False)
@@ -224,3 +226,63 @@ def test_es_matrix_in_neutrino_energy_is_folded_per_flavour():
     assert 0 < fine[k] / perfect[k] - 1 < 0.01 and fine[k] < coarse[k] < 1.02 * perfect[k]
     swapped = above(_es_neutrino_response(0.05, swap=True))
     assert swapped[k] / perfect[k] - 1 < -0.05   # nu_e's harder recoils given to the nu_mu and nu_tau
+
+
+def test_cross_sections_of_the_folding():
+    assert build.xsec_models({"tool": "snowglobes", "variant": "default"}, "es") == ("snowglobes", "default")
+    assert build.xsec_models({"tool": "snufish-reference", "variant": "es_bks"}, "es") == ("bks", "default")
+    assert build.xsec_models({"tool": "snufish-reference", "variant": "default"}, "es") == ("tree", "default")
+    assert build.xsec_models({"tool": "snowglobes", "variant": "default"}, "cc_nue_ar40") == ("bks", "default")
+    assert build.xsec_models({"tool": "marley", "variant": "ar40_marley1"}, "cc_nue_ar40") == ("bks", "ar40_marley1")
+    assert build.xsec_models({"table": "reference/xsec/nakamura2002.yaml"}, "cc_nue_d") == ("bks", "default")
+    for entry, channel in (("snowglobes", "es"), ({"tool": "marley", "variant": "default"}, "es"),
+                           ({"tool": "marley", "variant": "default"}, "cc_nue_ar40"), ({"tool": "toy"}, "cc_nue_ar40")):
+        with pytest.raises(ValueError):
+            build.xsec_models(entry, channel)
+    for channel in SPEC["response"]["cross_sections"]:   # the spec's own resolve
+        build._xsec_model(SPEC, channel)
+    stated = {"settings": {"cross_sections": {"es": {"tool": "snowglobes", "variant": "default"}}}}
+    assert build.observed_cross_section(SPEC, stated, "es") == {"tool": "snowglobes", "variant": "default"}
+    assert build.observed_cross_section(SPEC, stated, "cc_nue_ar40") == SPEC["response"]["cross_sections"]["cc_nue_ar40"]
+    assert build.observed_cross_section(SPEC, None, "es") == SPEC["response"]["cross_sections"]["es"]
+
+
+def test_stated_cross_sections_are_validated(tmp_path):
+    values = np.linspace(100.0, 0.0, 2001)
+    good = {"cc_nue_ar40": {"tool": "snowglobes", "variant": "default"}}
+    assert validate(_observed_contribution(tmp_path / "a", values, cross_sections=good), SPEC) == []
+    bad = {"cc_nue_ar40": "SNOwGLoBES's own"}
+    assert any("settings.cross_sections" in p
+               for p in validate(_observed_contribution(tmp_path / "b", values, cross_sections=bad), SPEC))
+    # a channel the contribution gives no observed rates for is not checked (free text, as MARLEY's part 1)
+    other = {"es": "MARLEY ES.react"}
+    assert validate(_observed_contribution(tmp_path / "c", values, cross_sections=other), SPEC) == []
+
+
+def test_rounded_rows_are_accepted(tmp_path):
+    values = np.linspace(100.0, 0.0, 2001)
+    rounded = _gaussian_response()
+    rounded.loc[rounded.kind == "smearing", "value"] *= 1.0005   # rows up to 1 + 5e-4
+    assert validate(_observed_contribution(tmp_path / "a", values, rounded, "own"), SPEC) == []
+    over = _gaussian_response()
+    over.loc[over.kind == "smearing", "value"] *= 1.01
+    assert any("sum to more than 1" in p for p in validate(_observed_contribution(tmp_path / "b", values, over, "own"), SPEC))
+
+
+@needs_build
+def test_the_folding_takes_the_stated_cross_section(tmp_path):
+    # the same contribution with SNOwGLoBES's CC table stated is folded through it, not through MARLEY 2 (the spec's)
+    averages = pd.read_parquet(build_dir() / "B2_Average.parquet")
+    provider = build.AverageProbabilities(averages[averages.Tool == "snufish-reference"])
+    inputs = build._engine_inputs()
+    stated = {"cc_nue_ar40": {"tool": "snowglobes", "variant": "default"}}
+    setup = build.observed_setup(SPEC, inputs, "b16_gs98", "argon", "cc_nue_ar40",
+                                 cross_section=stated["cc_nue_ar40"])
+    expected = build.above(build.observed_spectra(SPEC, inputs, provider, setup)[1]["B8"])
+    contribution = _observed_contribution(tmp_path, expected, cross_sections=stated)
+    assert validate(contribution, SPEC) == []
+    row = build._observed_chain([contribution], SPEC).iloc[0]
+    assert row.CrossSection == "snowglobes: default" and row.RatioAbove == pytest.approx(1.0, rel=1e-12)
+    spec_fold = build.above(build.observed_spectra(SPEC, inputs, provider, setup.replace(
+        xsec_model="ar40_marley2_bhattacharya2009"))[1]["B8"])
+    assert abs(expected[500] / spec_fold[500] - 1) > 0.01   # the two tables differ by more than the test resolves

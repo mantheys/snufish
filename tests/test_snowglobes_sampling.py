@@ -34,7 +34,8 @@ def test_globes_sampling_reproduces_snowglobes():
     sigma = {f: (lambda e, r=xs[f"es_{f}"]: np.nan_to_num(np.interp(e, r.Energy, r.Sigma, left=np.nan, right=np.nan)))
              for f in ("nue", "numu", "nutau")}
     paths = sorted((ROOT / "contributions" / "snowglobes" / "B5_rates").glob("*/data.parquet"))
-    data = pd.read_parquet(paths[-1]).set_index(["variant", "quantity", "threshold"])["value"]
+    data = pd.read_parquet(paths[-1])
+    data = data[data.grid == "totals"].set_index(["variant", "quantity", "threshold"])["value"]
     water = spec["detectors"]["water"]["targets"]["electron"] * spec["exposure"]["seconds_per_year"]
     for variant, naive in (("b16_gs98", False), ("b16_gs98_point_lines", True)):
         for component in ("pep", "Be7", "N13", "O15", "F17", "B8", "hep"):

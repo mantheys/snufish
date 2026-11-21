@@ -17,7 +17,7 @@
 # Status: DRAFT.
 
 id: B5_rates
-version: 0.6.0
+version: 0.7.0
 status: draft
 title: "Detector: interaction rates and the detector response"
 
@@ -220,7 +220,10 @@ checks:
 # summed above it. Daytime, B2 reference oscillations, as in part 1.
 response:
   visible_offset_MeV: {cc_nue_ar40: 1.504, cc_nue_o16: 15.42, cc_nue_d: 1.442}
-  # Cross sections of SNUfish's folding (contributions state theirs in meta.yaml settings.cross_sections):
+  # Cross sections of SNUfish's folding of the published responses. A contribution with observed rates may state
+  # its own per channel in meta.yaml settings.cross_sections, in the same form ({tool, variant} of B4: for ES
+  # snufish-reference default or es_bks, or snowglobes default; for CC a snowglobes or marley variant); SNUfish
+  # then folds through them. Unstated channels take these:
   cross_sections:
     es: {tool: snufish-reference, variant: es_bks}      # BKS 1995 radiative corrections, differential in T
     cc_nue_ar40: {tool: marley, variant: ar40_marley2_bhattacharya2009}
@@ -278,13 +281,14 @@ response:
   #     visible) it is flavour-blind; for ES it is per flavour (the recoil spectrum differs), with a matrix
   #     for nue and one for numu, and nutau, if given, equal to numu (equal ES cross sections). Its rows give
   #     P(observed bin | an interaction at E_nu), so neutrino energies outside its true bins give no events.
+  #     A row may sum to 1 + 1e-3 at most (the rounding of published tables).
   # One response per detector. A further published response of a detector would be added by name
   # (a minor change, docs/compatibility.md); none is published yet (docs/status.md).
 
 # Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
 # major (old contributions are no longer valid).
 # Earlier versions whose contributions are still exact.
-compatible: [0.5.0]
+compatible: [0.5.0, 0.6.0]
 
 changelog:
   - {version: 0.1.0, date: 2026-10-28, kind: initial, changes: "SNUfish's folding of every B4 model (no contributions)."}
@@ -293,3 +297,4 @@ changelog:
   - {version: 0.4.0, date: 2026-11-07, kind: minor, changes: "Part 2, the detector response: optional grid observed, response block, settings.response and response.parquet; heavy water and scintillator detectors."}
   - {version: 0.5.0, date: 2026-11-20, kind: major, changes: "The 8B shape continues above 15.2 MeV, where Winter et al.'s table ends, with Bahcall et al. 1996 up to 16.0 MeV (1.1e-5 of the flux; reference/ssm/shapes/8B_shape_Winter2006_tail_Bahcall1996.csv). Contributions rerun."}
   - {version: 0.6.0, date: 2026-11-20, kind: minor, changes: "Detector scintillator_lab (JUNO's LAB) with JUNO's 8B response (arXiv:2006.11760); response.parquet takes an optional flavour column and, for ES, matrices in neutrino energy per flavour."}
+  - {version: 0.7.0, date: 2026-11-21, kind: minor, changes: "settings.cross_sections of a contribution with observed rates: SNUfish folds through the cross sections it states; smearing rows may sum to 1 + 1e-3 (rounding)."}

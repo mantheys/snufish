@@ -44,7 +44,7 @@ contribute them are declared out of scope for 1.0, with the way back noted.
 | 1a | B2: non-adiabatic solver | out (definition frozen, bound stated) | — | — |
 | 1a | B2: line of sight for off-centre production | out (definition frozen) | — | — |
 | 1b | Specs to 1.0.0, compatibility policy, validator rule | 1.0 | M | none |
-| 2 | B5 part 2: SNOwGLoBES's smeared output | 1.0 | M | none (new contribution) |
+| 2 | B5 part 2: SNOwGLoBES's smeared output | 1.0 (done: B5 0.7.0) | M | none (new contribution) |
 | 3 | Public interface: CLI, engine, presets, calculator inputs; tests | 1.0 | M | none |
 | 4 | PyPI package | out | — | — |
 | 4 | A third-party contribution: sntools (water) | 1.0 if ready, not blocking; SNuDD out | M | none (new contribution) |
@@ -250,7 +250,20 @@ with the items above), `benchmarks.md` and the page show `frozen`, and
 
 ---
 
-## 2. B5 part 2: SNOwGLoBES's smeared output (1.0, M)
+## 2. B5 part 2: SNOwGLoBES's smeared output (1.0, M; done in B5 0.7.0)
+
+Done: the SNOwGLoBES contribution gives observed rates through its own response (its smearing matrices, in
+neutrino energy, per flavour for ES). Two things differ from the plan below. SNOwGLoBES at the pinned commit
+applies no efficiency in the mode the wrapper runs (supernova.pl mode 0 never names the efficiency files), so
+its response has an efficiency of 1. The 10⁻⁵ agreement holds against an emulation of GLoBES's sampling through
+the same matrices (10⁻⁴, `tests/test_snowglobes_part2.py`). Against SNUfish's folding of the same flux, matrices
+and cross sections, ⁸B is within 0.6 % above 5 MeV, the sampling of part 1. The spread within a bin is the same
+on both sides, so the comparison runs on the whole grid, not only at the tool's bin edges. SNUfish now folds
+through the cross sections a contribution states (`settings.cross_sections`, B5 0.7.0); the plan assumed the
+spec's.
+
+The plan, as written:
+
 
 The `response.parquet` path has never seen real data. SNOwGLoBES (checkout
 at the pinned `6fa928e`) has smearing matrices and efficiencies for both
@@ -363,7 +376,7 @@ and you say so.
 4. B5 named responses, the `flavour` column and ES in neutrino energy, JUNO
    (and SNO+ if sourced) (done: JUNO, `flavour`, ES in neutrino energy;
    SNO+ out, named responses deferred).
-5. SNOwGLoBES part 2.
+5. SNOwGLoBES part 2 (done: B5 0.7.0, own response, no rate changes).
 6. B4 thresholded ES.
 7. B3 `prem_crust1` variants and the finer reference step; B5 night on
    `prem_crust1`. (Reruns: hours, nuSQuIDS the longest.)
