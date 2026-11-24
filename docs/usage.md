@@ -178,6 +178,7 @@ SNUfish's folding).
 | `scripts/crosscheck.py [--exact]` | recompute the published numbers of [crosschecks.md](crosschecks.md) (app tables, or with `--exact` the B2 solver and NuFast-Earth); needs `build/app` |
 | `scripts/dune_solar_tables.py [--earth <model>]` | the CC, ES and NC rate tables of DUNE solar analyses in SOLAR's conventions ([dune-solar-tables.md](dune-solar-tables.md)) |
 | `scripts/dune_phase1_rates.py [--out <dir>]` | the raw rates of the DUNE solar Phase I paper as LaTeX macros, a table and JSON ([dune-solar-tables.md](dune-solar-tables.md#phase-i-paper)); NuFast-Earth driver needed |
+| `scripts/dune_phase1_daynight.py [--out <dir>]` | the CC and ES day-night asymmetries in argon for the Phase I paper, spectrum-weighted, with A<sub>ES</sub>/A<sub>CC</sub> ([dune-solar-tables.md](dune-solar-tables.md#day-night-asymmetry-of-cc-and-es)); NuFast-Earth driver needed |
 | `scripts/readme_images.py` | render the README figures (`input/plots/readme_scripts.txt`) in light and dark into `docs/images/` |
 | `contributions/<tool>/scripts/run_*.py` | produce a tool's contribution (see each script's docstring for how to build the tool) |
 

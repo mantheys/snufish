@@ -100,6 +100,23 @@ Annual, per kt-yr, ⁸B + hep, `ar40_marley1_allowed`:
 | E<sub>ν</sub> > 5 MeV | 2416 | 1081 | 105.7 |
 | T<sub>e</sub> > 5 MeV | 1211 | 360 | – |
 
+### Day-night asymmetry of CC and ES
+
+`python scripts/dune_phase1_daynight.py --out <dir>` gives A<sub>DN</sub> = 2(N − D)/(N + D) of CC and ES with the same
+settings, from the day and night spectra in electron kinetic energy, and writes `snufish_daynight.json` (integrated
+rates and asymmetries per threshold, and the spectra in 1 MeV bins). `tests/test_dune_phase1_daynight.py` pins it.
+
+| T<sub>e</sub> > | A<sub>CC</sub> | A<sub>ES</sub> | A<sub>ES</sub>/A<sub>CC</sub> | one-number estimate |
+|---|---|---|---|---|
+| 5 MeV | 4.97 % | 2.43 % | 0.49 | 0.63 |
+| 8 MeV | 6.00 % | 3.05 % | 0.51 | 0.63 |
+| 10 MeV | 6.58 % | 3.51 % | 0.53 | 0.64 |
+
+The one-number estimate, (1 − r)P/(P + r(1 − P)) with the CC-weighted day survival probability P ≈ 0.31 and the
+ν<sub>x</sub>/ν<sub>e</sub> ES rate ratio r ≈ 0.15, holds at a single neutrino energy. Above the same T<sub>e</sub>, CC samples
+higher E<sub>ν</sub> (T<sub>e</sub> ≈ E<sub>ν</sub> − Q) than ES (T<sub>e</sub> ≤ E<sub>ν</sub>), and regeneration grows with E<sub>ν</sub>,
+so the spectrum-weighted ratio is about 0.5.
+
 NC is SNUfish's default model, the measured discrete 1⁺ strength plus the HF+CRPA continuum; with SNOwGLoBES's
 table (`--nc-model snowglobes`), which the paper quoted before, it is 28.8 above both cuts.
 
