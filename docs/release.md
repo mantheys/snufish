@@ -1,9 +1,10 @@
 # Releasing a citable version
 
-Next: **v0.4.0** (notes below), to tag once its release commit is on `main`
-with CI green; its version DOI goes in with step 4.
-Released: **v0.3.0** is tagged (2026-11-20) and archived on Zenodo, version
-DOI [10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275).
+Next: **v0.5.0** (notes below), tagged from `main` with CI green; its version
+DOI goes in with step 4.
+Released: **v0.4.0** is tagged (2026-11-20) and archived on Zenodo.
+**v0.3.0** is tagged (2026-11-20), version DOI
+[10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275).
 **v0.2.0** has version DOI
 [10.5281/zenodo.24045167](https://doi.org/10.5281/zenodo.24045167). The
 concept DOI (resolves to the latest version) is
@@ -11,6 +12,31 @@ concept DOI (resolves to the latest version) is
 the untagged development version; 0.2.0 adds the DUNE table options
 (`night_fraction`, `nu_threshold`, `nc_ar40`, the SOLAR night). The steps
 below are what it took; repeat 2 to 4 for the next one.
+
+## v0.5.0 release notes
+
+SNUfish 0.5.0 adds the inputs of the DUNE solar Phase I paper's day-night
+uncertainty and new benchmark parts. No rate changes:
+`scripts/dune_phase1_rates.py` (B16-GS98 8B + hep, per kt-yr) gives the same
+CC, ES and NC rates as 0.3.0 and 0.4.0.
+
+- DUNE Phase I (#42 and on `main`): `scripts/dune_phase1_daynight.py`, the
+  spectrum-weighted CC and ES day-night asymmetries in argon, and
+  `scripts/dune_phase1_adn_budget.py`, the theoretical uncertainty of the CC
+  asymmetry at SURF (range over the current Earth models, 0.6 %; spread for
+  the NuFIT 6.1 uncertainties around the analysis point, 2.3 %).
+- B5 0.5.0 to 0.7.0 (#38 to #40): the 8B spectrum above 15.2 MeV from
+  Bahcall et al. 1996; JUNO's detector and response, ES matrices in neutrino
+  energy per flavour; SNOwGLoBES part 2 through its own response.
+- B4 0.2.0 (#41): ES above the detectors' recoil thresholds.
+- Compatibility rule (#37): spec changelogs, `Spec.accepts`,
+  docs/compatibility.md; roadmap to 1.0.0 (#36).
+- CI: test coverage reported to Codecov.
+
+Submodules: NuFast-Earth at `327586d` (v1.2.0-3), PEANUTS at `1783f9f` (v1.7).
+
+Cite the version DOI of 0.5.0 once minted, or the concept DOI
+10.5281/zenodo.24045166.
 
 ## v0.4.0 release notes
 
@@ -88,9 +114,9 @@ concept DOI 10.5281/zenodo.24045166.
 
 | File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.4.0: `version`, `date-released` 2026-11-20 (set to the tag date if it differs); `doi` the concept DOI until step 4 puts in the v0.4.0 version DOI |
-| `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.4.0 (ORCID included) |
-| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.4.0 (plotipus pinned to its `v0.1.0` release) |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.5.0: `version`, `date-released` 2026-11-26 (set to the tag date if it differs); `doi` the concept DOI until step 4 puts in the v0.5.0 version DOI |
+| `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.5.0 (ORCID included) |
+| `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.5.0 (plotipus pinned to its `v0.1.0` release) |
 | `catalogue/tools/snufish-reference.yaml` | `reference` | the concept DOI (cites every version); the comment lists the version DOIs |
 
 ## Steps

@@ -11,9 +11,9 @@ authors:
 repository-code: "https://github.com/mantheys/snufish"
 url: "https://mantheys.github.io/snufish/"
 license: MIT
-version: 0.4.0
-date-released: "2026-11-20"
-doi: 10.5281/zenodo.24045166   # concept DOI (every version) until Zenodo mints the v0.4.0 version DOI; v0.3.0 is 10.5281/zenodo.24383275, v0.2.0 is 10.5281/zenodo.24045167
+version: 0.5.0
+date-released: "2026-11-26"
+doi: 10.5281/zenodo.24045166   # concept DOI (every version) until Zenodo mints the v0.5.0 version DOI; v0.3.0 is 10.5281/zenodo.24383275, v0.2.0 is 10.5281/zenodo.24045167
 keywords:
   - solar neutrinos
   - neutrino oscillations
