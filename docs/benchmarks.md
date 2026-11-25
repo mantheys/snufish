@@ -9,15 +9,16 @@ inputs in
 **variants** carry model alternatives (solar model, Earth model, nuclear
 model) so that the spread between models shows next to the spread between
 tools. All specs are drafts: they may still change, and any change bumps
-their `version`.
+their `version` and adds a `changelog` entry; which contributions stay valid
+is set by [compatibility.md](compatibility.md).
 
 | Step | id | Version | Link of the chain | Contributed by |
 |---|---|---|---|---|
 | B1 Oscillation parameters | [B1_osc](#b1-oscillation-parameters-b1_osc) | 0.1.0 | the parameters of every propagation | (registry, no contributions) |
 | B2 Sun | [B2_sun](#b2-sun-b2_sun-solar-models-and-msw-propagation) | 0.2.0 | the source (solar models) and MSW propagation out of the Sun | snufish-reference, nufast-earth, peanuts |
 | B3 Earth | [B3_earth](#b3-earth-b3_earth-earth-crossing) | 0.3.0 | crossing the Earth at night | snufish-reference, nufast-earth, peanuts (`prem_prob3`), nusquids |
-| B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.1.0 | detection cross sections | snufish-reference, snowglobes, marley |
-| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.4.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water), marley (argon) (full chain, part 1); SNUfish folds every B4 model and every published response |
+| B4 Interaction | [B4_xsec](#b4-interaction-b4_xsec-cross-sections) | 0.2.0 | detection cross sections | snufish-reference, snowglobes, marley |
+| B5 Detector | [B5_rates](#b5-detector-b5_rates-interaction-rates-and-the-detector-response) | 0.7.0 | interaction rates (part 1) and the detector response (part 2) | snowglobes (argon and water; full chain, parts 1 and 2 with its own response), marley (argon; full chain, part 1); SNUfish folds every B4 model and every published response |
 
 Shared settings of B2 and B3: NuFIT 6.0, normal ordering
 (sin²θ₁₂ = 0.307, sin²θ₁₃ = 0.02195, sin²θ₂₃ = 0.561, δ = 177°,
@@ -188,20 +189,22 @@ a fixed energy grid. B5 folds every contributed model into rates.
 | `cc_nue_o16` | νₑ + ¹⁶O → e⁻ + ¹⁶F | ¹⁶O nucleus |
 | `cc_nue_c13` | νₑ + ¹³C → e⁻ + ¹³N | ¹³C nucleus |
 | `cc_nue_d` | νₑ + d → e⁻ + p + p | deuteron |
+| `es_<flavour>_T<T_min>` | ES with electron kinetic energy T > T<sub>min</sub>, for T<sub>min</sub> = 0.05 (Borexino), 2.0 (JUNO), 3.49 (Super-K IV), 5.0 (DUNE), 5.5 MeV (SNO salt), the thresholds of the B5 responses; zero where T<sub>max</sub>(E) ≤ T<sub>min</sub> | electron |
 
 | Setting | Value |
 |---|---|
 | Grid `map` | E = 0.02–20 MeV, step 0.02 (1000 points; fine enough for pp, endpoint 0.42 MeV) |
 | Constants | m<sub>e</sub> = 0.51099895 MeV; sin²θ<sub>W</sub> = 0.23857 (PDG 2024, MS-bar at Q² → 0, for the tree-level reference) |
 | Columns | `grid, variant, quantity, energy, value` (cm² per target; NaN outside a tool's table) |
-| Checks | values in [0, 10⁻³⁰], NaN allowed, never negative; σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e) |
+| Checks | values in [0, 10⁻³⁰], NaN allowed, never negative; σ(νₑe) > σ(ν<sub>μ</sub>e), σ(ν<sub>τ</sub>e), at every threshold where they are not zero |
 
-A tool contributes only the channels it has. Variants:
+A tool contributes only the channels it has; a variant's channels are the ones it may give. Version 0.2.0
+added the thresholded ES quantities (optional; 0.1.0 contributions stay valid). Variants:
 
 | Variant | Channel | Model |
 |---|---|---|
 | `default` (required) | all | the tool's own choice per channel |
-| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν<sub>μ,τ</sub> against its tree level) |
+| `es_bks` | ES | Bahcall, Kamionkowski & Sirlin 1995: electroweak, QCD and QED radiative corrections, all recoil energies or above a threshold (`snufish-reference`: −3.9 to −4.8 % for νₑ, +2.8 to +4.9 % for ν<sub>μ,τ</sub> against its tree level; at 10 MeV −4.8 % and +4.9 % for all recoils, −5.3 % and +6.0 % above 5 MeV) |
 | `ar40_klmv` | ⁴⁰Ar | KLMV (Kolbe, Langanke, Martínez-Pinedo, Vogel), SNOwGLoBES table |
 | `ar40_marley` | ⁴⁰Ar | MARLEY, allowed approximation, B(GT) from ⁴⁰Ar(p,n) (Bhattacharya 2009); SNOwGLoBES table, zero below 5 MeV |
 | `ar40_marley1` | ⁴⁰Ar | MARLEY, B(GT) from ⁴⁰Ti β decay; SNOwGLoBES table, zero below 5 MeV |
@@ -228,6 +231,16 @@ neutrino energy, part 2 passes them through each detector's published
 response into observed energy. A contribution may give either part or both
 (`optional_grids`); version 0.4.0 added part 2 without changing part 1, and
 the SNOwGLoBES contribution was rerun against it (bit-identical numbers).
+Version 0.5.0 continues the ⁸B shape above 15.2 MeV, where Winter et al.'s
+table ends, with Bahcall et al. 1996 (1.1 × 10⁻⁵ of the flux); the
+SNOwGLoBES and MARLEY contributions were rerun against it. Version 0.6.0
+adds JUNO's detector (`scintillator_lab`) and its response, and lets a
+tool's own response give ES matrices in neutrino energy per flavour; it is
+additive, so 0.5.0 contributions stay valid (`compatible`). Version 0.7.0
+lets a contribution with observed rates state its cross sections
+(`settings.cross_sections`, which SNUfish then folds through) and accepts
+smearing rows summing to 1 + 10⁻³ (rounding of published tables); also
+additive. The SNOwGLoBES contribution gives part 2 since 0.7.0.
 
 ### Part 1: interaction rates
 
@@ -245,9 +258,9 @@ inputs.
 
 | Setting | Value |
 |---|---|
-| Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes)); normalisations from the B2 solar model |
+| Fluxes | shapes and lines in the spec (shared by all models; [sources.md](sources.md#spectral-shapes); ⁸B: Winter et al. 2006, above 15.2 MeV Bahcall et al. 1996); normalisations from the B2 solar model |
 | Exposure | 1 kton-year, Julian year (3.15576 × 10⁷ s) |
-| Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`); `heavy_water` (3.007 × 10³² e⁻, 6.014 × 10³¹ d per kt; `es`, `cc_nue_d`); `scintillator_pc` (3.307 × 10³² e⁻ per kt; `es`) |
+| Detectors | `argon` (2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar per kt; channels `es`, `cc_nue_ar40`); `water` (3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O per kt; `es`, `cc_nue_o16`); `heavy_water` (3.007 × 10³² e⁻, 6.014 × 10³¹ d per kt; `es`, `cc_nue_d`); `scintillator_pc` (3.307 × 10³² e⁻ per kt; `es`); `scintillator_lab` (3.38 × 10³² e⁻ per kt; `es`) |
 | Channels | `es` sums the three ES channels weighted with P<sub>eα</sub>; CC uses P<sub>ee</sub>. Thresholds: ⁴⁰Ar 1.504 MeV, ¹⁶O 15.4 MeV, d 1.442 MeV; below the B4 grid (0.02 MeV) σ = 0 (< 0.01 % of any rate) |
 | Spectra | `linear` (0–20 MeV, 0.1 MeV) and `log` (0.05–20 MeV, 40 per decade) binnings, per MeV of neutrino energy |
 | Totals | all energies and E<sub>ν</sub> > 5 MeV |
@@ -306,6 +319,7 @@ numbers and sources in [sources.md](sources.md#detector-responses)):
 | `water` | Super-K IV (arXiv:2312.12907) | −0.05525 + 0.3162√E + 0.04572E, E = T + m<sub>e</sub> | fig. 28 curve | 3.49 MeV | scale 0.48 %, σ 3 %, rate 1.1 % |
 | `heavy_water` | SNO salt (nucl-ex/0502021) | −0.131 + 0.383√T + 0.03731T | 1 (none published) | 5.5 MeV | scale 1.15 %, σ 3.4 % |
 | `scintillator_pc` | Borexino Phase-II (arXiv:1707.09279) | 0.05√E | 0.999 | 0.05 MeV | — |
+| `scintillator_lab` | JUNO (arXiv:2006.11760) | 0.03√T | 1 | 2 MeV | scale 0.3 %, rate 1 % |
 | `argon` | DUNE far detector (arXiv:2008.06647) | 20 % | 1 | 5 MeV | — |
 
 The response applies to every channel of the detector, in observed energy:
@@ -316,10 +330,10 @@ efficiency in observed energy; the threshold is not part of it.
 
 | Setting | Value |
 |---|---|
-| Cross sections (SNUfish's folding) | ES: BKS (`snufish-reference` `es_bks`); ⁴⁰Ar: `ar40_marley2_bhattacharya2009`; ¹⁶O: SNOwGLoBES; d: Nakamura et al. 2002 down to threshold |
+| Cross sections (SNUfish's folding) | ES: BKS (`snufish-reference` `es_bks`); ⁴⁰Ar: `ar40_marley2_bhattacharya2009`; ¹⁶O: SNOwGLoBES; d: Nakamura et al. 2002 down to threshold. A contribution may state its own per channel (`settings.cross_sections`, `{tool, variant}` of B4: ES `snufish-reference` `default` or `es_bks`, or `snowglobes` `default`; CC a `snowglobes` or named `marley` variant), and its rates are compared with SNUfish's folding through those |
 | Grid `observed` | `threshold` = 0–20 MeV of observed energy, step 0.01 (2001 points): the value is the rate above it, so the spectrum is its difference and every preset threshold is a grid point |
 | Quantities | `<detector>/<channel>/<component>` as in part 1, including `all` |
-| Response of a contribution | `settings.response` in meta.yaml: `spec` (the responses above), or `own`, with `response.parquet` next to the data (per detector and channel: efficiency per observed bin and a smearing matrix P(observed bin \| true bin), true axis the observed energy or, CC only, E<sub>ν</sub>). `snufish validate` checks both |
+| Response of a contribution | `settings.response` in meta.yaml: `spec` (the responses above), or `own`, with `response.parquet` next to the data (per detector and channel: efficiency per observed bin and a smearing matrix P(observed bin \| true bin), true axis the observed energy or E<sub>ν</sub>; an ES matrix in E<sub>ν</sub> is given per flavour, column `flavour`: `nue` and `numu`, with `nutau`, if given, equal to `numu`; a row may sum to 1 + 10⁻³ at most). `snufish validate` checks both |
 
 SNUfish's folding (`B5_Observed`, B16-GS98, per kt·yr by day):
 
@@ -329,6 +343,7 @@ SNUfish's folding (`B5_Observed`, B16-GS98, per kt·yr by day):
 | heavy water CC (> 5.5 MeV) | 4403 | 3638 | 3508 | 0.964 |
 | heavy water ES (> 5.5 MeV) | 6.24 × 10⁵ | 337.9 | 337.9 | 1.000 |
 | scintillator ES (> 0.05 MeV) | 6.86 × 10⁵ | 4.88 × 10⁵ | 4.84 × 10⁵ | 0.992 |
+| JUNO scintillator ES (> 2 MeV) | 7.01 × 10⁵ | 1087 | 1086 | 1.000 |
 | argon CC (> 5 MeV) | 2333 | 2235 | 2136 | 0.956 |
 | argon ES (> 5 MeV) | 5.63 × 10⁵ | 366.6 | 356.4 | 0.972 |
 
@@ -343,8 +358,32 @@ component: the spectrum on the observed grid, the rate above every grid
 value and above the preset threshold, with and without the response) and
 `B5_ObservedChain` (a contribution's observed rates next to SNUfish's
 folding of the same inputs through the same response, the spec's or its
-own). Contributions so far: none in part 2 (SNOwGLoBES's smeared output uses
-its own detector configurations; see [status.md](status.md)).
+own, and the cross sections it states). Plots: in the `b45` list.
+
+Part 2 contribution with SNOwGLoBES (argon `ar40kt`, water `wc100kt30prct`;
+`contributions/snowglobes/scripts/run_b5.py`, the runs of part 1): its
+smeared output, with its own response in `response.parquet`. That response
+is its smearing matrices, in neutrino energy, one per flavour for ES, on its
+0.4975 MeV bins below 20 MeV. Its efficiency is 1: supernova.pl at 6fa928e
+includes no efficiency in the mode the wrapper runs (see
+[crosschecks.md](crosschecks.md#snowglobes-in-observed-energy)). The rate above
+each grid value spreads each detected bin uniformly, as SNUfish does with an
+imported bin. ⁸B, B16-GS98, per kt·yr by day:
+
+| Case, threshold | SNOwGLoBES | SNUfish, same matrices and cross sections | Ratio | Published response (SNUfish, spec cross sections) |
+|---|---|---|---|---|
+| argon CC, > 5 MeV | 1317 | 1313 | 1.003 | 2124 (DUNE) |
+| argon ES, > 5 MeV | 367.1 | 369.4 | 0.994 | 355.1 (DUNE) |
+| water ES, T > 3.49 MeV | 932.0 | 934.2 | 0.998 | 378.1 (Super-K IV) |
+
+The ratios are GLoBES's sampling of flux × σ at bin midpoints, as in part 1.
+Emulated through the same matrices, it reproduces the contribution to
+10⁻⁴ (`tests/test_snowglobes_part2.py`). Against the published responses,
+SNOwGLoBES's argon CC is low by its cross section (its default table against
+MARLEY 2). Its water ES is 2.5 times Super-K IV's, having no efficiency. With all
+components, its water ES above 3.49 MeV is 3.7 × 10⁴ per kt·yr against
+Super-K IV's 379: wc100kt30prct's matrices spread the ⁷Be and pep lines
+above threshold, and no efficiency removes them.
 
 ---
 

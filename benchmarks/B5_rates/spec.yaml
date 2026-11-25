@@ -17,7 +17,7 @@
 # Status: DRAFT.
 
 id: B5_rates
-version: 0.4.0   # part 2 (detector response, grid `observed`) is optional: part-1 contributions stay valid
+version: 0.7.0
 status: draft
 title: "Detector: interaction rates and the detector response"
 
@@ -28,7 +28,7 @@ fluxes:
   pep: {lines: [[1.442, 1.0]]}
   hep: {shape: reference/ssm/shapes/hep_shape.csv}
   Be7: {lines: [[0.8613, 0.8956], [0.3843, 0.1044]]}
-  B8:  {shape: reference/ssm/shapes/8B_shape_Winter_et_al.csv}
+  B8:  {shape: reference/ssm/shapes/8B_shape_Winter2006_tail_Bahcall1996.csv}   # Winter et al. 2006 to 15.2 MeV, Bahcall et al. 1996 above
   N13: {shape: reference/ssm/shapes/n13_shape.csv}
   O15: {shape: reference/ssm/shapes/o15_shape.csv}
   F17: {shape: reference/ssm/shapes/f17_shape.csv}
@@ -73,6 +73,10 @@ detectors:
     description: "pseudocumene + PPO (Borexino): (3.307 +- 0.003) x 10^31 electrons per 100 t, arXiv:1707.09279"
     targets: {electron: 3.307e+32}
     channels: {es: electron}
+  scintillator_lab:
+    description: "linear alkylbenzene (JUNO): 3.38 x 10^32 electrons per kt, arXiv:2006.11760 (sec. 2)"
+    targets: {electron: 3.38e+32}
+    channels: {es: electron}
 
 # `es` sums the three ES channels weighted with P_{e alpha}; CC channels use P_ee.
 # Below `threshold_MeV` the cross section is zero by kinematics (missing
@@ -93,8 +97,6 @@ spectrum_bins:
 thresholds_MeV: [0.0, 5.0]
 
 # Open questions:
-# - The 8B shape table is truncated at 15.2 MeV (true endpoint ~16.5 MeV):
-#   take the full Winter et al. tail before using rates above 15 MeV.
 # - Part 2: the CC visible energy is E_nu - Q (no recoil, binding or quenching
 #   losses); for d(nu_e, e-)pp the electron shares E_nu - Q with the two protons.
 
@@ -184,6 +186,15 @@ quantities:
   scintillator_pc/es/O15: scintillator_pc, es, O15
   scintillator_pc/es/F17: scintillator_pc, es, F17
   scintillator_pc/es/all: scintillator_pc, es, all
+  scintillator_lab/es/pp: scintillator_lab, es, pp
+  scintillator_lab/es/pep: scintillator_lab, es, pep
+  scintillator_lab/es/hep: scintillator_lab, es, hep
+  scintillator_lab/es/Be7: scintillator_lab, es, Be7
+  scintillator_lab/es/B8: scintillator_lab, es, B8
+  scintillator_lab/es/N13: scintillator_lab, es, N13
+  scintillator_lab/es/O15: scintillator_lab, es, O15
+  scintillator_lab/es/F17: scintillator_lab, es, F17
+  scintillator_lab/es/all: scintillator_lab, es, all
 all_quantities_required: false
 
 columns:
@@ -209,7 +220,10 @@ checks:
 # summed above it. Daytime, B2 reference oscillations, as in part 1.
 response:
   visible_offset_MeV: {cc_nue_ar40: 1.504, cc_nue_o16: 15.42, cc_nue_d: 1.442}
-  # Cross sections of SNUfish's folding (contributions state theirs in meta.yaml settings.cross_sections):
+  # Cross sections of SNUfish's folding of the published responses. A contribution with observed rates may state
+  # its own per channel in meta.yaml settings.cross_sections, in the same form ({tool, variant} of B4: for ES
+  # snufish-reference default or es_bks, or snowglobes default; for CC a snowglobes or marley variant); SNUfish
+  # then folds through them. Unstated channels take these:
   cross_sections:
     es: {tool: snufish-reference, variant: es_bks}      # BKS 1995 radiative corrections, differential in T
     cc_nue_ar40: {tool: marley, variant: ar40_marley2_bhattacharya2009}
@@ -241,6 +255,13 @@ response:
       threshold_MeV: 0.05
       resolution: {form: quadrature, a: 0.05, b: 0.0}   # 50 keV at 1 MeV, scaled with sqrt(E) (photostatistics: ~500 p.e./MeV)
       efficiency: {plateau: 0.999}
+    scintillator_lab:
+      preset: JUNO
+      source: "arXiv:2006.11760: 3 %/sqrt(E) on the recoil kinetic energy (sec. 2), the 2 MeV analysis threshold (sec. 3); energy scale 0.3 % and detection efficiency 1 % (table 5). The light-output nonlinearity it also applies is not modelled; dead time and the energy-dependent fiducial volumes are exposure, not response"
+      threshold_MeV: 2.0
+      resolution: {form: quadrature, a: 0.03, b: 0.0}
+      efficiency: {plateau: 1.0}
+      uncertainties: {energy_scale: 0.003, normalisation: 0.01}
     argon:
       preset: DUNE far detector
       source: "arXiv:2008.06647: \"realistic energy resolution is closest to the 20 % level\" (sec. 6); step efficiency at a 5 MeV detected-energy threshold (fig. 15)"
@@ -251,7 +272,29 @@ response:
   #   "spec": the responses above; SNUfish compares point by point with its folding.
   #   "own": the tool's own detector model, given next to data.parquet as response.parquet, one row per
   #     bin: detector, channel, kind ("efficiency" or "smearing"), true_axis ("observed": the true value of
-  #     the observed energy, or "neutrino": E_nu, CC only), true_low, true_high (MeV; NaN for efficiency),
-  #     observed_low, observed_high (MeV), value (efficiency 0-1, or P(observed bin | true bin)). SNUfish
-  #     folds the same inputs through that response, so the comparison tests the chain, and shows the
-  #     tool's response against the spec's.
+  #     the observed energy, or "neutrino": E_nu), true_low, true_high (MeV; NaN for efficiency),
+  #     observed_low, observed_high (MeV), value (efficiency 0-1, or P(observed bin | true bin)), and
+  #     optionally flavour ("nue", "numu", "nutau"; empty for a flavour-blind row). SNUfish folds the same
+  #     inputs through that response, so the comparison tests the chain, and shows the tool's response
+  #     against the spec's.
+  #     A matrix in neutrino energy maps the interactions at E_nu to observed energy: for CC (E_nu - Q
+  #     visible) it is flavour-blind; for ES it is per flavour (the recoil spectrum differs), with a matrix
+  #     for nue and one for numu, and nutau, if given, equal to numu (equal ES cross sections). Its rows give
+  #     P(observed bin | an interaction at E_nu), so neutrino energies outside its true bins give no events.
+  #     A row may sum to 1 + 1e-3 at most (the rounding of published tables).
+  # One response per detector. A further published response of a detector would be added by name
+  # (a minor change, docs/compatibility.md); none is published yet (docs/status.md).
+
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+# Earlier versions whose contributions are still exact.
+compatible: [0.5.0, 0.6.0]
+
+changelog:
+  - {version: 0.1.0, date: 2026-10-28, kind: initial, changes: "SNUfish's folding of every B4 model (no contributions)."}
+  - {version: 0.2.0, date: 2026-10-28, kind: major, changes: "Flux normalisations from the solar-model registry; rates for every solar model with its own B2 oscillations."}
+  - {version: 0.3.0, date: 2026-10-28, kind: minor, changes: "Contribution format for full-chain tools: grid totals, variants b16_gs98, bs05_op, b16_gs98_point_lines, native."}
+  - {version: 0.4.0, date: 2026-11-07, kind: minor, changes: "Part 2, the detector response: optional grid observed, response block, settings.response and response.parquet; heavy water and scintillator detectors."}
+  - {version: 0.5.0, date: 2026-11-20, kind: major, changes: "The 8B shape continues above 15.2 MeV, where Winter et al.'s table ends, with Bahcall et al. 1996 up to 16.0 MeV (1.1e-5 of the flux; reference/ssm/shapes/8B_shape_Winter2006_tail_Bahcall1996.csv). Contributions rerun."}
+  - {version: 0.6.0, date: 2026-11-20, kind: minor, changes: "Detector scintillator_lab (JUNO's LAB) with JUNO's 8B response (arXiv:2006.11760); response.parquet takes an optional flavour column and, for ES, matrices in neutrino energy per flavour."}
+  - {version: 0.7.0, date: 2026-11-21, kind: minor, changes: "settings.cross_sections of a contribution with observed rates: SNUfish folds through the cross sections it states; smearing rows may sum to 1 + 1e-3 (rounding)."}

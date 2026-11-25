@@ -18,6 +18,8 @@ asymmetries and uncertainty budgets (command line and web page). The
 | [dune-solar-tables.md](dune-solar-tables.md) | reproduce the CC, ES and NC rate tables of DUNE solar analyses in SOLAR's conventions, and write the raw rates of the DUNE solar Phase I paper |
 | [release.md](release.md) | make a citable release (prepared, not done) |
 | [status.md](status.md) | see what is missing, what is approximate and what is still open |
+| [compatibility.md](compatibility.md) | know what a spec or package version promises, and which contributions stay valid |
+| [roadmap-1.0.md](roadmap-1.0.md) | see what is decided, planned and out of scope for 1.0.0 (frozen specs, format, CLI and API) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | contribute a tool's results |
 
 Conventions used throughout:

@@ -58,7 +58,7 @@ uncertainties only; BS05 neither.
 |---|---|---|
 | pp | J. N. Bahcall, Phys. Rev. C 56, 3391 (1997) | 0.42341 MeV |
 | hep | J. N. Bahcall, Phys. Rev. C 56, 3391 (1997) | 18.784 MeV |
-| ⁸B | W. T. Winter et al., Phys. Rev. C 73, 025503 (2006), with shape uncertainty | table truncated at 15.2–15.3 MeV (true ~16.5 MeV) |
+| ⁸B | W. T. Winter et al., Phys. Rev. C 73, 025503 (2006), table IV, with shape uncertainty; above 15.2 MeV, J. N. Bahcall et al., Phys. Rev. C 54, 411 (1996), table I | Winter's table ends at 15.2 MeV (its strength function starts at E<sub>x</sub> = 1.55 MeV); Bahcall's continues it to 16.0 MeV (1.1 × 10⁻⁵ of the flux) and agrees at 15.2 |
 | ¹³N | Bahcall & Ulrich, Rev. Mod. Phys. 60, 297 (1988) | 1.199 MeV |
 | ¹⁵O | Bahcall & Ulrich (1988) (file header says N13: a copy slip in PEANUTS) | 1.732 MeV |
 | ¹⁷F | Bahcall & Ulrich (1988) | 1.740 MeV |
@@ -110,7 +110,7 @@ Targets per kiloton:
 | `argon` | 2.71349 × 10³² e⁻, 1.50146 × 10³¹ ⁴⁰Ar | natural argon, 99.60 % ⁴⁰Ar, M = 39.948 g/mol (B5 spec) |
 | `water` | 3.34285 × 10³² e⁻, 3.33472 × 10³¹ ¹⁶O | H₂O, M = 18.015 g/mol, 99.757 % ¹⁶O (B5 spec) |
 | `scintillator_pc` | 3.307 × 10³² e⁻ | Borexino pseudocumene + PPO, [arXiv:1707.09279](https://arxiv.org/abs/1707.09279) (B5 spec) |
-| `scintillator_lab` | 3.38 × 10³² e⁻ | JUNO LAB, arXiv:2006.11760 |
+| `scintillator_lab` | 3.38 × 10³² e⁻ | JUNO linear alkylbenzene, [arXiv:2006.11760](https://arxiv.org/abs/2006.11760) (B5 spec) |
 | `heavy_water` | 3.007 × 10³² e⁻, 6.014 × 10³¹ d | D₂O, 99.92 % isotopic purity ([arXiv:1109.0763](https://arxiv.org/abs/1109.0763)), M = 20.03 g/mol (B5 spec) |
 
 ### Detector responses
@@ -125,6 +125,7 @@ widths at the true (unsmeared) energy.
 | `water` | Super-K IV | −0.05525 + 0.3162√E + 0.04572 E, E the total electron energy (eq. 9) | fig. 28, final sample (`sk4_final`) | T > 3.49 MeV | scale ±0.48 %, σ ±3 %, rate ±1.1 % | [arXiv:2312.12907](https://arxiv.org/abs/2312.12907) |
 | `heavy_water` | SNO salt phase | −0.131 + 0.383√T + 0.03731 T, T the true kinetic energy (eq. A3) | 1 (no CC curve published; selection-efficiency systematic −0.1/+0.2 %, table XXXIV) | T<sub>eff</sub> > 5.5 MeV (sec. IX) | scale ±1.15 %, σ ±3.4 % (table V) | [nucl-ex/0502021](https://arxiv.org/abs/nucl-ex/0502021) |
 | `scintillator_pc` | Borexino Phase-II | 0.05 √E ("~50 keV at 1 MeV", sec. II; the √E scaling is photostatistics, ~500 p.e./MeV, not a published curve) | 0.999 (cuts remove ~0.1 % of good events, sec. II) | T > 0.05 MeV (trigger N_p > 20, ~50 keV) | — | [arXiv:1707.09279](https://arxiv.org/abs/1707.09279) |
+| `scintillator_lab` | JUNO | 0.03 √T, T the recoil kinetic energy (sec. 2; JUNO's light-output nonlinearity, also applied there, is not modelled) | 1 (dead time and the energy-dependent fiducial volumes are exposure) | T > 2 MeV (analysis threshold, sec. 3) | scale ±0.3 %, rate ±1 % (table 5) | [arXiv:2006.11760](https://arxiv.org/abs/2006.11760) |
 | `argon` | DUNE far detector | 0.20 E ("realistic energy resolution is closest to the 20 % level", sec. 6) | 1 above the threshold (step efficiency, fig. 15) | 5 MeV detected energy | — (none published for solar neutrinos) | [arXiv:2008.06647](https://arxiv.org/abs/2008.06647) |
 
 Calculator presets (`PRESETS` in `web/checks.js`), from published numbers

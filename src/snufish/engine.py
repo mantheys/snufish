@@ -145,12 +145,15 @@ class Table:
     hash). Efficiency: ``x`` energies (MeV) and ``y`` efficiencies (0-1). Smearing:
     ``x`` true-bin edges, ``y`` observed-bin edges (MeV) and ``matrix`` [true][observed]
     probabilities (rows may sum to less than 1); ``true_axis`` "observed" (the
-    true value of the observed energy) or "neutrino" (CC: E_nu, shifted by -Q)."""
+    true value of the observed energy) or "neutrino" (CC: E_nu, shifted by -Q; ES:
+    E_nu, one matrix per flavour in ``flavours``, (("nue", matrix), ("numu", matrix)),
+    each row P(observed bin | an interaction at E_nu))."""
     id: str
     x: tuple
     y: tuple
     matrix: tuple = ()
     true_axis: str = "observed"
+    flavours: tuple = ()
 
     def __eq__(self, other):
         return isinstance(other, Table) and self.id == other.id
@@ -312,10 +315,19 @@ def check(inputs, setup, quantity="rate"):
             raise ValueError(f"the imported {name} needs increasing energies")
     t = setup.smearing_table
     if t is not None:
-        if len(t.matrix) != len(t.x) - 1 or any(len(row) != len(t.y) - 1 for row in t.matrix):
-            raise ValueError("the imported smearing matrix needs one row per true bin and one column per observed bin")
-        if t.true_axis == "neutrino" and (setup.channel == "es" or setup.channel.startswith("nc_")):
-            raise ValueError("a smearing matrix in neutrino energy applies to CC channels only")
+        if _es_in_neutrino_energy(setup):
+            given = dict(t.flavours)
+            if set(given) != {"nue", "numu"}:
+                raise ValueError("an ES smearing matrix in neutrino energy needs one matrix for nue and one for numu")
+            matrices = list(given.values())
+        elif t.true_axis == "neutrino" and setup.channel.startswith("nc_"):
+            raise ValueError("a smearing matrix in neutrino energy applies to CC and ES channels only")
+        else:
+            matrices = [t.matrix]
+        for matrix in matrices:
+            if len(matrix) != len(t.x) - 1 or any(len(row) != len(t.y) - 1 for row in matrix):
+                raise ValueError("the imported smearing matrix needs one row per true bin and one column per "
+                                 "observed bin")
     allowed("site", setup.site, list(inputs["sites"]))
     allowed("Earth model", setup.earth_model, list(inputs["earth_models"]))
     if setup.orbit:
@@ -395,33 +407,66 @@ def _kernels(inputs, setup, component, edges):
     """Cached, oscillation-independent pieces of one component: ES: per neutrino
     energy, the cross section into each recoil bin [E, bins] for nu_e and nu_x;
     CC: the cross section sigma(E)."""
+    neutrino = _es_in_neutrino_energy(setup)
     key = (component, setup.detector, setup.channel, setup.es_model, setup.xsec_model, setup.threshold,
-           _edges_key(edges))
+           _edges_key(edges)) + ((setup.smearing_table.id, setup.energy_scale) if neutrino else ())
     cache = inputs.__dict__.setdefault("_kernels", {})
     if key not in cache:
         kind, energy, weight = inputs.components[component]
-        if setup.channel == "es":
-            out = []
-            for flavour in ("nue", "numu"):
-                above = np.stack([es_above(energy, flavour, inputs["constants"], t) for t in edges], axis=1)
-                k = above[:, :-1] - above[:, 1:]  # sigma(E; T in bin), exact for the tree-level formula
-                if setup.es_model == "snowglobes":  # its tables start at 0.5 MeV: BKS below
-                    e, ratio = inputs.es_ratio[flavour]
-                    k = k * np.interp(energy, e, ratio, left=1.0, right=1.0)[:, None]
-                    below = energy < e[0]
-                    if below.any():
-                        b = above[below] * bks_ratio(inputs, flavour, energy[below], edges)
-                        k[below] = b[:, :-1] - b[:, 1:]
-                elif setup.es_model == "bks":
-                    above = above * bks_ratio(inputs, flavour, energy, edges)
-                    k = above[:, :-1] - above[:, 1:]
-                out.append(k)
-            cache[key] = tuple(out)
+        if setup.channel == "es" and neutrino:  # sigma(E) times the flavour's matrix row at E: observed bins
+            matrices = dict(setup.smearing_table.flavours)
+            cache[key] = tuple(_es_recoil_bins(inputs, setup, flavour, energy, [0.0, np.inf])[:, 0, None]
+                               * _neutrino_rows(setup, matrices[flavour], energy, edges)
+                               for flavour in ("nue", "numu"))
+        elif setup.channel == "es":
+            cache[key] = tuple(_es_recoil_bins(inputs, setup, flavour, energy, edges) for flavour in ("nue", "numu"))
         else:
             e, sigma = inputs.xsec[setup.channel][setup.xsec_model]
             s = np.interp(energy, e, sigma, left=0.0, right=0.0)  # zero outside the table
             cache[key] = np.where(energy < inputs["xsec_thresholds_MeV"].get(setup.channel, 0.0), 0.0, s)
     return cache[key]
+
+
+def _es_recoil_bins(inputs, setup, flavour, energy, edges):
+    """[E, bins] ES cross section into each recoil-energy bin, sigma(E; T in bin), for the setup's ES model."""
+    edges = np.asarray(edges, dtype=float)
+    above = np.stack([es_above(energy, flavour, inputs["constants"], t) for t in edges], axis=1)
+    k = above[:, :-1] - above[:, 1:]  # exact for the tree-level formula
+    if setup.es_model == "snowglobes":  # its tables start at 0.5 MeV: BKS below
+        e, ratio = inputs.es_ratio[flavour]
+        k = k * np.interp(energy, e, ratio, left=1.0, right=1.0)[:, None]
+        below = energy < e[0]
+        if below.any():
+            b = above[below] * bks_ratio(inputs, flavour, energy[below], edges)
+            k[below] = b[:, :-1] - b[:, 1:]
+    elif setup.es_model == "bks":
+        above = above * bks_ratio(inputs, flavour, energy, edges)
+        k = above[:, :-1] - above[:, 1:]
+    return k
+
+
+def _es_in_neutrino_energy(setup):
+    t = setup.smearing_table
+    return setup.channel == "es" and t is not None and t.true_axis == "neutrino"
+
+
+def _spread(setup, observed, edges):
+    """[imported observed bin, fine bin]: each imported bin (energy-scaled) spread uniformly over the fine bins."""
+    obs = setup.energy_scale * np.asarray(observed, float)
+    spread = np.clip(np.minimum(obs[1:, None], edges[None, 1:]) - np.maximum(obs[:-1, None], edges[None, :-1]), 0, None)
+    return spread / np.diff(obs)[:, None]
+
+
+def _neutrino_rows(setup, matrix, energy, edges):
+    """[E, fine observed bin]: the row of an imported matrix in neutrino energy for each neutrino energy (the
+    true bin holding it; zero outside the matrix), spread over the fine observed bins."""
+    t = setup.smearing_table
+    true_edges, energy = np.asarray(t.x, float), np.asarray(energy, float)
+    out = np.zeros((len(energy), len(edges) - 1))
+    inside = (energy >= true_edges[0]) & (energy < true_edges[-1])
+    rows = np.searchsorted(true_edges, energy[inside], side="right") - 1
+    out[inside] = np.asarray(matrix, float)[rows] @ _spread(setup, t.y, np.asarray(edges, float))
+    return out
 
 
 def bks_ratio(inputs, flavour, energy, edges):
@@ -470,10 +515,8 @@ def _imported_matrix(inputs, setup, edges):
     true_edges = np.asarray(t.x, float)
     if t.true_axis == "neutrino":
         true_edges = true_edges - inputs["visible_offset_MeV"][setup.channel]
-    obs = setup.energy_scale * np.asarray(t.y, float)
     probs = np.asarray(t.matrix, float)
-    spread = np.clip(np.minimum(obs[1:, None], edges[None, 1:]) - np.maximum(obs[:-1, None], edges[None, :-1]), 0, None)
-    spread = spread / np.diff(obs)[:, None]   # [imported observed bin, fine observed bin]
+    spread = _spread(setup, t.y, edges)   # [imported observed bin, fine observed bin]
     centres = 0.5 * (edges[1:] + edges[:-1])
     matrix = np.eye(len(centres))
     inside = (centres >= true_edges[0]) & (centres < true_edges[-1])
@@ -492,7 +535,9 @@ def _response(inputs, setup, edges):
         sigma = np.zeros_like(centres) if setup.smearing_table is not None else resolution(inputs, setup, centres)
         scale = setup.energy_scale
         matrix = np.eye(len(centres))
-        if setup.smearing_table is not None:
+        if _es_in_neutrino_energy(setup):
+            pass  # the kernels map neutrino energy to observed energy themselves
+        elif setup.smearing_table is not None:
             matrix = _imported_matrix(inputs, setup, edges)
         elif scale != 1.0:  # without resolution: each bin's content spread uniformly over its scaled width
             low, high = scale * edges[:-1], scale * edges[1:]

@@ -11,11 +11,10 @@ an issue.
 
 | Item | Where | Notes |
 |---|---|---|
-| **Part 2 contributions to B5** | B5 spec | The spec takes observed rates with the published responses or a tool's own (`response.parquet`), and SNUfish folds every published response (`B5_Observed`), but no tool has contributed yet. SNOwGLoBES's smeared output would be the first, with its own detector configurations (matrices in neutrino energy, also for ES, which the engine's imported matrices take for CC only). |
+| **Part 2 contributions with the published responses** | B5 spec | SNOwGLoBES gives observed rates through its own response (B5 0.7.0: its smearing matrices, no efficiency, as its mode-0 run applies none), and agrees with SNUfish's folding through the same matrices to 0.6 % for ⁸B above 5 MeV. No tool yet gives observed rates with the spec's published responses (`settings.response: spec`); sntools (water, Super-K-like smearing) would be the first. |
 | **Night and A<sub>DN</sub> in B5 part 2** | B5 spec | Observed spectra are daytime; the engine has night and A<sub>DN</sub> through any response, the benchmark does not. |
 | **Night and annual rates in B5 contributions** | B5 spec | SNUfish's folding has them (`B5_DayNight`, per site and Earth model); B5 contributions (full-chain tools) are daytime only. |
 | **Non-adiabatic Sun solver** | B2 spec | A validated solver (e.g. adiabatic-basis integration with phase averaging) to measure the O(1/γ²) corrections the adiabatic reference neglects. |
-| **ES with recoil thresholds in B4** | B4 spec | σ(E; T > T<sub>min</sub>) for detector thresholds is not a benchmark quantity (the engine computes it). |
 | **Spectral-shape variants** | B2 spec | The Ortiz et al. ⁸B shape and the ⁷Be line widths as shape variants; all solar models share one set of shapes now. |
 | **Solar-model flux correlations in B5** | B2 spec | The B23 correlation matrices are used by `snufish budget` and the engine, not by the B5 build. |
 
@@ -93,7 +92,7 @@ contributions ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)):
 | `prem_crust1_3d`: the crust of the ~130 chords in each of the 1001 nadir cells averaged before solving; chords in pieces of near-constant density | ≤ 1.3 × 10⁻⁴ in P₂ₑ (≤ 0.25 % of the regeneration); A<sub>DN</sub> within 0.07 % of 10 km pieces | `earth3d` |
 | `prem_crust1_3d`: every CRUST1.0 cell's surface at the Earth's radius (no topography, as `prem_crust1` under the detector), Yₑ = 0.494 in every layer (water and ice too: 0.555 for water), one year of Sun positions (2026) | not measured; the far side, where oceans and topography sit, contributes ≤ 0.2 % of A<sub>DN</sub> in all | `earth3d` |
 | θ₁₃ in the app tables followed by ν₃ decoupling | within 1.6 % of the exact A<sub>DN</sub> over sin²θ₁₃ = 0.015–0.03 | `engine.TableProbabilities` |
-| ⁸B shape truncated at 15.2 MeV (true endpoint ~16.5 MeV) | ~10⁻⁴ of the flux; matters above 15 MeV (⁸B background to hep) | `reference/ssm/shapes/` |
+| ⁸B shape above 15.2 MeV, where Winter et al.'s table ends (its strength function starts at E<sub>x</sub>(⁸Be) = 1.55 MeV), from Bahcall et al. 1996 | the tail holds 1.1 × 10⁻⁵ of the flux; the two tables agree at 15.2 MeV | `reference/ssm/shapes/` |
 | B16 and BS05 density beyond 0.5 R<sub>☉</sub> | exponential tail fit, residual ≤ 0.0033 in log₁₀ n<sub>e</sub> | `models.yaml` `tail` |
 | Cross sections below the B4 grid (0.02 MeV) | < 0.01 % of any rate | B5 spec |
 | NaN in a cross-section table counted as zero | a lower bound; `Coverage` reports the covered fraction | build, engine |
@@ -107,7 +106,8 @@ contributions ([crosschecks.md](crosschecks.md#peanuts-and-nusquids)):
 | Borexino resolution | "~50 keV at 1 MeV" scaled with √E (photostatistics); its analysis uses a full response model (scaled Poisson in N_p, quenching, Cherenkov light) not reduced to σ(E) | B5 spec |
 | DUNE response | 20 % at every energy and no efficiency below or above the 5 MeV step: no solar-neutrino response is published | B5 spec, calculator preset |
 | Super-K IV efficiency on CC ¹⁶O | the fig. 28 curve (⁸B ES) applied to every channel of water, CC ¹⁶O included (4 × 10⁻⁵ per kt·yr: hep only) | B5 spec |
-| JUNO preset | no energy-dependent fiducial volume, muon-veto dead time or non-linearity | calculator preset |
+| JUNO response | 3 %/√T, no light-output nonlinearity (JUNO applies Daya Bay's; under 1 % above 2 MeV, sec. 4), no energy-dependent fiducial volume or muon-veto dead time (exposure, not response) | B5 spec, calculator preset |
+| One response per detector | no second published response: SNO+'s water-phase ⁸B paper (arXiv:1812.03355) gives only the uncertainties of its resolution (0.018√T) and scale (2 %), not the resolution; Hyper-K publishes none (its preset borrows Super-K IV's). A second one would be added by name, a minor spec change | B5 spec |
 
 ## Data to check
 
@@ -156,14 +156,15 @@ From [crosschecks.md](crosschecks.md):
 
 ## Open questions before freezing the specs
 
+Each is decided (for 1.0, or out of scope) in [roadmap-1.0.md](roadmap-1.0.md).
+
 - **B3**: extend the energy grid down to 0.1 MeV for pp and ⁷Be (Earth
   effects are tiny there)? Add `prem_crust1` per site as a variant? And
   `prem_crust1_3d`, which needs the chords written out per site (a
   trajectories grid) and a tool that solves single trajectories?
-- **B4**: add σ(E; T > T<sub>min</sub>) for the detectors' ES thresholds?
-- **B5**: take the full Winter et al. ⁸B tail before using rates above
-  15 MeV; night and annual quantities in contributions; a second response
-  per detector (Hyper-K, JUNO, SNO+) as variants of part 2.
+- **B5**: night and annual quantities in contributions (out of 1.0). A
+  second response per detector: none is published (JUNO is a detector of
+  its own since B5 0.6.0; SNO+ and Hyper-K give no resolution function).
 - **B2 (solar models)**: shape variants; use the B23 correlations in B5 rate
   uncertainties.
 - **B2**: a non-adiabatic solver; radial path against the true line of

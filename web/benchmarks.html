@@ -160,6 +160,9 @@
       <p>Elastic scattering on electrons is known to well under 1 %: radiative corrections (Bahcall, Kamionkowski &amp;
         Sirlin) and SNOwGLoBES's tables differ by 0.1–0.2 % on the rates (0.12 % on ⁸B ES in water, 0.22 % on its A<sub>DN</sub>; up to 0.5 % point by point, ν<sub>μ</sub>
         and ν<sub>τ</sub> in opposite directions); tree level, an approximation, is 2–4 % high.
+        Since B4 0.2.0 the reference also gives ES above each detector's recoil threshold (0.05 to 5.5 MeV): the
+        corrections grow with the threshold, at 10 MeV from −4.8 % (ν<sub>e</sub>) and +4.9 % (ν<sub>μ,τ</sub>) for all
+        recoils to −5.3 % and +6.0 % above 5 MeV.
         ν<sub>e</sub> CC on ⁴⁰Ar is not. MARLEY 2, with each of the three sets of measured Gamow–Teller
         strengths, and the shell model of Suzuki &amp; Honma agree within 11 %; the shell model of Kostensalo, Suhonen
         &amp; Zuber, which quenches the strength (g<sub>A</sub> = 1.00), is 27–35 % lower (its published values; 29–37 % in SNUfish's tables). That 36 % range on the ⁸B rate is the
@@ -191,8 +194,8 @@
       <p>B5 closes the chain: it folds the B2 fluxes and oscillations and the B4 cross sections into interactions per
         kiloton-year in true neutrino energy, the input of every detector, and passes them through each detector's
         published response (resolution, efficiency, threshold) into observed spectra and rates above threshold:
-        Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II for scintillator and DUNE's far
-        detector for argon. Tools that fold the whole chain themselves are compared with SNUfish's folding of exactly the
+        Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II for pseudocumene scintillator, JUNO
+        for LAB scintillator and DUNE's far detector for argon. Tools that fold the whole chain themselves are compared with SNUfish's folding of exactly the
         same inputs and their own cross sections. MARLEY (argon: CC with its recommended model, ES at tree level)
         integrates over each oscillated spectrum itself and agrees to 0.03 % for every component. SNOwGLoBES (argon
         and water) agrees to 0.4 % on ⁸B and hep (ES and ⁴⁰Ar CC; 1.6 % on the tiny hep CC on ¹⁶O), but is 2–21 % low
@@ -200,7 +203,8 @@
         Super-K IV's efficiency halves the rate above its threshold, DUNE's and SNO's resolutions take 4.4 % and
         3.6 % off their CC rates above threshold, and under 3 % off the falling ES recoil spectra. Its entry in the
         overview is the statistics of 100 kt·yr and the published detector uncertainties; a tool may also
-        contribute observed rates, with the spec's response or its own.</p>
+        contribute observed rates, with the spec's response or its own. SNOwGLoBES does, through its own smearing
+        matrices (and no efficiency, as its run applies none): within 0.6 % of SNUfish's folding through the same matrices for ⁸B above 5 MeV.</p>
     </section>
     <section class="card"><h3 class="plot-title"></h3><div id="plot-b5-chain" class="plot"></div></section>
     <section class="card"><h3 class="plot-title">Full-chain rates over SNUfish's folding</h3><div id="b5-tools"></div></section>

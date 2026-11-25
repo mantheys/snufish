@@ -5,6 +5,7 @@ plotipus wants one row per series with whole arrays in the cells; the
 builders below pivot the long-format contributions into those rows.
 """
 
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -182,20 +183,50 @@ def response_cases(spec):
     return [(d, c) for d in spec["response"]["detectors"] for c in spec["detectors"][d]["channels"]]
 
 
+ES_CROSS_SECTIONS = {("snufish-reference", "es_bks"): "bks", ("snufish-reference", "default"): "tree",
+                     ("snowglobes", "default"): "snowglobes"}   # B4 {tool, variant} of ES -> the engine's es_model
+CC_TOOLS = ("snowglobes", "marley")   # B4 tools whose CC tables the engine holds by variant name (export.collect_inputs)
+
+
+def xsec_models(entry, channel):
+    """The engine's (es_model, xsec_model) for a B5 part 2 cross section: {tool, variant} of B4, or {table} (the
+    channel's reference table). ValueError for one the engine does not hold."""
+    if not isinstance(entry, dict):
+        raise ValueError(f"cross section of {channel} must be {{tool, variant}}, not {entry!r}")
+    if channel == "es":
+        key = (entry.get("tool"), entry.get("variant", "default"))
+        if key not in ES_CROSS_SECTIONS:
+            raise ValueError(f"ES cross section must be one of {sorted(ES_CROSS_SECTIONS)}, not {key}")
+        return ES_CROSS_SECTIONS[key], "default"
+    if "table" in entry:
+        return "bks", "default"
+    tool, variant = entry.get("tool"), entry.get("variant", "default")
+    if tool not in CC_TOOLS or (tool == "marley" and variant == "default"):
+        raise ValueError(f"cross section of {channel} must be a snowglobes variant or a named marley variant, "
+                         f"not {tool}: {variant}")
+    return "bks", variant
+
+
+def observed_cross_section(spec, meta, channel):
+    """The cross section of ``channel`` in SNUfish's folding of a contribution's observed rates: the one its
+    settings.cross_sections states, or the spec's (``meta`` None: the spec's)."""
+    stated = ((meta or {}).get("settings") or {}).get("cross_sections") or {}
+    return stated.get(channel, spec["response"]["cross_sections"][channel])
+
+
 def _xsec_model(spec, channel):
     """The engine's (es_model, xsec_model) for the cross section B5 part 2 names for ``channel``."""
-    entry = spec["response"]["cross_sections"][channel]
-    if channel == "es":
-        return {"es_bks": "bks", "default": "tree"}[entry["variant"]], "default"
-    return "bks", entry.get("variant", "default")
+    return xsec_models(spec["response"]["cross_sections"][channel], channel)
 
 
-def observed_setup(spec, inputs, solar_model, detector, channel, response=None):
-    """engine.Setup of B5 part 2: every flux component, the spec's cross section, and the published response of the
-    detector without its threshold (or ``response``: Setup fields of a contribution's own response)."""
+def observed_setup(spec, inputs, solar_model, detector, channel, response=None, cross_section=None):
+    """engine.Setup of B5 part 2: every flux component, the spec's cross section (or ``cross_section``, {tool,
+    variant}), and the published response of the detector without its threshold (or ``response``: Setup fields of a
+    contribution's own response)."""
     from . import engine
 
-    es_model, xsec_model = _xsec_model(spec, channel)
+    es_model, xsec_model = (_xsec_model(spec, channel) if cross_section is None
+                            else xsec_models(cross_section, channel))
     fields = engine.published_response(inputs, detector) if response is None else dict(response)
     fields.update(threshold=0.0, energy_scale_error=0.0, resolution_error=0.0, normalisation_error=0.0)
     return engine.Setup(solar_model=solar_model, components=tuple(spec["fluxes"]), detector=detector, channel=channel,
@@ -269,13 +300,22 @@ def response_tables(table, detector, channel):
     smear = sub[sub.kind == "smearing"]
     true_edges = np.unique(np.concatenate([smear.true_low, smear.true_high]))
     obs_edges = np.unique(np.concatenate([smear.observed_low, smear.observed_high]))
-    matrix = np.zeros((len(true_edges) - 1, len(obs_edges) - 1))
-    for r in smear.itertuples():
-        matrix[np.searchsorted(true_edges, r.true_low), np.searchsorted(obs_edges, r.observed_low)] += r.value
-    tag = f"{detector}:{channel}:{len(sub)}:{float(sub.value.sum()):.12g}"
+
+    def matrix_of(rows):
+        matrix = np.zeros((len(true_edges) - 1, len(obs_edges) - 1))
+        for r in rows.itertuples():
+            matrix[np.searchsorted(true_edges, r.true_low), np.searchsorted(obs_edges, r.observed_low)] += r.value
+        return tuple(map(tuple, matrix))
+
+    axis = smear.true_axis.iloc[0]
+    if channel == "es" and axis == "neutrino":  # one matrix per flavour; nu_tau shares nu_mu's (the validator checks)
+        matrix, flavours = (), tuple((f, matrix_of(smear[smear.flavour == f])) for f in ("nue", "numu"))
+    else:
+        matrix, flavours = matrix_of(smear), ()
+    digest = hashlib.sha1(pd.util.hash_pandas_object(sub.reset_index(drop=True), index=False).to_numpy()).hexdigest()
+    tag = f"{detector}:{channel}:{digest[:16]}"  # by content: the engine caches by id
     return dict(efficiency_table=Table(f"own-eff:{tag}", tuple(x), tuple(y)),
-                smearing_table=Table(f"own-smear:{tag}", tuple(true_edges), tuple(obs_edges), tuple(map(tuple, matrix)),
-                                     smear.true_axis.iloc[0]),
+                smearing_table=Table(f"own-smear:{tag}", tuple(true_edges), tuple(obs_edges), matrix, axis, flavours),
                 resolution_a=0.0, resolution_b=0.0, resolution_poly=(), efficiency=1.0, efficiency_e50=0.0)
 
 
@@ -286,7 +326,7 @@ def _observed_chain(contributions, spec):
 
     path = build_dir() / "B5_Observed.parquet"
     reference = pd.read_parquet(path) if path.exists() else None
-    rows = []
+    rows, folds = [], {}
     for contribution in contributions:
         data = contribution.data[contribution.data["grid"] == "observed"]
         if data.empty:
@@ -299,7 +339,8 @@ def _observed_chain(contributions, spec):
             model = spec.variants[variant]["solar_model"]
             if model is None:
                 continue
-            if own is None:
+            xsec = observed_cross_section(spec, meta, channel)
+            if own is None and xsec == spec["response"]["cross_sections"][channel]:
                 if reference is None:
                     continue
                 match = reference[(reference.SolarModel == model) & (reference.Detector == detector)
@@ -307,20 +348,25 @@ def _observed_chain(contributions, spec):
                 if match.empty:
                     continue
                 folded = np.asarray(match.iloc[0].Above)
-            else:
-                averages = pd.read_parquet(build_dir() / "B2_Average.parquet")
-                inputs = _engine_inputs()
-                setup = observed_setup(spec, inputs, model, detector, channel, response_tables(own, detector, channel))
-                _, spectra = observed_spectra(spec, inputs, AverageProbabilities(
-                    averages[averages.Tool == "snufish-reference"]), setup)
-                folded = above(spectra[component])
+            else:  # folded here: the contribution's own response or cross section (all components at once)
+                key = (contribution.path, model, detector, channel)
+                if key not in folds:
+                    averages = pd.read_parquet(build_dir() / "B2_Average.parquet")
+                    inputs = _engine_inputs()
+                    response = None if own is None else response_tables(own, detector, channel)
+                    setup = observed_setup(spec, inputs, model, detector, channel, response, xsec)
+                    folds[key] = observed_spectra(spec, inputs, AverageProbabilities(
+                        averages[averages.Tool == "snufish-reference"]), setup)[1]
+                folded = above(folds[key][component])
             sub = sub.sort_values("threshold")
             threshold, value = sub.threshold.to_numpy(), sub.value.to_numpy()
             preset = spec["response"]["detectors"].get(detector, {}).get("threshold_MeV", 0.0)
             k = int(np.argmin(np.abs(threshold - preset)))
             ratio = np.divide(value, folded, out=np.full_like(value, np.nan), where=folded > 0)
+            label = xsec.get("table") or f"{xsec['tool']}: {xsec.get('variant', 'default')}"
             rows.append(dict(Tool=meta["tool"], Version=str(meta["tool_version"]), Variant=variant, SolarModel=model,
-                             Response=mode, Detector=detector, Channel=channel, Component=component,
+                             Response=mode, CrossSection=label, Case=f"{detector} {channel}",
+                             Detector=detector, Channel=channel, Component=component,
                              Threshold=threshold, Rate=value, Folded=folded, Ratio=ratio, PresetThreshold=preset,
                              RateAbove=float(value[k]), FoldedAbove=float(folded[k]),
                              RatioAbove=float(value[k] / folded[k]) if folded[k] > 0 else np.nan))

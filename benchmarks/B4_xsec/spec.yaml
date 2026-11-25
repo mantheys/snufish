@@ -7,8 +7,9 @@
 # Status: DRAFT.
 
 id: B4_xsec
-version: 0.1.0
+version: 0.2.0
 status: draft
+compatible: [0.1.0]             # 0.2.0 adds optional quantities: 0.1.0 contributions stay valid
 title: Cross sections of solar neutrino detection channels
 
 quantities:                     # channels; target in brackets
@@ -19,6 +20,23 @@ quantities:                     # channels; target in brackets
   cc_nue_o16:  nu_e + 16O -> e- + 16F [16O nucleus]
   cc_nue_c13:  nu_e + 13C -> e- + 13N [13C nucleus]
   cc_nue_d:    nu_e + d -> e- + p + p [deuteron]
+  # ES above the electron-recoil thresholds of the B5 responses: sigma(E; T > T_min), the cross section
+  # integrated over electron kinetic energies T from T_min to T_max(E) (zero where T_max <= T_min) [electron]
+  es_nue_T0.05:   nu_e e-, T > 0.05 MeV (Borexino)
+  es_numu_T0.05:  nu_mu e-, T > 0.05 MeV (Borexino)
+  es_nutau_T0.05: nu_tau e-, T > 0.05 MeV (Borexino)
+  es_nue_T2.0:    nu_e e-, T > 2.0 MeV (JUNO)
+  es_numu_T2.0:   nu_mu e-, T > 2.0 MeV (JUNO)
+  es_nutau_T2.0:  nu_tau e-, T > 2.0 MeV (JUNO)
+  es_nue_T3.49:   nu_e e-, T > 3.49 MeV (Super-K IV)
+  es_numu_T3.49:  nu_mu e-, T > 3.49 MeV (Super-K IV)
+  es_nutau_T3.49: nu_tau e-, T > 3.49 MeV (Super-K IV)
+  es_nue_T5.0:    nu_e e-, T > 5.0 MeV (DUNE)
+  es_numu_T5.0:   nu_mu e-, T > 5.0 MeV (DUNE)
+  es_nutau_T5.0:  nu_tau e-, T > 5.0 MeV (DUNE)
+  es_nue_T5.5:    nu_e e-, T > 5.5 MeV (SNO salt)
+  es_numu_T5.5:   nu_mu e-, T > 5.5 MeV (SNO salt)
+  es_nutau_T5.5:  nu_tau e-, T > 5.5 MeV (SNO salt)
 all_quantities_required: false  # a tool contributes the channels it has
 
 grids:
@@ -34,10 +52,13 @@ variants:
     description: The tool's default cross section for each channel it provides.
   es_bks:
     required: false
-    quantities: [es_nue, es_numu, es_nutau]
+    quantities: [es_nue, es_numu, es_nutau, es_nue_T0.05, es_numu_T0.05, es_nutau_T0.05, es_nue_T2.0, es_numu_T2.0,
+                 es_nutau_T2.0, es_nue_T3.49, es_numu_T3.49, es_nutau_T3.49, es_nue_T5.0, es_numu_T5.0, es_nutau_T5.0,
+                 es_nue_T5.5, es_numu_T5.5, es_nutau_T5.5]
     description: >-
       ES with electroweak, QCD and QED radiative corrections, Bahcall, Kamionkowski & Sirlin, PRD 51, 6146 (1995),
-      all recoil energies (the photon of nu e -> nu e gamma undetected); sin^2 theta_W(m_Z) = 0.2317 as in BKS.
+      all recoil energies or above the threshold in the name (the photon of nu e -> nu e gamma undetected; T is
+      the electron's kinetic energy); sin^2 theta_W(m_Z) = 0.2317 as in BKS.
   ar40_klmv:
     required: false
     quantities: [cc_nue_ar40]
@@ -99,6 +120,8 @@ checks:
   range: [0.0, 1.0e-30]
   allow_missing: true           # NaN allowed (outside a tool's table); never negative
 
-# Open questions:
-# - Electron-recoil thresholds: add sigma(E; T > T_min) for the detectors' ES thresholds?
-# - Radiative corrections for ES (Bahcall, Kamionkowski, Sirlin 1995) in the reference.
+# Versions (docs/compatibility.md). kind: initial, patch, minor (additive: old contributions stay valid) or
+# major (old contributions are no longer valid).
+changelog:
+  - {version: 0.1.0, date: 2026-10-28, kind: initial, changes: "ES and CC channels on one energy grid. Optional variants added later without a bump (additive): the MARLEY 2 40Ar variants and ar40_marley1_bhattacharya2009 (2026-10-29), es_bks (2026-10-31), ar40_marley1_allowed (2026-11-07)."}
+  - {version: 0.2.0, date: 2026-11-21, kind: minor, changes: "Optional quantities es_<flavour>_T<threshold>, sigma(E; T > T_min) at the B5 responses' ES thresholds (0.05, 2.0, 3.49, 5.0, 5.5 MeV); a variant's quantities list is the set a contribution may give, no longer the set it must give exactly (a relaxed check); the nu_e > nu_mu, nu_tau ordering check extends to each threshold where the cross section is not zero."}

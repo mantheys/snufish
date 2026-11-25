@@ -57,8 +57,8 @@ def _reference_records(spec):
     if spec.id == "B4_xsec":
         from .reference import xsec
 
-        return ["default", "es_bks"], ("nu-e elastic scattering, all recoil energies: tree-level SM (default) and with "
-                                       "the BKS 1995 radiative corrections (es_bks)"), [
+        return ["default", "es_bks"], ("nu-e elastic scattering, all recoil energies and above each ES threshold of the spec: tree-level SM "
+                                       "(default) and with the BKS 1995 radiative corrections (es_bks)"), [
             r for grid in spec.grids for r in xsec.solve_b4(spec, grid)]
     from .reference import sun
 

@@ -8,7 +8,10 @@ files:
   pp_shape.csv:  {source: "J. N. Bahcall, Phys. Rev. C 56, 3391 (1997)", endpoint_MeV: 0.42341}
   hep_shape.csv: {source: "J. N. Bahcall, Phys. Rev. C 56, 3391 (1997)", endpoint_MeV: 18.784}
   8B_shape_Winter_et_al.csv: {source: "W. T. Winter et al., Phys. Rev. C 73, 025503 (2006)", columns: [E_MeV, shape, shape_uncertainty],
-                              note: "truncated: falls from 0.047 to 0 between 15.2 and 15.3 MeV (true endpoint ~16.5 MeV); ~1e-4 of the flux missing, relevant above 15 MeV (8B background to hep)"}
+                              note: "as published (table IV, nucl-ex/0406019): ends at 15.2 MeV, because its strength function starts at E_x(8Be) = 1.55 MeV. B5 uses the file below; this one stays for checks that quote Winter's table"}
+  8B_shape_Winter2006_tail_Bahcall1996.csv: {source: "Winter et al. 2006 (table IV) to 15.2 MeV; above, J. N. Bahcall et al., Phys. Rev. C 54, 411 (1996), table I (nucl-th/9601044), lambda x 1000",
+                              columns: [E_MeV, shape, shape_uncertainty], endpoint_MeV: 16.0, method: "table (typed from the arXiv text, 2026-11-20)",
+                              note: "the two tables agree at 15.2 MeV (0.047 per 1000 per MeV); the tail beyond holds 1.1e-5 of the flux. Tail uncertainty: (lambda+ - lambda)/3 of Bahcall's +-3 sigma spectra"}
   n13_shape.csv: {source: "J. N. Bahcall and R. K. Ulrich, Rev. Mod. Phys. 60, 297 (1988)", endpoint_MeV: 1.199}
   o15_shape.csv: {source: "J. N. Bahcall and R. K. Ulrich, Rev. Mod. Phys. 60, 297 (1988)", endpoint_MeV: 1.732,
                   note: "the file header says N13 (a copy slip in the PEANUTS file); the endpoint is that of 15O"}

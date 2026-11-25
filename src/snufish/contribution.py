@@ -85,8 +85,9 @@ def validate(contribution, spec=None):
     tool_dir, bench_dir, version_dir = contribution.path.parts[-3:]
     if (tool_dir, bench_dir, version_dir) != (meta["tool"], meta["benchmark"], str(meta["tool_version"])):
         problems.append(f"directory {tool_dir}/{bench_dir}/{version_dir} does not match meta.yaml")
-    if str(meta["benchmark_version"]) != spec.version:
-        problems.append(f"computed with spec {meta['benchmark_version']}, current spec is {spec.version}")
+    if not spec.accepts(meta["benchmark_version"]):
+        problems.append(f"computed with spec {meta['benchmark_version']}, which spec {spec.version} does not accept "
+                        "(docs/compatibility.md)")
 
     columns = ["grid", "variant", "quantity", *spec.grid_names, "value"]
     missing = [c for c in columns if c not in df.columns]
@@ -143,10 +144,10 @@ def _check_grid(df, spec, variant, grid):
         if len(got) != len(expected) or not np.allclose(got, expected, atol=1e-9):
             problems.append(f"{where} {name} grid differs from the spec ({len(got)} vs {len(expected)} points)")
     quantities = set(df["quantity"])
-    expected_quantities = spec.variants[variant].get("quantities")
-    if expected_quantities is not None:
-        if quantities != set(expected_quantities):
-            problems.append(f"{where} quantities {sorted(quantities)}, expected {expected_quantities}")
+    allowed = spec.variants[variant].get("quantities")
+    if allowed is not None:  # the quantities the variant may give
+        if not quantities <= set(allowed):
+            problems.append(f"{where} quantities {sorted(quantities - set(allowed))} are not among {allowed}")
     elif spec.data.get("all_quantities_required", True):
         if quantities != set(spec.quantities):
             problems.append(f"{where} quantities {sorted(quantities)}, expected {spec.quantities}")
@@ -185,20 +186,26 @@ def _check_b2(df, spec):
 
 
 def _check_b4(df, spec):
-    # nu_e scatters on electrons through CC and NC: always above nu_mu, nu_tau
+    # nu_e scatters on electrons through CC and NC: always above nu_mu, nu_tau, at every recoil threshold
+    # (es_<flavour> and es_<flavour>_T<threshold>) where it is not zero (below threshold both are)
     wide = df[df.quantity.str.startswith("es_")].pivot_table(
         index=["grid", "variant", "energy"], columns="quantity", values="value")
     problems = []
-    for other in ("es_numu", "es_nutau"):
-        if {"es_nue", other} <= set(wide.columns):
-            bad = (wide["es_nue"] <= wide[other]) & wide["es_nue"].notna()
-            if bad.any():
-                problems.append(f"es_nue <= {other} at {bad.sum()} energies")
+    suffixes = sorted({c[len("es_nue"):] for c in wide.columns if c.startswith("es_nue")})
+    for suffix in suffixes:
+        nue = wide[f"es_nue{suffix}"]
+        for other in (f"es_numu{suffix}", f"es_nutau{suffix}"):
+            if other in wide.columns:
+                bad = (nue <= wide[other]) & nue.notna() & ~((nue == 0) & (wide[other] == 0))
+                if bad.any():
+                    problems.append(f"es_nue{suffix} <= {other} at {bad.sum()} energies")
     return problems
 
 
 RESPONSE_COLUMNS = ["detector", "channel", "kind", "true_axis", "true_low", "true_high", "observed_low",
                     "observed_high", "value"]
+FLAVOURS = ("nue", "numu", "nutau")
+ROW_SUM_TOLERANCE = 1e-3   # a smearing row may sum to 1 + this (the rounding of published tables, B5 spec)
 
 
 def load_response(path):
@@ -214,9 +221,18 @@ def _check_b5_response(contribution, spec):
     observed = df[df["grid"] == "observed"]
     if observed.empty:
         return []
-    mode = (contribution.meta.get("settings") or {}).get("response")
+    from .build import xsec_models
+
+    settings = contribution.meta.get("settings") or {}
+    mode = settings.get("response")
     if mode not in ("spec", "own"):
         return ["meta.yaml: settings.response must be 'spec' or 'own' for observed-energy rates (grid observed)"]
+    stated = settings.get("cross_sections") or {}
+    for channel in sorted({q.split("/")[1] for q in observed["quantity"]} & set(stated)):
+        try:
+            xsec_models(stated[channel], channel)
+        except ValueError as error:
+            return [f"meta.yaml: settings.cross_sections: {error}"]
     if mode == "spec":
         return []
     table = load_response(contribution.path)
@@ -226,9 +242,15 @@ def _check_b5_response(contribution, spec):
     if missing:
         return [f"response.parquet: missing columns {missing}"]
     problems = []
+    if "flavour" not in table.columns:
+        table = table.assign(flavour="")
+    table = table.assign(flavour=table.flavour.fillna("").astype(str))
     for case in sorted({q.rsplit("/", 1)[0] for q in observed["quantity"]}):
         detector, channel = case.split("/")
         sub = table[(table.detector == detector) & (table.channel == channel)]
+        if set(sub.flavour) - {"", *FLAVOURS}:
+            problems.append(f"response.parquet: flavour of {case} must be one of {', '.join(FLAVOURS)} or empty")
+            continue
         for kind in ("efficiency", "smearing"):
             part = sub[sub.kind == kind]
             if part.empty:
@@ -237,14 +259,36 @@ def _check_b5_response(contribution, spec):
                 problems.append(f"response.parquet: {kind} of {case} outside [0, 1]")
         smearing = sub[sub.kind == "smearing"]
         if not smearing.empty:
-            if set(smearing.true_axis) - {"observed", "neutrino"}:
-                problems.append(f"response.parquet: true_axis of {case} must be 'observed' or 'neutrino'")
-            elif (smearing.true_axis == "neutrino").any() and not channel.startswith("cc_"):
-                problems.append(f"response.parquet: a matrix in neutrino energy applies to CC channels only ({case})")
-            rows = smearing.groupby(["true_low", "true_high"])["value"].sum()
-            if (rows > 1 + 1e-6).any():
-                problems.append(f"response.parquet: smearing rows of {case} sum to more than 1")
+            problems += _check_smearing(smearing, case, channel)
     return problems
+
+
+def _check_smearing(smearing, case, channel):
+    """One detector/channel's smearing rows: one true axis; per flavour only for ES in neutrino energy (nue and
+    numu, nutau equal to numu); every row summing to at most 1."""
+    axes = set(smearing.true_axis)
+    if axes - {"observed", "neutrino"} or len(axes) > 1:
+        return [f"response.parquet: true_axis of {case} must be one of 'observed' or 'neutrino'"]
+    neutrino = axes == {"neutrino"}
+    if neutrino and channel.startswith("nc_"):
+        return [f"response.parquet: a matrix in neutrino energy applies to CC and ES channels only ({case})"]
+    flavours = set(smearing.flavour)
+    if channel == "es" and neutrino:
+        if not {"nue", "numu"} <= flavours or "" in flavours:
+            return [f"response.parquet: an ES matrix in neutrino energy of {case} needs flavour nue and numu rows"]
+        if "nutau" in flavours:
+            key = ["true_low", "true_high", "observed_low", "observed_high"]
+            pair = smearing[smearing.flavour == "numu"].merge(smearing[smearing.flavour == "nutau"], on=key,
+                                                               how="outer", suffixes=("_mu", "_tau"))
+            if not np.allclose(pair.value_mu.fillna(0), pair.value_tau.fillna(0), rtol=1e-6, atol=1e-12):
+                return [f"response.parquet: the nutau matrix of {case} differs from numu's (SNUfish's ES cross "
+                        "sections of the two are equal)"]
+    elif flavours != {""}:
+        return [f"response.parquet: flavour applies to ES matrices in neutrino energy only ({case})"]
+    rows = smearing.groupby(["flavour", "true_low", "true_high"])["value"].sum()
+    if (rows > 1 + ROW_SUM_TOLERANCE).any():
+        return [f"response.parquet: smearing rows of {case} sum to more than 1"]
+    return []
 
 
 BENCHMARK_CHECKS = {"B3_earth": _check_b3, "B2_sun": _check_b2, "B4_xsec": _check_b4}

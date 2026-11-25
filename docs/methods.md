@@ -160,7 +160,10 @@ the end point; the differential cross section is clipped at zero there
 (the last ~10⁻³ of the recoil range). The engine uses it as a ratio to the
 tree level, σ<sub>BKS</sub>(E; T > u T<sub>max</sub>)/σ<sub>tree</sub>(E; T > u T<sub>max</sub>), tabulated in E
 and u (`ratio_table`), and reproduces the paper's averaged cross sections
-([crosschecks.md](crosschecks.md)).
+([crosschecks.md](crosschecks.md)). The B4 reference integrates the same
+cross section directly above each B5 threshold (`es_<flavour>_T<T_min>`,
+`xsec.bks_threshold`); the table reproduces those values to 2 × 10⁻⁵ wherever
+T<sub>max</sub> > 1.2 T<sub>min</sub> (`tests/test_b4_thresholds.py`).
 
 The engine offers three ES models: `bks` (default), `tree`, and
 `snowglobes` (SNOwGLoBES's tables, as their ratio to tree level; BKS below
@@ -254,18 +257,27 @@ reproduces the true-energy rates (tested).
 
 The B5 spec's `response` gives each detector one published response
 (Super-K IV for water, SNO's salt phase for heavy water, Borexino Phase-II
-for scintillator, DUNE's far detector for argon; numbers and sources in
+for pseudocumene scintillator, JUNO for LAB scintillator, DUNE's far
+detector for argon; numbers and sources in
 [sources.md](sources.md#detector-responses)); `engine.published_response`
 turns it into setup fields, and the calculator's presets take the same
 values (`tests/test_b5_response.py`). `build.combine_observed` folds the
 part 1 daytime rates (B2 reference F_i averaged over production, NuFIT 6.0,
-the cross sections the spec names) through it with `engine.observed_rates`
+the cross sections the spec names; for a contribution, those it states in
+`settings.cross_sections`, mapped to the engine's models by `build.xsec_models`) through it with `engine.observed_rates`
 on the spec's observed grid: 0–20 MeV in 0.01 MeV bins, true and observed
 bins alike, so every preset threshold is a bin edge. The threshold is not
 part of the spectrum; the rate above a threshold is the spectrum summed
 over the bins above it. A contribution with its own response gives it as a
 binned matrix and efficiency (`response.parquet`), which `response_tables`
 turns into an imported matrix and efficiency curve for the same folding.
+A matrix in neutrino energy is shifted by Q for CC. For ES it maps the
+interactions at E<sub>ν</sub> to observed energy, one matrix per flavour (the ν<sub>e</sub>
+recoil spectrum is harder): the engine's ES kernels become σ<sub>α</sub>(E<sub>ν</sub>) times
+the matrix row of the true bin holding E<sub>ν</sub>, for ν<sub>e</sub> and for ν<sub>μ</sub> (whose matrix
+also serves ν<sub>τ</sub>), and the response after them is the identity. Evaluating
+each true bin's row for every energy in it biases rates above a threshold
+up, by about 1 % above 5 MeV for 0.2 MeV bins (`tests/test_b5_response.py`).
 
 ## Uncertainties
 

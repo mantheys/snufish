@@ -168,7 +168,7 @@ def test_nc_ar40_reference_value(inputs, osc):
     assert parts["default"] == pytest.approx(parts["tornow2025"] + parts["vandessel2019"], rel=1e-9)   # linear in sigma
 
 
-DEFAULT_NC_RATE = 105.70   # per kt-yr, E_nu > 5 MeV, B16-GS98 8B + hep, SNUfish's default NC model
+DEFAULT_NC_RATE = 105.74   # per kt-yr, E_nu > 5 MeV, B16-GS98 8B + hep, SNUfish's default NC model
 
 
 def test_nc_ar40_models_and_their_status(inputs, osc):
