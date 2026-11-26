@@ -1,8 +1,9 @@
 # Releasing a citable version
 
-Next: **v0.5.0** (notes below), tagged from `main` with CI green; its version
-DOI goes in with step 4.
-Released: **v0.4.0** is tagged (2026-11-20) and archived on Zenodo.
+Released: **v0.5.0** is tagged (2026-11-26), version DOI
+[10.5281/zenodo.24569636](https://doi.org/10.5281/zenodo.24569636).
+**v0.4.0** is tagged (2026-11-20), version DOI
+[10.5281/zenodo.24402563](https://doi.org/10.5281/zenodo.24402563).
 **v0.3.0** is tagged (2026-11-20), version DOI
 [10.5281/zenodo.24383275](https://doi.org/10.5281/zenodo.24383275).
 **v0.2.0** has version DOI
@@ -35,7 +36,7 @@ CC, ES and NC rates as 0.3.0 and 0.4.0.
 
 Submodules: NuFast-Earth at `327586d` (v1.2.0-3), PEANUTS at `1783f9f` (v1.7).
 
-Cite the version DOI of 0.5.0 once minted, or the concept DOI
+Cite the version DOI of 0.5.0, [10.5281/zenodo.24569636](https://doi.org/10.5281/zenodo.24569636), or the concept DOI
 10.5281/zenodo.24045166.
 
 ## v0.4.0 release notes
@@ -62,7 +63,7 @@ E_ν = 5 MeV, annual) gives CC 2416, ES 1081 and NC 105.7 as before.
   screen scaling; B1 sets have one colour each; B5's observed spectra are
   split into ES and CC plots; numbers in the text checked against the data.
 
-Cite the version DOI of 0.4.0 once minted, or the concept DOI
+Cite the version DOI of 0.4.0, [10.5281/zenodo.24402563](https://doi.org/10.5281/zenodo.24402563), or the concept DOI
 10.5281/zenodo.24045166.
 
 ## v0.3.0 release notes
@@ -114,7 +115,7 @@ concept DOI 10.5281/zenodo.24045166.
 
 | File | Holds | Status |
 |---|---|---|
-| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.5.0: `version`, `date-released` 2026-11-26 (set to the tag date if it differs); `doi` the concept DOI until step 4 puts in the v0.5.0 version DOI |
+| `CITATION.cff` | citation metadata (GitHub's "Cite this repository") | 0.5.0: `version`, `date-released` 2026-11-26 (set to the tag date if it differs); `doi` the v0.5.0 version DOI 10.5281/zenodo.24569636 |
 | `.zenodo.json` | the metadata Zenodo's GitHub integration reads at each release (it takes precedence over `CITATION.cff`) | 0.5.0 (ORCID included) |
 | `pyproject.toml`, `src/snufish/__init__.py` | `version`, `__version__` | 0.5.0 (plotipus pinned to its `v0.1.0` release) |
 | `catalogue/tools/snufish-reference.yaml` | `reference` | the concept DOI (cites every version); the comment lists the version DOIs |
